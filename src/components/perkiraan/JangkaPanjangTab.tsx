@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import IklimView from './IklimView';
 import GempaView from './GempaView';
+import AbuVulkanikView from './AbuVulkanikView';
 import ChecklistPanel from './ChecklistPanel';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 
-type SubTab = 'iklim' | 'gempa';
+type SubTab = 'iklim' | 'gempa' | 'abu_vulkanik';
 
 const SUB_TABS: { key: SubTab; label: string; iconType: string }[] = [
   { key: 'iklim', label: 'Iklim', iconType: 'cuaca' },
   { key: 'gempa', label: 'Gempa Bumi', iconType: 'gempa' },
+  { key: 'abu_vulkanik', label: 'Abu Vulkanik & Bandara', iconType: 'volcanic_ash' },
 ];
 
 const JangkaPanjangTab: React.FC = () => {
@@ -40,6 +42,7 @@ const JangkaPanjangTab: React.FC = () => {
         <div className="jangka-panjang-content">
           {activeSubTab === 'iklim' && <IklimView />}
           {activeSubTab === 'gempa' && <GempaView />}
+          {activeSubTab === 'abu_vulkanik' && <AbuVulkanikView />}
         </div>
 
         {/* Collapsible checklist sidebar */}

@@ -89,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       let maxRiskScore = 0;
       officeAlerts.forEach((alert) => {
-        const isKerentananSupported = ['flood', 'tsunami', 'kekeringan', 'volcanic'].includes(alert.type);
+        const isKerentananSupported = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash'].includes(alert.type);
         let vulScore = 1;
         if (!isKerentananSupported) {
           vulScore = 3; // Bypass kerentanan
@@ -413,6 +413,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               <option value="extreme_weather">Cuaca Ekstrem</option>
                               <option value="karhutla">Karhutla</option>
                               <option value="volcanic">Gunung Api</option>
+                              <option value="volcanic_ash">Abu Vulkanik (INA-SIAM)</option>
                             </select>
                           </div>
                           <div className="filter-group">

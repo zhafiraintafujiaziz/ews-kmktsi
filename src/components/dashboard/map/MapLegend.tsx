@@ -12,8 +12,9 @@ interface MapLegendProps {
     extreme_weather: boolean;
     karhutla: boolean;
     volcanic: boolean;
+    volcanic_ash?: boolean;
   };
-  onToggleLayer: (layerKey: 'critical' | 'warning' | 'watch' | 'earthquake' | 'extreme_weather' | 'karhutla' | 'volcanic') => void;
+  onToggleLayer: (layerKey: 'critical' | 'warning' | 'watch' | 'earthquake' | 'extreme_weather' | 'karhutla' | 'volcanic' | 'volcanic_ash') => void;
   selectedAlert?: DisasterAlert | null;
 }
 
@@ -23,11 +24,12 @@ const SEV_CONFIG: Array<{ key: 'critical' | 'warning' | 'watch'; num: AlertSever
   { key: 'watch',    num: 1, label: 'Keparahan Rendah', color: 'var(--alert-watch)' },
 ];
 
-const DISASTER_TYPES_CONFIG: Array<{ key: 'earthquake' | 'extreme_weather' | 'karhutla' | 'volcanic'; label: string }> = [
+const DISASTER_TYPES_CONFIG: Array<{ key: 'earthquake' | 'extreme_weather' | 'karhutla' | 'volcanic' | 'volcanic_ash'; label: string }> = [
   { key: 'earthquake', label: 'Gempa Bumi' },
   { key: 'extreme_weather', label: 'Cuaca Ekstrem' },
   { key: 'karhutla', label: 'Kebakaran Hutan' },
   { key: 'volcanic', label: 'Gunung Api' },
+  { key: 'volcanic_ash', label: 'Abu Vulkanik' },
 ];
 
 const MapLegend: React.FC<MapLegendProps> = ({

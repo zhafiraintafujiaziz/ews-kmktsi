@@ -93,7 +93,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, alert
           let rScoreVal = 0;
           const event = mapAlertToDisasterEvent(alert);
           if (event) {
-            const kerentananDisasters = ['flood', 'tsunami', 'kekeringan', 'volcanic'];
+            const kerentananDisasters = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash'];
             const isKerentananSupported = kerentananDisasters.includes(event.type);
             let vulScore = 1;
             if (!isKerentananSupported) {

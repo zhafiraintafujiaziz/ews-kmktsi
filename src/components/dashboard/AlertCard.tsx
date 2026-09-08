@@ -15,6 +15,7 @@ const TYPE_LABELS: Record<string, string> = {
   earthquake:      'Gempa Bumi',
   flood:           'Banjir',
   volcanic:        'Gunung Api',
+  volcanic_ash:    'Abu Vulkanik (INA-SIAM)',
   tsunami:         'Tsunami',
   landslide:       'Longsor',
   extreme_weather: 'Cuaca Ekstrem',
@@ -69,6 +70,52 @@ function renderMetrics(alert: DisasterAlert) {
             )}
             {affectedArea && (
               <span className="metric-chip metric-chip-area">{affectedArea}</span>
+            )}
+          </div>
+        </div>
+      );
+
+    case 'volcanic_ash':
+      return (
+        <div className="alertcard-metrics">
+          <div className="metric-chips">
+            <span className="metric-chip" style={{ background: '#fef3c7', color: '#92400e', fontWeight: 600 }}>
+              INA-SIAM / VAAC
+            </span>
+            {alert.ashHeight && (
+              <span className="metric-chip" style={{ background: '#ffedd5', color: '#9a3412', fontWeight: 500 }}>
+                {alert.ashHeight.split('(')[0].trim()}
+              </span>
+            )}
+            {alert.movementDirection && (
+              <span className="metric-chip" style={{ background: '#fef08a', color: '#854d0e' }}>
+                🧭 {alert.movementDirection.split('(')[0].trim()}
+              </span>
+            )}
+            {alert.closedAirports && alert.closedAirports.length > 0 && (
+              <span className="metric-chip" style={{ background: '#fee2e2', color: '#b91c1c', fontWeight: 700, border: '1px solid #fca5a5' }}>
+                ⛔ Bandara Ditutup ({alert.closedAirports[0].icao})
+              </span>
+            )}
+            {alert.affectedSeaports && alert.affectedSeaports.length > 0 && (
+              <span className="metric-chip" style={{ background: '#dbeafe', color: '#1e40af', fontWeight: 600, border: '1px solid #93c5fd' }}>
+                🚢 Dermaga Waspada
+              </span>
+            )}
+            {affectedArea && (
+              <span className="metric-chip metric-chip-area">{affectedArea}</span>
+            )}
+            {alert.trajectoryImageUrl && (
+              <a
+                href={alert.trajectoryImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="metric-chip"
+                style={{ background: '#e0f2fe', color: '#0369a1', textDecoration: 'none', cursor: 'pointer' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                📡 Citra Trajektori Satelit ↗
+              </a>
             )}
           </div>
         </div>

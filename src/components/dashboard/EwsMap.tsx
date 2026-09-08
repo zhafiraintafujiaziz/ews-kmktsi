@@ -31,10 +31,10 @@ export interface EwsMapProps {
 }
 
 const INDONESIA_CENTER: [number, number] = [-2.5489, 118.0149];
-const INARISK_TYPES = ['flood', 'tsunami', 'kekeringan', 'volcanic'];
+const INARISK_TYPES = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash'];
 const POTENSI_TYPES = ['gempa', 'karhutla', 'cuaca', 'pasang'];
 
-function getProvinceRisk(provinceId: string, hazard: 'flood' | 'tsunami' | 'kekeringan' | 'volcanic'): number {
+function getProvinceRisk(provinceId: string, hazard: 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash'): number {
   return KPWBI_OFFICES.filter((o) => o.provinceId === provinceId).reduce((max, o) => {
     const idx = BnpbInariskService.getLocalHazardIndex(o.id, hazard);
     return idx > max ? idx : max;
@@ -78,6 +78,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     extreme_weather: true,
     karhutla: true,
     volcanic: true,
+    volcanic_ash: true,
   });
 
   const toggleLayer = (layerKey: keyof typeof mapLayers) => {
@@ -274,6 +275,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
       if (alert.type === 'extreme_weather' && !mapLayers.extreme_weather) return false;
       if (alert.type === 'karhutla' && !mapLayers.karhutla) return false;
       if (alert.type === 'volcanic' && !mapLayers.volcanic) return false;
+      if (alert.type === 'volcanic_ash' && !mapLayers.volcanic_ash) return false;
 
       return true;
     });
@@ -286,7 +288,8 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     mapLayers.earthquake,
     mapLayers.extreme_weather,
     mapLayers.karhutla,
-    mapLayers.volcanic
+    mapLayers.volcanic,
+    mapLayers.volcanic_ash
   ]);
 
   // Compute province highlights for extreme_weather alerts (province-level impact instead of circle radius)

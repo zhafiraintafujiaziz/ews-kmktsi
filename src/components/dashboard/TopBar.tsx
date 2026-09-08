@@ -36,6 +36,7 @@ const FILTER_OPTIONS: Array<{ value: DisasterType | 'all'; label: string }> = [
   { value: 'extreme_weather', label: 'Cuaca' },
   { value: 'karhutla', label: 'Karhutla' },
   { value: 'volcanic', label: 'Gunung Api' },
+  { value: 'volcanic_ash', label: 'Abu Vulkanik' },
 ];
 
 function formatRelativeTime(timestamp: string): string {
@@ -471,7 +472,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                       })
                       .map((alert) => {
                         const levelClass = severityToCssClass(alert.severity);
-                        const sourceName = alert.type === 'volcanic' ? 'MAGMA' : 'BMKG';
+                        const sourceName = alert.type === 'volcanic' ? 'MAGMA' : alert.type === 'volcanic_ash' ? 'INA-SIAM' : alert.type === 'karhutla' ? 'SIPONGI' : 'BMKG';
                         
                         return (
                           <div

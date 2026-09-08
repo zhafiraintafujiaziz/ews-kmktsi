@@ -3,6 +3,7 @@ import type { DisasterAlert, AlertSeverity } from '../types';
 import { fetchLatestEarthquakes, fetchExtremeWeather, fetchThreeDayForecast, fetchHighRainfallWarning, fetchEarlyWarning } from '../services/bmkgService';
 import { MagmaService } from '../services/magmaService';
 import { SipongiService } from '../services/sipongiService';
+import { InaSiamService } from '../services/inaSiamService';
 
 // InaRisk / BNPB data is shown in the Kerentanan screen, not as live alerts.
 // This hook only aggregates real-time BMKG alert streams.
@@ -67,6 +68,20 @@ try {
           if (end && now > end) return false;
         }
         return true;
+      }).map((a) => {
+        if ((a.type === 'volcanic' || a.type === 'volcanic_ash') && (!a.pentagonCoords || a.pentagonCoords.length === 0)) {
+          const sig = InaSiamService.getSigmetForVolcano(a.title || a.affectedArea || '');
+          if (sig) {
+            return {
+              ...a,
+              pentagonCoords: sig.coordinates,
+              ashHeight: a.ashHeight || sig.flightLevel,
+              movementDirection: a.movementDirection || sig.directionText,
+              windBearing: a.windBearing ?? sig.bearing,
+            };
+          }
+        }
+        return a;
       });
       if (cachedAlerts.length !== parsed.length) {
         localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(cachedAlerts));
@@ -93,9 +108,29 @@ const mergeAlerts = (existing: DisasterAlert[], incoming: DisasterAlert[]) => {
   let hasChanges = false;
   
   incoming.forEach((a) => {
-    if (!map.has(a.id)) {
-      map.set(a.id, a);
+    let alertToAdd = a;
+    if ((alertToAdd.type === 'volcanic' || alertToAdd.type === 'volcanic_ash') && (!alertToAdd.pentagonCoords || alertToAdd.pentagonCoords.length === 0)) {
+      const sig = InaSiamService.getSigmetForVolcano(alertToAdd.title || alertToAdd.affectedArea || '');
+      if (sig) {
+        alertToAdd = {
+          ...alertToAdd,
+          pentagonCoords: sig.coordinates,
+          ashHeight: alertToAdd.ashHeight || sig.flightLevel,
+          movementDirection: alertToAdd.movementDirection || sig.directionText,
+          windBearing: alertToAdd.windBearing ?? sig.bearing,
+        };
+      }
+    }
+
+    if (!map.has(alertToAdd.id)) {
+      map.set(alertToAdd.id, alertToAdd);
       hasChanges = true;
+    } else {
+      const existingAlert = map.get(alertToAdd.id)!;
+      if (!existingAlert.pentagonCoords && alertToAdd.pentagonCoords) {
+        map.set(alertToAdd.id, { ...existingAlert, ...alertToAdd });
+        hasChanges = true;
+      }
     }
   });
   
@@ -150,7 +185,7 @@ const fetchAllSources = async () => {
     }
   }
 
-  cachedLoadingSources = ['Gempa BMKG', 'Cuaca Ekstrem BMKG', 'Peringatan Dini Cuaca BMKG', 'Prakiraan 3 Hari BMKG', 'Curah Hujan Tinggi BMKG', 'Live Gunung Api Magma', 'Sipongi Karhutla'];
+  cachedLoadingSources = ['Gempa BMKG', 'Cuaca Ekstrem BMKG', 'Peringatan Dini Cuaca BMKG', 'Prakiraan 3 Hari BMKG', 'Curah Hujan Tinggi BMKG', 'Live Gunung Api Magma', 'Sipongi Karhutla', 'Abu Vulkanik INA-SIAM'];
   notifyListeners();
 
   const apis = [
@@ -160,7 +195,8 @@ const fetchAllSources = async () => {
     { call: fetchThreeDayForecast, name: 'Prakiraan 3 Hari BMKG' },
     { call: fetchHighRainfallWarning, name: 'Curah Hujan Tinggi BMKG' },
     { call: () => MagmaService.fetchLiveAlerts(false), name: 'Live Gunung Api Magma' },
-    { call: () => SipongiService.fetchKarhutlaAlerts(true), name: 'Sipongi Karhutla' }
+    { call: () => SipongiService.fetchKarhutlaAlerts(true), name: 'Sipongi Karhutla' },
+    { call: () => InaSiamService.fetchLiveAlerts(), name: 'Abu Vulkanik INA-SIAM' }
   ];
 
   let pending = apis.length;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Circle, Tooltip, Marker, Popup } from 'react-leaflet';
+import { Circle, Tooltip, Marker, Popup, Polygon, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import type { DisasterAlert, AlertSeverity } from '../../../types';
 import { severityToCssClass } from '../../../types';
@@ -7,6 +7,7 @@ import { KPWBI_OFFICES } from '../../../constants/kpwbiOffices';
 import { PROVINCES } from '../../../constants/provinces';
 import { isValidCoord } from '../../../utils/geo';
 import { getDisasterIconHtml, renderDisasterIcon } from '../../../utils/alertUtils';
+import { computeTrajectoryArrow, computeDispersionPentagon, InaSiamService } from '../../../services/inaSiamService';
 
 interface AlertCirclesProps {
   alerts: DisasterAlert[];
@@ -40,8 +41,6 @@ function getCircleRadius(alert: DisasterAlert): number {
       return 150000;
     case 'flood':
       return (alert.waterLevel || 1.5) * 40000;
-    case 'volcanic':
-      return 85000;
     case 'landslide':
       return 50000;
     case 'extreme_weather':
@@ -72,14 +71,10 @@ function getCircleConfig(alert: DisasterAlert): CircleConfig {
   };
 }
 
-/**
- * Calculates a coordinates offset from the center by a given distance (radius in meters)
- * at a specific bearing (135 degrees for South-East/Bottom-Right).
- */
 function getBottomRightCoords(centerLat: number, centerLng: number, radiusMeters: number): [number, number] {
-  const earthRadius = 6378137; // in meters
+  const earthRadius = 6378137;
   const d = radiusMeters;
-  const bearingRad = (135 * Math.PI) / 180; // 135 degrees is South-East (bottom-right)
+  const bearingRad = (135 * Math.PI) / 180;
 
   const latRad = (centerLat * Math.PI) / 180;
   const lngRad = (centerLng * Math.PI) / 180;
@@ -110,10 +105,57 @@ function sevTagStyle(severity: AlertSeverity) {
   };
 }
 
+function getVolcanoDeduplicationKey(alert: DisasterAlert): string | null {
+  const isVolcano = alert.type === 'volcanic' || alert.type === 'volcanic_ash';
+  if (!isVolcano) return null;
+
+  const t = (alert.title + ' ' + (alert.affectedArea || '')).toLowerCase();
+  if (t.includes('krakatau')) return 'krakatau';
+  if (t.includes('lewotobi') || t.includes('lewotolok')) return 'lewotobi';
+  if (t.includes('semeru')) return 'semeru';
+  if (t.includes('ibu')) return 'ibu';
+  if (t.includes('dukono')) return 'dukono';
+  if (t.includes('merapi')) return 'merapi';
+  if (t.includes('marapi')) return 'marapi';
+  if (t.includes('sinabung')) return 'sinabung';
+
+  if (alert.latitude && alert.longitude) {
+    return `${Math.round(alert.latitude * 10)}_${Math.round(alert.longitude * 10)}`;
+  }
+  return alert.id;
+}
+
 const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, provinceCentroids }) => {
+  // Deduplicate volcano alerts so that for each volcano, only ONE canonical SIGMET polygon is rendered
+  const processedAlerts = React.useMemo(() => {
+    const volcanoSeen = new Set<string>();
+    const result: DisasterAlert[] = [];
+
+    // Prioritize volcanic_ash (INA-SIAM) first because it has the authentic SIGMET geometry and flight corridors
+    const sorted = [...alerts].sort((a, b) => {
+      if (a.type === 'volcanic_ash' && b.type !== 'volcanic_ash') return -1;
+      if (b.type === 'volcanic_ash' && a.type !== 'volcanic_ash') return 1;
+      return 0;
+    });
+
+    for (const alert of sorted) {
+      const vKey = getVolcanoDeduplicationKey(alert);
+      if (vKey) {
+        if (volcanoSeen.has(vKey)) {
+          // Already rendered polygon & marker for this volcano, skip duplicate to prevent double polygons
+          continue;
+        }
+        volcanoSeen.add(vKey);
+      }
+      result.push(alert);
+    }
+
+    return result;
+  }, [alerts]);
+
   return (
     <>
-      {alerts.map((alert) => {
+      {processedAlerts.map((alert) => {
         let center: [number, number] | null = null;
 
         if (isValidCoord(alert.latitude, alert.longitude)) {
@@ -125,9 +167,37 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
 
         if (!center) return null;
 
+        const isVolcano = alert.type === 'volcanic' || alert.type === 'volcanic_ash';
+
+        // Cari poligon SIGMET dinamis real-time dari INA-SIAM jika belum ada
+        let polygonCoords = alert.pentagonCoords;
+        let windBearing = alert.windBearing;
+        let sigmetInfo = null;
+
+        if (isVolcano) {
+          sigmetInfo = InaSiamService.getSigmetForVolcano(alert.title || alert.affectedArea || '');
+          if (!polygonCoords && sigmetInfo && sigmetInfo.coordinates.length >= 3) {
+            polygonCoords = sigmetInfo.coordinates;
+            windBearing = sigmetInfo.bearing;
+          } else if (!polygonCoords && center) {
+            windBearing = windBearing ?? 240;
+            polygonCoords = computeDispersionPentagon(center[0], center[1], windBearing, 95);
+          }
+        }
+
+        const hasPolygon = isVolcano && polygonCoords && polygonCoords.length >= 3;
+        const arrowData = isVolcano && center
+          ? computeTrajectoryArrow(center[0], center[1], windBearing ?? 240, 65)
+          : null;
+
         const { radius, pathOptions } = getCircleConfig(alert);
         const iconCoords = getBottomRightCoords(center[0], center[1], radius);
-        const iconHtml = getDisasterIconHtml(alert.type, pathOptions.color);
+        
+        // Icon type: jika memiliki sebaran abu vulkanik aktif / SIGMET, tampilkan gunung berawan
+        const iconType = (alert.type === 'volcanic_ash' || (alert.type === 'volcanic' && sigmetInfo))
+          ? 'volcanic_ash'
+          : alert.type;
+        const iconHtml = getDisasterIconHtml(iconType, isVolcano ? '#ea580c' : pathOptions.color);
         const sevColor = SEV_COLORS[alert.severity] || 'var(--alert-critical)';
 
         const customIcon = L.divIcon({
@@ -136,16 +206,15 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             background-color: transparent;
             border: none;
-            font-size: 18px;
             cursor: pointer;
             pointer-events: auto;
           ">${iconHtml}</div>`,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12],
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
         });
 
         const renderSevBoxes = () => (
@@ -159,42 +228,191 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
         const isProvinceAlert = alert.type === 'extreme_weather';
         const isWeatherAlert = alert.type === 'extreme_weather';
 
+        const effectiveAshHeight = alert.ashHeight || sigmetInfo?.flightLevel;
+        const effectiveDirection = alert.movementDirection || sigmetInfo?.directionText;
+
         const popupContent = (
-          <div className="ews-popup-content">
+          <div className="ews-popup-content" style={{ maxWidth: '330px' }}>
             <div className={`ews-popup-header ${severityToCssClass(alert.severity)}`}>
               <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                {renderDisasterIcon(alert.type, undefined, { color: 'inherit' })}
+                {renderDisasterIcon(iconType, undefined, { color: 'inherit' })}
               </span>
               <span>{alert.title}</span>
             </div>
-            <div className="ews-popup-title" style={{ marginTop: 0 }}>
+
+            <div className="ews-popup-title" style={{ marginTop: '4px', fontWeight: 600 }}>
               {alert.affectedArea || 'Area Terdampak'}
             </div>
-            <p className="ews-popup-desc">
-              {alert.description}
+
+            {isVolcano && (
+              <div style={{ fontSize: '11px', margin: '4px 0', background: 'rgba(234, 88, 12, 0.08)', padding: '6px 8px', borderRadius: '4px', border: '1px solid rgba(234, 88, 12, 0.25)' }}>
+                <div style={{ color: '#c2410c', fontWeight: 700, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>📡</span>
+                  <span>Poligon SIGMET Real-Time BMKG INA-SIAM</span>
+                </div>
+                {effectiveAshHeight && (
+                  <div><strong>Ketinggian Kolom Abu:</strong> {effectiveAshHeight}</div>
+                )}
+                {effectiveDirection && (
+                  <div><strong>Arah & Kecepatan:</strong> {effectiveDirection}</div>
+                )}
+                {sigmetInfo?.rawSigmet && (
+                  <div style={{
+                    marginTop: '4px',
+                    fontSize: '9px',
+                    fontFamily: 'monospace',
+                    background: '#ffffff',
+                    padding: '4px',
+                    borderRadius: '3px',
+                    border: '1px solid #e2e8f0',
+                    maxHeight: '42px',
+                    overflowY: 'auto',
+                    whiteSpace: 'pre-wrap',
+                    color: '#334155'
+                  }}>
+                    {sigmetInfo.rawSigmet}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Closed Airport Alert Banner */}
+            {alert.closedAirports && alert.closedAirports.length > 0 && (
+              <div style={{ margin: '6px 0', padding: '6px 8px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '4px' }}>
+                <div style={{ color: '#b91c1c', fontWeight: 700, fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>⛔</span>
+                  <span>BANDARA DITUTUP (AERODROME CLOSED)</span>
+                </div>
+                {alert.closedAirports.map((ap) => (
+                  <div key={ap.icao} style={{ marginTop: '3px', fontSize: '10.5px', color: '#991b1b', lineHeight: 1.3 }}>
+                    <div><strong>{ap.name} ({ap.icao})</strong> {ap.distanceKm ? `• ±${ap.distanceKm} km` : ''}</div>
+                    <div style={{ fontSize: '10px', color: '#7f1d1d' }}>{ap.detail}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Regional Seaports / Dermaga Banner */}
+            {alert.affectedSeaports && alert.affectedSeaports.length > 0 && (
+              <div style={{ margin: '6px 0', padding: '6px 8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px' }}>
+                <div style={{ color: '#1e40af', fontWeight: 700, fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>🚢</span>
+                  <span>DERMAGA & PELABUHAN WASPADA</span>
+                </div>
+                {alert.affectedSeaports.map((port, pIdx) => (
+                  <div key={pIdx} style={{ marginTop: '3px', fontSize: '10.5px', color: '#1e3a8a', lineHeight: 1.3 }}>
+                    <div><strong>{port.name}</strong> • {port.distanceKm} km</div>
+                    <div style={{ fontSize: '10px', color: '#3b82f6' }}>{port.status} - {port.note}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="ews-popup-desc" style={{ fontSize: '11px', margin: '6px 0', color: 'var(--text-secondary)' }}>
+              {alert.description.split('\n')[0]}
             </p>
-            <div className="ews-popup-footer">
-              {isProvinceAlert ? (
-                <span>Provinsi terdampak cuaca ekstrim</span>
+
+            {alert.trajectoryImageUrl && (
+              <div style={{ marginTop: '6px', marginBottom: '6px' }}>
+                <a href={alert.trajectoryImageUrl} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={alert.trajectoryImageUrl}
+                    alt="Citra Trajektori Satelit BMKG"
+                    style={{ width: '100%', maxHeight: '140px', objectFit: 'contain', borderRadius: '4px', border: '1px solid var(--border-default)' }}
+                  />
+                </a>
+                <div style={{ fontSize: '9.5px', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '2px' }}>
+                  INA-SIAM BMKG / VAAC Darwin (Klik untuk memperbesar)
+                </div>
+              </div>
+            )}
+
+            <div className="ews-popup-footer" style={{ marginTop: '6px', paddingTop: '4px', borderTop: '1px solid var(--border-default)' }}>
+              {isVolcano ? (
+                <span style={{ fontSize: '10.5px', color: '#ea580c', fontWeight: 600 }}>Poligon SIGMET INA-SIAM</span>
+              ) : isProvinceAlert ? (
+                <span>Provinsi terdampak cuaca ekstrem</span>
               ) : (
                 <span>Radius: {(radius / 1000).toFixed(0)} km</span>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Severity:</span>
+                <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Severity:</span>
                 {renderSevBoxes()}
               </div>
             </div>
           </div>
         );
 
-        // Use province geometric centroid for extreme weather marker placement
         const weatherPos: [number, number] | null = isWeatherAlert && provinceCentroids
           ? (provinceCentroids.get(alert.provinceId) ?? null)
           : null;
 
         return (
           <React.Fragment key={`alert-group-${alert.id}`}>
-            {!isProvinceAlert && (
+            {/* 1. Volcanic Hazard: Real-Time Dynamic SIGMET Polygon & Trajectory Direction Arrow */}
+            {hasPolygon && polygonCoords && (
+              <>
+                <Polygon
+                  positions={polygonCoords}
+                  pathOptions={{
+                    color: '#facc15',
+                    fillColor: '#dc2626',
+                    fillOpacity: 0.35,
+                    weight: 2.5,
+                    dashArray: '6, 4',
+                    bubblingMouseEvents: false,
+                  }}
+                  eventHandlers={{
+                    click: () => onAlertSelect?.(alert.id),
+                  }}
+                >
+                  <Tooltip sticky>
+                    <div>
+                      <strong>{alert.title}</strong><br />
+                      <span style={{ color: '#ea580c', fontWeight: 600 }}>Poligon SIGMET Real-Time (INA-SIAM)</span><br />
+                      {effectiveAshHeight && <>Ketinggian: {effectiveAshHeight}<br /></>}
+                      {effectiveDirection && <>Arah & Kecepatan: {effectiveDirection}<br /></>}
+                      {alert.closedAirports && alert.closedAirports.length > 0 && (
+                        <div style={{ color: '#dc2626', fontWeight: 'bold' }}>
+                          ⛔ Bandara Ditutup: {alert.closedAirports.map(a => a.icao).join(', ')}
+                        </div>
+                      )}
+                      Area: {alert.affectedArea || 'Koridor Ruang Udara'}<br />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                        <span>Severity:</span>
+                        <div style={{ display: 'flex', gap: '3px' }}>
+                          {[1, 2, 3].map((i) => (
+                            <span key={i} style={{ width: '12px', height: '4px', borderRadius: '1px', backgroundColor: i <= alert.severity ? sevColor : 'rgba(255,255,255,0.2)', display: 'inline-block' }} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </Tooltip>
+                  <Popup>{popupContent}</Popup>
+                </Polygon>
+
+                {/* Trajectory Direction Arrow */}
+                {arrowData && (
+                  <>
+                    <Polyline
+                      positions={arrowData.shaft}
+                      pathOptions={{ color: '#fde047', weight: 3.5, opacity: 0.95 }}
+                    />
+                    <Polyline
+                      positions={arrowData.barb1}
+                      pathOptions={{ color: '#fde047', weight: 3.5, opacity: 0.95 }}
+                    />
+                    <Polyline
+                      positions={arrowData.barb2}
+                      pathOptions={{ color: '#fde047', weight: 3.5, opacity: 0.95 }}
+                    />
+                  </>
+                )}
+              </>
+            )}
+
+            {/* 2. Standard Circle ONLY for non-volcano and non-province hazards (Flood, Earthquake, etc.) */}
+            {!isProvinceAlert && !hasPolygon && !isVolcano && (
               <Circle
                 center={center}
                 radius={radius}
@@ -226,6 +444,8 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
                 <Popup>{popupContent}</Popup>
               </Circle>
             )}
+
+            {/* 3. Hazard Marker Icon */}
             <Marker
               position={
                 isWeatherAlert
@@ -233,7 +453,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
                       const province = PROVINCES.find((p) => p.id === alert.provinceId);
                       return province ? [province.latitude, province.longitude] as [number, number] : center!;
                     })())
-                  : (alert.type === 'karhutla' ? center : iconCoords)
+                  : (alert.type === 'karhutla' || isVolcano ? center : iconCoords)
               }
               icon={customIcon}
               interactive={true}

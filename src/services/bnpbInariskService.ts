@@ -78,13 +78,35 @@ export class BnpbInariskService {
     }
   }
 
-  static getLocalHazardIndex(officeId: string, hazard: 'flood' | 'tsunami' | 'kekeringan' | 'volcanic'): number {
+  static getLocalHazardIndex(officeId: string, hazard: 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash'): number {
     let hash = 0;
     const str = officeId + hazard;
     for (let i = 0; i < str.length; i++) {
       hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
     const val = Math.abs(hash % 100) / 100;
+
+    if (hazard === 'volcanic_ash') {
+      const ashHotspots: Record<string, number> = {
+        'kupang': 0.88, // Terdampak Erupsi G. Lewotobi & Penutupan Bandara WATW
+        'ternate': 0.84, // G. Ibu & G. Dukono (Halmahera)
+        'lampung': 0.78, // G. Anak Krakatau & Koridor Selat Sunda
+        'banten': 0.74, // G. Anak Krakatau
+        'malang': 0.76, // G. Semeru & G. Bromo
+        'kediri': 0.68, // G. Kelud & Semeru
+        'surabaya': 0.62, // Koridor Jawa Timur
+        'yogyakarta': 0.75, // G. Merapi
+        'solo': 0.65, // G. Merapi
+        'padang': 0.73, // G. Marapi
+        'manado': 0.71, // G. Ruang & G. Karangetang
+        'bandung': 0.58, // G. Tangkuban Parahu
+        'medan': 0.55, // G. Sinabung
+      };
+      for (const [k, score] of Object.entries(ashHotspots)) {
+        if (officeId.toLowerCase().includes(k)) return score;
+      }
+      return val > 0.6 ? 0.2 + val * 0.35 : 0;
+    }
 
     if (hazard === 'tsunami') {
       const inlandOffices = ['yogyakarta', 'solo', 'malang', 'bandung', 'purwokerto', 'tasikmalaya', 'kediri', 'bogor'];

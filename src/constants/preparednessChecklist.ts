@@ -46,6 +46,27 @@ export const CHECKLIST_ITEMS: ChecklistItemDef[] = [
     category: 'banjir',
     floodOnly: true,
   },
+  {
+    id: 'filter-hvac-drc',
+    label: 'Proteksi Filter AC / Data Center dari Abu Vulkanik',
+    description:
+      'Damper intake udara luar AC presisi server/DRC dapat ditutup rapat dan filter silika/HEPA cadangan siap dipasang guna mencegah kerusakan sirkuit elektronik akibat abu silika korosif.',
+    category: 'umum',
+  },
+  {
+    id: 'kontinjensi-kas-bandara',
+    label: 'Kontinjensi Distribusi Kas (Jalur Alternatif Laut/Darat)',
+    description:
+      'SOP pengalihan pengiriman uang kas rupiah melalui dermaga kapal/jalur darat jika bandara regional terdekat ditutup akibat sebaran abu vulkanik (NOTAM closure).',
+    category: 'umum',
+  },
+  {
+    id: 'apd-masker-vulkanik',
+    label: 'Stok Masker N95 & Pelindung Debu Pegawai',
+    description:
+      'Tersedia persediaan masker partikulat N95/FFP2 dan pelindung mata dalam jumlah memadai untuk seluruh pegawai jika terjadi paparan sebaran abu vulkanik.',
+    category: 'umum',
+  },
 ];
 
 export type ChecklistStatus = Record<string, boolean>; // itemId → checked

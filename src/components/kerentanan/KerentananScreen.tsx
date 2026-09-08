@@ -9,7 +9,7 @@ import MobileSplitter from '../ui/MobileSplitter';
 import '../dashboard/TopBar.css';
 import './KerentananScreen.css';
 
-type InariskHazard = 'flood' | 'tsunami' | 'kekeringan' | 'volcanic';
+type InariskHazard = 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash';
 
 interface KerentananScreenProps {
   onBack: () => void;
@@ -20,6 +20,7 @@ const HAZARD_TABS: { key: InariskHazard; label: string }[] = [
   { key: 'tsunami', label: 'Tsunami' },
   { key: 'kekeringan', label: 'Kekeringan' },
   { key: 'volcanic', label: 'Gunung Api' },
+  { key: 'volcanic_ash', label: 'Abu Vulkanik' },
 ];
 
 function riskLevel(score: number): { label: string; cls: string } {

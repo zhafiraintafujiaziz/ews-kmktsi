@@ -1,4 +1,4 @@
-export type DisasterType = 'earthquake' | 'flood' | 'volcanic' | 'tsunami' | 'landslide' | 'extreme_weather' | 'karhutla' | 'kekeringan';
+export type DisasterType = 'earthquake' | 'flood' | 'volcanic' | 'volcanic_ash' | 'tsunami' | 'landslide' | 'extreme_weather' | 'karhutla' | 'kekeringan';
 
 export type AlertSeverity = 3 | 2 | 1;
 
@@ -30,6 +30,26 @@ export interface KpwbiOffice {
   category: 'kpw' | 'korwil' | 'kantor_pusat' | 'dc' | 'drc';
 }
 
+export interface ClosedAirportInfo {
+  icao: string;
+  name: string;
+  reason: string;
+  detail: string;
+  lat?: number;
+  lon?: number;
+  distanceKm?: number;
+}
+
+export interface AffectedSeaportInfo {
+  name: string;
+  regency: string;
+  status: string;
+  note: string;
+  lat: number;
+  lon: number;
+  distanceKm?: number;
+}
+
 export interface DisasterAlert {
   id: string;
   type: DisasterType;
@@ -47,6 +67,14 @@ export interface DisasterAlert {
   isForecast?: boolean;
   forecastDay?: number; // 1, 2, or 3
   forecastDateStr?: string; // e.g. "25 Jun 2026"
+  trajectoryImageUrl?: string; // Volcanic ash trajectory satellite image URL
+  ashHeight?: string; // Height of volcanic ash cloud
+  movementDirection?: string; // Direction of volcanic ash movement
+  windBearing?: number; // Degree bearing of ash dispersion
+  pentagonCoords?: [number, number][]; // 5 vertices of INA-SIAM dispersion pentagon
+  closedAirports?: ClosedAirportInfo[]; // Closed airports from web-aviation.bmkg.go.id
+  affectedSeaports?: AffectedSeaportInfo[]; // Impacted regional seaports / docks
+  sourceUrl?: string; // Reference link e.g. inasiam.bmkg.go.id
 }
 
 export type VolcanoLevel = 'III' | 'II' | 'I';

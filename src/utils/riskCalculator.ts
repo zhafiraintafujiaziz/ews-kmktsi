@@ -144,6 +144,7 @@ export function mapDisasterTypeToInariskHazard(
     case 'earthquake':
       return 'tsunami';
     case 'volcanic':
+    case 'volcanic_ash':
       return 'volcanic';
     case 'kekeringan':
     case 'karhutla':
