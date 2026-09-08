@@ -79,7 +79,9 @@ export function getDisasterIconValue(type: DisasterType | string): string {
 }
 
 export function getDisasterEmoji(type: DisasterType | string): string {
-  return getDisasterIconValue(type);
+  const val = getDisasterIconValue(type);
+  if (val === 'volcano_cloud') return '🌋';
+  return val;
 }
 
 export function getDisasterColor(type: DisasterType | string): string {

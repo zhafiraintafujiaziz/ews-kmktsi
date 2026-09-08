@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { DisasterAlert, AlertSeverity } from '../../../types';
-import { getDisasterEmoji } from '../../../utils/alertUtils';
+import { renderDisasterIcon } from '../../../utils/alertUtils';
 
 interface MapLegendProps {
   isInariskFilter: boolean;
@@ -128,8 +128,6 @@ const MapLegend: React.FC<MapLegendProps> = ({
                 Tipe Bencana
               </div>
               {DISASTER_TYPES_CONFIG.map(({ key, label }) => {
-                const emoji = getDisasterEmoji(key);
-                const isPng = emoji.endsWith('.png') || emoji.startsWith('data:') || emoji.startsWith('/') || emoji.startsWith('static/') || emoji.startsWith('src/');
                 return (
                   <div
                     key={key}
@@ -139,11 +137,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
                     style={{ cursor: 'pointer' }}
                   >
                     <span className="legend-shape-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {isPng ? (
-                        <img src={emoji} style={{ width: '16px', height: '16px', objectFit: 'contain' }} alt={label} />
-                      ) : (
-                        <span style={{ fontSize: '14px', lineHeight: 1 }}>{emoji}</span>
-                      )}
+                      {renderDisasterIcon(key, undefined, { width: '16px', height: '16px' })}
                     </span>
                     <span>{label}</span>
                     <span className={`legend-ios-toggle ${mapLayers[key] ? 'on' : 'off'}`}>
