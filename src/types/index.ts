@@ -74,6 +74,8 @@ export interface DisasterAlert {
   pentagonCoords?: [number, number][]; // 5 vertices of INA-SIAM dispersion pentagon
   closedAirports?: ClosedAirportInfo[]; // Closed airports from web-aviation.bmkg.go.id
   affectedSeaports?: AffectedSeaportInfo[]; // Impacted regional seaports / docks
+  hotspotCount?: number; // Hotspot count for karhutla
+  satellites?: string[]; // Detecting satellites for karhutla
   sourceUrl?: string; // Reference link e.g. inasiam.bmkg.go.id
 }
 

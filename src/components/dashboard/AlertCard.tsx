@@ -121,8 +121,31 @@ function renderMetrics(alert: DisasterAlert) {
         </div>
       );
 
-    case 'volcanic':
     case 'karhutla':
+      return (
+        <div className="alertcard-metrics">
+          <div className="metric-chips">
+            {alert.hotspotCount !== undefined && (
+              <span className="metric-chip" style={{ background: '#ffedd5', color: '#c2410c', fontWeight: 700 }}>
+                🔥 {alert.hotspotCount} Titik Panas
+              </span>
+            )}
+            <span className="metric-chip" style={{ background: '#fee2e2', color: '#991b1b', fontWeight: 600 }}>
+              Sangat Tinggi
+            </span>
+            {alert.satellites && alert.satellites.length > 0 && (
+              <span className="metric-chip" style={{ background: '#f1f5f9', color: '#475569', fontSize: '10px' }}>
+                🛰️ {alert.satellites.join(', ')}
+              </span>
+            )}
+            {affectedArea && (
+              <span className="metric-chip metric-chip-area">{affectedArea}</span>
+            )}
+          </div>
+        </div>
+      );
+
+    case 'volcanic':
     case 'landslide':
     case 'tsunami':
     case 'kekeringan':

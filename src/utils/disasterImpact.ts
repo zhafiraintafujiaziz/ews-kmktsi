@@ -21,7 +21,7 @@ export function getAlertImpactRadiusKm(alert: DisasterAlert): number {
     case 'extreme_weather':
       return 60;
     case 'karhutla':
-      return 10;
+      return 25; // Radius 25 km untuk zona dampak asap pekat & paparan langsung terhadap KPw BI
     case 'kekeringan':
       return 40;
     default:

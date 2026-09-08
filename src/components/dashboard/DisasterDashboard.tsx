@@ -3,6 +3,7 @@ import { useAlerts } from '../../hooks/useAlerts';
 import { useDisasterAlert } from '../../hooks/useDisasterAlert';
 import type { AlertSeverity, DisasterType } from '../../types';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
+import { haversineDistance } from '../../utils/geo';
 import TopBar from './TopBar';
 import Sidebar from './Sidebar';
 import EwsMap from './EwsMap';
@@ -65,10 +66,27 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
     unseen.slice(0, 4).forEach((calc, i) => {
       const alert = alerts.find((a) => a.id === calc.event.id);
       if (!alert) return;
+
+      const nearestLoc = calc.affectedLocations[0];
+      let nearestKpwName: string | undefined;
+      let nearestKpwDistanceKm: number | undefined;
+
+      if (nearestLoc && alert.latitude != null && alert.longitude != null) {
+        nearestKpwName = nearestLoc.name;
+        nearestKpwDistanceKm = Math.round(
+          haversineDistance(alert.latitude, alert.longitude, nearestLoc.latitude, nearestLoc.longitude)
+        );
+      }
+
       setTimeout(() => {
         setToasts((prev) => [
           ...prev,
-          { toastId: `${alert.id}-${Date.now()}`, alert },
+          {
+            toastId: `${alert.id}-${Date.now()}`,
+            alert,
+            nearestKpwName,
+            nearestKpwDistanceKm,
+          },
         ]);
       }, i * 350);
     });

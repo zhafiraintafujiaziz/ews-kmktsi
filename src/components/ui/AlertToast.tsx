@@ -7,6 +7,8 @@ import './AlertToast.css';
 export interface ToastItem {
   toastId: string;
   alert: DisasterAlert;
+  nearestKpwName?: string;
+  nearestKpwDistanceKm?: number;
 }
 
 interface AlertToastProps {
@@ -27,10 +29,11 @@ function timeAgo(iso: string): string {
 const TYPE_LABEL: Record<string, string> = {
   earthquake:    'Gempa Bumi',
   extreme_weather: 'Cuaca Ekstrem',
-  karhutla:      'Kebakaran Hutan',
+  karhutla:      'Kebakaran Hutan (Karhutla)',
   flood:         'Banjir',
   tsunami:       'Tsunami',
   volcanic:      'Gunung Api',
+  volcanic_ash:  'Abu Vulkanik',
   kekeringan:    'Kekeringan',
   landslide:     'Tanah Longsor',
 };
@@ -54,6 +57,10 @@ function SingleToast({ item, onDismiss }: { item: ToastItem; onDismiss: () => vo
     province?.name,
     alert.magnitude ? `M${alert.magnitude}` : null,
     alert.depth ? `kedalaman ${alert.depth} km` : null,
+    alert.hotspotCount ? `${alert.hotspotCount} Titik Panas (Sangat Tinggi)` : null,
+    item.nearestKpwName && item.nearestKpwDistanceKm !== undefined
+      ? `📍 ±${item.nearestKpwDistanceKm} km dari ${item.nearestKpwName}`
+      : null,
   ].filter(Boolean).join(' • ');
 
   return (
