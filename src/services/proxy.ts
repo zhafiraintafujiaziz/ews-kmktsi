@@ -34,6 +34,10 @@ async function fetchViaApiProxy(url: string): Promise<Response | null> {
   try {
     const res = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
     if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/html') && (url.includes('.json') || url.includes('/api/'))) {
+      return null;
+    }
     return res;
   } catch {
     return null;

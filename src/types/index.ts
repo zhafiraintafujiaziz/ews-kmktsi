@@ -95,9 +95,13 @@ export interface DisasterAlert {
   hotspotCount?: number; // Hotspot count for karhutla
   satellites?: string[]; // Detecting satellites for karhutla
   sourceUrl?: string; // Reference link e.g. inasiam.bmkg.go.id
+  ispuValue?: number; // ISPU score (KemenLH)
+  ispuCategory?: IspuCategory; // Kategori resmi ISPU
+  ispuParam?: string; // Polutan kritis e.g. PM2.5, PM10
+  stationName?: string; // Nama stasiun pemantau SPKU
 }
 
-export type VolcanoLevel = 'III' | 'II' | 'I';
+export type VolcanoLevel = 'IV' | 'III' | 'II' | 'I';
 
 export interface VolcanoSeismicity {
   count: number;

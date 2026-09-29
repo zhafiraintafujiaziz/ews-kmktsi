@@ -55,7 +55,7 @@ const NearestKpwPanel: React.FC<NearestKpwPanelProps> = ({
               <div className="nearest-kpw-details">
                 <div className="nearest-kpw-name">{office.name}</div>
                 <div className="nearest-kpw-meta">
-                  {office.city} {office.isKantorPusat ? '🏛️ KP' : office.isKorwil ? '★ Korwil' : ''}
+                  {office.city} {office.isKantorPusat ? '🏛️ KP' : office.category === 'dc' ? '🏛️ DC' : office.isKorwil ? '★ Korwil' : ''}
                 </div>
               </div>
               <div className="nearest-kpw-distance">{distanceKm.toFixed(0)} km</div>

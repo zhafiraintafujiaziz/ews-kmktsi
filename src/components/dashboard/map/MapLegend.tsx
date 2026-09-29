@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { DisasterAlert, AlertSeverity } from '../../../types';
-import { renderDisasterIcon } from '../../../utils/alertUtils';
+import { renderDisasterIcon, getDisasterTypeStatus } from '../../../utils/alertUtils';
 
 interface MapLegendProps {
   isInariskFilter: boolean;
@@ -13,9 +13,11 @@ interface MapLegendProps {
     karhutla: boolean;
     volcanic: boolean;
     volcanic_ash?: boolean;
+    air_quality?: boolean;
   };
-  onToggleLayer: (layerKey: 'critical' | 'warning' | 'watch' | 'earthquake' | 'extreme_weather' | 'karhutla' | 'volcanic' | 'volcanic_ash') => void;
+  onToggleLayer: (layerKey: 'critical' | 'warning' | 'watch' | 'earthquake' | 'extreme_weather' | 'karhutla' | 'volcanic' | 'volcanic_ash' | 'air_quality') => void;
   selectedAlert?: DisasterAlert | null;
+  allAlerts?: DisasterAlert[];
 }
 
 const SEV_CONFIG: Array<{ key: 'critical' | 'warning' | 'watch'; num: AlertSeverity; label: string; color: string }> = [
@@ -24,12 +26,13 @@ const SEV_CONFIG: Array<{ key: 'critical' | 'warning' | 'watch'; num: AlertSever
   { key: 'watch',    num: 1, label: 'Keparahan Rendah', color: 'var(--alert-watch)' },
 ];
 
-const DISASTER_TYPES_CONFIG: Array<{ key: 'earthquake' | 'extreme_weather' | 'karhutla' | 'volcanic' | 'volcanic_ash'; label: string }> = [
+const DISASTER_TYPES_CONFIG: Array<{ key: 'earthquake' | 'extreme_weather' | 'karhutla' | 'volcanic' | 'volcanic_ash' | 'air_quality'; label: string }> = [
   { key: 'earthquake', label: 'Gempa Bumi' },
   { key: 'extreme_weather', label: 'Cuaca Ekstrem' },
   { key: 'karhutla', label: 'Kebakaran Hutan' },
   { key: 'volcanic', label: 'Gunung Api' },
   { key: 'volcanic_ash', label: 'Abu Vulkanik' },
+  { key: 'air_quality', label: 'Kualitas Udara' },
 ];
 
 const MapLegend: React.FC<MapLegendProps> = ({
@@ -37,6 +40,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
   mapLayers,
   onToggleLayer,
   selectedAlert,
+  allAlerts = [],
 }) => {
   const [isExpanded, setIsExpanded] = useState(() => window.innerWidth > 768);
 
@@ -128,18 +132,33 @@ const MapLegend: React.FC<MapLegendProps> = ({
                 Tipe Bencana
               </div>
               {DISASTER_TYPES_CONFIG.map(({ key, label }) => {
+                const status = getDisasterTypeStatus(key, allAlerts);
                 return (
                   <div
                     key={key}
                     className={`legend-item ${!mapLayers[key] ? 'disabled' : ''}`}
                     onClick={() => onToggleLayer(key)}
-                    title={`Toggle ${label}`}
+                    title={`Toggle ${label} • Status: ${status.label}`}
                     style={{ cursor: 'pointer' }}
                   >
                     <span className="legend-shape-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {renderDisasterIcon(key, undefined, { width: '16px', height: '16px' })}
                     </span>
-                    <span>{label}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+                      {label}
+                      <span
+                        style={{
+                          width: '7px',
+                          height: '7px',
+                          borderRadius: '50%',
+                          backgroundColor: status.color,
+                          display: 'inline-block',
+                          boxShadow: status.color === '#ef4444' ? '0 0 5px #ef4444' : '0 0 2px rgba(0,0,0,0.3)',
+                          flexShrink: 0,
+                        }}
+                        title={`Status ${label}: ${status.label}`}
+                      />
+                    </span>
                     <span className={`legend-ios-toggle ${mapLayers[key] ? 'on' : 'off'}`}>
                       <span className="legend-ios-thumb" />
                     </span>
@@ -194,7 +213,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
               <div className="legend-item legend-item--shape">
                 <span className="legend-shape-icon">
                   <svg viewBox="0 0 24 24" width="14" height="14">
-                    <polygon points="12,2 23,22 1,22" fill="var(--accent-primary)" stroke="white" strokeWidth="1.5" />
+                    <path fill="#10b981" d="M12,2L1,7v2h22V7L12,2z M4,9v11h3V9H4z M10,9v11h4V9h-4z M17,9v11h3V9h-3z M2,20v2h20v-2H2z"/>
                   </svg>
                 </span>
                 <span>Data Center (Sinergi)</span>

@@ -4,6 +4,7 @@ import { fetchLatestEarthquakes, fetchExtremeWeather, fetchThreeDayForecast, fet
 import { MagmaService } from '../services/magmaService';
 import { SipongiService } from '../services/sipongiService';
 import { InaSiamService } from '../services/inaSiamService';
+import { IspuService } from '../services/ispuService';
 
 // InaRisk / BNPB data is shown in the Kerentanan screen, not as live alerts.
 // This hook only aggregates real-time BMKG alert streams.
@@ -185,7 +186,7 @@ const fetchAllSources = async () => {
     }
   }
 
-  cachedLoadingSources = ['Gempa BMKG', 'Cuaca Ekstrem BMKG', 'Peringatan Dini Cuaca BMKG', 'Prakiraan 3 Hari BMKG', 'Curah Hujan Tinggi BMKG', 'Live Gunung Api Magma', 'Sipongi Karhutla', 'Abu Vulkanik INA-SIAM'];
+  cachedLoadingSources = ['Gempa BMKG', 'Cuaca Ekstrem BMKG', 'Peringatan Dini Cuaca BMKG', 'Prakiraan 3 Hari BMKG', 'Curah Hujan Tinggi BMKG', 'Live Gunung Api Magma', 'Sipongi Karhutla', 'Abu Vulkanik INA-SIAM', 'ISPU Kualitas Udara'];
   notifyListeners();
 
   const apis = [
@@ -196,7 +197,8 @@ const fetchAllSources = async () => {
     { call: fetchHighRainfallWarning, name: 'Curah Hujan Tinggi BMKG' },
     { call: () => MagmaService.fetchLiveAlerts(false), name: 'Live Gunung Api Magma' },
     { call: () => SipongiService.fetchKarhutlaAlerts(true), name: 'Sipongi Karhutla' },
-    { call: () => InaSiamService.fetchLiveAlerts(), name: 'Abu Vulkanik INA-SIAM' }
+    { call: () => InaSiamService.fetchLiveAlerts(), name: 'Abu Vulkanik INA-SIAM' },
+    { call: () => IspuService.fetchAirQualityAlerts(), name: 'ISPU Kualitas Udara' }
   ];
 
   let pending = apis.length;

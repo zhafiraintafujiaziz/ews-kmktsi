@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { DisasterAlert, DisasterType, RiskCalcResult } from '../../types';
 import { severityToCssClass } from '../../types';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
-import { renderDisasterIcon } from '../../utils/alertUtils';
+import { renderDisasterIcon, getDisasterTypeStatus } from '../../utils/alertUtils';
 import { Public as PublicIcon } from '@mui/icons-material';
 import { useAlerts } from '../../hooks/useAlerts';
 import { isOfficeAffectedByAlert } from '../../utils/disasterImpact';
@@ -37,6 +37,7 @@ const FILTER_OPTIONS: Array<{ value: DisasterType | 'all'; label: string }> = [
   { value: 'karhutla', label: 'Karhutla' },
   { value: 'volcanic', label: 'Gunung Api' },
   { value: 'volcanic_ash', label: 'Abu Vulkanik' },
+  { value: 'air_quality', label: 'Kualitas Udara' },
 ];
 
 function formatRelativeTime(timestamp: string): string {
@@ -124,6 +125,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     })[0];
   }, [allAlerts]);
+
 
   useEffect(() => {
     const isToastDisabled = localStorage.getItem('bima_toast_disabled') === 'true';
@@ -519,22 +521,39 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
 
       <div className="topbar-center">
         <div className="topbar-filter-group">
-          {FILTER_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              className={`topbar-filter-pill${selectedType === opt.value ? ' active' : ''}`}
-              onClick={() => onTypeChange(opt.value)}
-            >
-              <span>
-                {opt.value === 'all' ? (
-                  <PublicIcon style={{ width: '14px', height: '14px', display: 'inline-block', verticalAlign: 'middle' }} />
-                ) : (
-                  renderDisasterIcon(opt.value, undefined, { width: '14px', height: '14px' })
-                )}
-              </span>
-              <span>{opt.label}</span>
-            </button>
-          ))}
+          {FILTER_OPTIONS.map((opt) => {
+            const status = getDisasterTypeStatus(opt.value, allAlerts);
+            return (
+              <button
+                key={opt.value}
+                className={`topbar-filter-pill${selectedType === opt.value ? ' active' : ''}`}
+                onClick={() => onTypeChange(opt.value)}
+                title={`Filter: ${opt.label} • Status: ${status.label}`}
+              >
+                <span>
+                  {opt.value === 'all' ? (
+                    <PublicIcon style={{ width: '14px', height: '14px', display: 'inline-block', verticalAlign: 'middle' }} />
+                  ) : (
+                    renderDisasterIcon(opt.value, undefined, { width: '14px', height: '14px' })
+                  )}
+                </span>
+                <span>{opt.label}</span>
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: status.color,
+                    display: 'inline-block',
+                    marginLeft: '4px',
+                    boxShadow: status.color === '#ef4444' ? '0 0 6px #ef4444' : '0 0 3px rgba(0,0,0,0.3)',
+                    flexShrink: 0,
+                  }}
+                  title={`Status ${opt.label}: ${status.label}`}
+                />
+              </button>
+            );
+          })}
         </div>
         <div className="topbar-divider-v" />
         <button className="topbar-nav-btn" onClick={onSwitchToKerentanan}>

@@ -1,8 +1,9 @@
 import React from 'react';
-import type { DisasterType } from '../types';
+import type { DisasterType, DisasterAlert } from '../types';
 import earthquakeIcon from '../assets/earthquake.png';
 import floodIcon from '../assets/flood.png';
 import droughtIcon from '../assets/drought.png';
+import { IspuService } from '../services/ispuService';
 
 export const VolcanoWithCloudIcon: React.FC<{ size?: string | number; className?: string; style?: React.CSSProperties }> = ({
   size = '20px',
@@ -48,7 +49,7 @@ export const VolcanoWithCloudIcon: React.FC<{ size?: string | number; className?
   </svg>
 );
 
-export const AirQualityIcon: React.FC<{ size?: string | number; className?: string; style?: React.CSSProperties }> = ({
+export const AirQualityTriangleIcon: React.FC<{ size?: string | number; className?: string; style?: React.CSSProperties }> = ({
   size = '20px',
   className,
   style,
@@ -62,33 +63,34 @@ export const AirQualityIcon: React.FC<{ size?: string | number; className?: stri
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
-    {/* Wind flow & aerosol particles */}
+    {/* Triangle alert contour */}
     <path
-      d="M3 8H15C16.6569 8 18 6.65685 18 5C18 3.34315 16.6569 2 15 2C13.3431 2 12 3.34315 12 5"
+      d="M10.29 3.86L1.82 18A2 2 0 003.53 21H20.47A2 2 0 0022.18 18L13.71 3.86A2 2 0 0010.29 3.86Z"
+      fill="rgba(234, 179, 8, 0.18)"
+      stroke="#eab308"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Air quality particulate gust */}
+    <path
+      d="M8.5 13H15C16.1 13 17 12.1 17 11C17 9.9 16.1 9 15 9C13.9 9 13 9.9 13 11"
       stroke="#0284c7"
-      strokeWidth="2"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
     <path
-      d="M2 13H18.5C20.433 13 22 14.567 22 16.5C22 18.433 20.433 20 18.5 20C16.567 20 15 18.433 15 16.5"
+      d="M7.5 16.5H14.5"
       stroke="#0ea5e9"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M4 18H11C12.1046 18 13 17.1046 13 16"
-      stroke="#38bdf8"
-      strokeWidth="2"
+      strokeWidth="1.5"
       strokeLinecap="round"
     />
-    {/* Particulate Matter dots */}
-    <circle cx="20.5" cy="7.5" r="1.5" fill="#f59e0b" />
-    <circle cx="5.5" cy="4.5" r="1.2" fill="#ef4444" />
-    <circle cx="12.5" cy="11.5" r="1.2" fill="#64748b" />
+    <circle cx="16.5" cy="15.5" r="1.2" fill="#ef4444" />
   </svg>
 );
+
+export const AirQualityIcon = AirQualityTriangleIcon;
 
 export function getDisasterIconValue(type: DisasterType | string): string {
   switch (type) {
@@ -127,7 +129,7 @@ export function getDisasterIconValue(type: DisasterType | string): string {
 export function getDisasterEmoji(type: DisasterType | string): string {
   const val = getDisasterIconValue(type);
   if (val === 'volcano_cloud') return '🌋';
-  if (val === 'air_quality_icon') return '🌫️';
+  if (val === 'air_quality_icon') return '🔺';
   return val;
 }
 
@@ -203,7 +205,8 @@ export function getDisasterIconHtml(type: DisasterType | string, _customColor?: 
     return `<svg viewBox="0 0 32 32" width="20" height="20" style="display:inline-block;vertical-align:middle;" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 2.5C13.6 2.5 11.7 4.2 11.4 6.5C9.7 6.8 8.5 8.3 8.5 10.1C8.5 12.2 10.2 13.8 12.3 13.8H20.7C22.8 13.8 24.5 12.2 24.5 10.1C24.5 8.4 23.3 7 21.6 6.6C21.3 4.3 19.4 2.5 16 2.5Z" fill="#475569"/><circle cx="16" cy="6.5" r="1.2" fill="#f97316"/><path d="M6.5 27.5L12 14.5H19L24.5 27.5H7.4L6.5 27.5Z" fill="#dc2626"/><path d="M12 14.5H19L18 16H13L12 14.5Z" fill="#ea580c"/></svg>`;
   }
   if (icon === 'air_quality_icon') {
-    return `<svg viewBox="0 0 24 24" width="20" height="20" style="display:inline-block;vertical-align:middle;" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 8H15C16.6569 8 18 6.65685 18 5C18 3.34315 16.6569 2 15 2C13.3431 2 12 3.34315 12 5" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13H18.5C20.433 13 22 14.567 22 16.5C22 18.433 20.433 20 18.5 20C16.567 20 15 18.433 15 16.5" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20.5" cy="7.5" r="1.5" fill="#f59e0b"/></svg>`;
+    const strokeColor = _customColor || '#eab308';
+    return `<svg viewBox="0 0 24 24" width="22" height="22" style="display:inline-block;vertical-align:middle;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3));" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18A2 2 0 003.53 21H20.47A2 2 0 0022.18 18L13.71 3.86A2 2 0 0010.29 3.86Z" fill="${strokeColor}33" stroke="${strokeColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 13H15C16.1 13 17 12.1 17 11C17 9.9 16.1 9 15 9" stroke="${strokeColor}" stroke-width="1.6" stroke-linecap="round"/><circle cx="16.5" cy="15.5" r="1.3" fill="${strokeColor}"/></svg>`;
   }
   if (icon.endsWith('.png') || icon.startsWith('data:') || icon.startsWith('/') || icon.startsWith('static/') || icon.startsWith('src/')) {
     return `<img src="${icon}" style="width: 20px; height: 20px; display: inline-block; vertical-align: middle; object-fit: contain;" alt="${type}" />`;
@@ -250,6 +253,41 @@ export function renderDisasterIcon(
     ...style
   };
   return <span className={className} style={mergedStyle}>{icon}</span>;
+}
+
+export function getDisasterTypeStatus(
+  type: DisasterType | 'all' | string,
+  alerts: DisasterAlert[] = []
+): { color: string; label: string; count: number } {
+  if (type === 'all') {
+    if (!alerts || alerts.length === 0) {
+      return { color: '#10b981', label: 'Normal / Aman (0 Peringatan)', count: 0 };
+    }
+    const maxSev = Math.max(...alerts.map((a) => a.severity || 1));
+    if (maxSev === 3) return { color: '#ef4444', label: `Tinggi / Kritis (${alerts.length} Peringatan)`, count: alerts.length };
+    if (maxSev === 2) return { color: '#f59e0b', label: `Sedang / Waspada (${alerts.length} Peringatan)`, count: alerts.length };
+    return { color: '#0284c7', label: `Rendah / Informasi (${alerts.length} Peringatan)`, count: alerts.length };
+  }
+
+  if (type === 'air_quality' || type === 'kualitas_udara') {
+    const ispuAlerts = alerts.filter((a) => a.type === 'air_quality');
+    if (ispuAlerts.length === 0) {
+      return { color: '#10b981', label: 'Baik / Normal', count: 0 };
+    }
+    const worst = ispuAlerts.reduce((prev, curr) => ((curr.ispuValue || 0) > (prev.ispuValue || 0) ? curr : prev), ispuAlerts[0]);
+    const cat = worst.ispuCategory || 'BAIK';
+    const color = IspuService.getCategoryColor(cat);
+    return { color, label: `${cat} (ISPU ${worst.ispuValue || '-'})`, count: ispuAlerts.length };
+  }
+
+  const typeAlerts = alerts.filter((a) => a.type === type);
+  if (typeAlerts.length === 0) {
+    return { color: '#10b981', label: 'Normal (0 Peringatan)', count: 0 };
+  }
+  const maxSev = Math.max(...typeAlerts.map((a) => a.severity || 1));
+  if (maxSev === 3) return { color: '#ef4444', label: `Tinggi / Kritis (${typeAlerts.length} Aktif)`, count: typeAlerts.length };
+  if (maxSev === 2) return { color: '#f59e0b', label: `Sedang / Waspada (${typeAlerts.length} Aktif)`, count: typeAlerts.length };
+  return { color: '#0284c7', label: `Rendah / Informasi (${typeAlerts.length} Aktif)`, count: typeAlerts.length };
 }
 
 

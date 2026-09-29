@@ -21,6 +21,7 @@ const TYPE_LABELS: Record<string, string> = {
   extreme_weather: 'Cuaca Ekstrem',
   karhutla:        'Karhutla',
   kekeringan:      'Kekeringan',
+  air_quality:     'Kualitas Udara (ISPU)',
 };
 
 function renderMetrics(alert: DisasterAlert) {
@@ -144,6 +145,74 @@ function renderMetrics(alert: DisasterAlert) {
           </div>
         </div>
       );
+
+    case 'air_quality': {
+      const ispuVal = alert.ispuValue || 0;
+      const ispuCat = alert.ispuCategory || 'BAIK';
+      let dotColor = '#10b981'; // Baik (Hijau)
+      let catBg = 'rgba(16, 185, 129, 0.15)';
+      let catColor = '#059669';
+
+      if (ispuCat === 'BERBAHAYA' || ispuVal > 300) {
+        dotColor = '#0f172a';
+        catBg = '#0f172a';
+        catColor = '#ffffff';
+      } else if (ispuCat === 'SANGAT TIDAK SEHAT' || ispuVal > 200) {
+        dotColor = '#ef4444';
+        catBg = '#fee2e2';
+        catColor = '#dc2626';
+      } else if (ispuCat === 'TIDAK SEHAT' || ispuVal > 100) {
+        dotColor = '#eab308';
+        catBg = '#fef9c3';
+        catColor = '#b45309';
+      } else if (ispuCat === 'SEDANG' || ispuVal > 50) {
+        dotColor = '#0284c7';
+        catBg = '#e0f2fe';
+        catColor = '#0369a1';
+      }
+
+      return (
+        <div className="alertcard-metrics">
+          <div className="metric-chips">
+            <span
+              className="metric-chip"
+              style={{
+                background: catBg,
+                color: catColor,
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <span
+                style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  backgroundColor: dotColor,
+                  display: 'inline-block',
+                }}
+              />
+              {ispuCat} • ISPU {ispuVal}
+            </span>
+            {alert.ispuParam && (
+              <span className="metric-chip" style={{ background: '#f1f5f9', color: '#475569', fontWeight: 600 }}>
+                Polutan: {alert.ispuParam}
+              </span>
+            )}
+            {alert.stationName && (
+              <span className="metric-chip" style={{ background: '#f8fafc', color: '#64748b' }}>
+                SPKU: {alert.stationName}
+              </span>
+            )}
+            {affectedArea && (
+              <span className="metric-chip metric-chip-area">{affectedArea}</span>
+            )}
+          </div>
+        </div>
+      );
+    }
 
     case 'volcanic':
     case 'landslide':

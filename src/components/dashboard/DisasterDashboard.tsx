@@ -40,11 +40,9 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const shownAlertIds = useRef<Set<string>>(new Set());
 
-  // Today's date data ONLY — alerts older than today (00:00:00 local time) are excluded
+  // Active alert window (last 7 days) so ongoing alerts don't vanish across days
   const minTimestamp = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
+    return Date.now() - 7 * 24 * 3600 * 1000;
   }, []);
 
   const todayActiveAlerts = useMemo(() => {
@@ -102,7 +100,8 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
       if (new Date(a.timestamp).getTime() < minTimestamp) return false;
       if (typeFilter !== 'all' && a.type !== typeFilter) return false;
       const riskRes = riskResults.find((r) => r.event.id === a.id);
-      return riskRes && riskRes.riskLevel === 'Tinggi';
+      if (riskRes) return riskRes.riskLevel === 'Tinggi';
+      return a.severity === 3;
     });
   }, [alerts, riskResults, typeFilter, minTimestamp]);
 
@@ -112,11 +111,13 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
       if (new Date(a.timestamp).getTime() < minTimestamp) return false;
 
       const riskRes = riskResults.find((r) => r.event.id === a.id);
-      if (!riskRes) return false;
+      const effectiveRiskLevel = riskRes 
+        ? riskRes.riskLevel 
+        : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
 
       if (severityFilter !== 'all') {
         const mappedRiskLevel = { 3: 'Tinggi', 2: 'Sedang', 1: 'Rendah' }[severityFilter];
-        if (riskRes.riskLevel !== mappedRiskLevel) return false;
+        if (effectiveRiskLevel !== mappedRiskLevel) return false;
       }
 
       if (typeFilter !== 'all' && a.type !== typeFilter) return false;
@@ -133,12 +134,14 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
       if (typeFilter !== 'all' && a.type !== typeFilter) return;
 
       const riskRes = riskResults.find((r) => r.event.id === a.id);
-      if (riskRes) {
-        if (riskRes.riskLevel === 'Tinggi') stats[3]++;
-        else if (riskRes.riskLevel === 'Sedang') stats[2]++;
-        else if (riskRes.riskLevel === 'Rendah') stats[1]++;
-        stats.total++;
-      }
+      const effectiveRiskLevel = riskRes 
+        ? riskRes.riskLevel 
+        : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
+
+      if (effectiveRiskLevel === 'Tinggi') stats[3]++;
+      else if (effectiveRiskLevel === 'Sedang') stats[2]++;
+      else if (effectiveRiskLevel === 'Rendah') stats[1]++;
+      stats.total++;
     });
 
     if (severityFilter !== 'all') {
@@ -177,7 +180,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
         criticalCount={filteredStats[3]}
         totalAlerts={filteredAlerts.length}
         criticalAlerts={calculatedCriticalAlerts}
-        allAlerts={filteredAlerts}
+        allAlerts={alerts}
         riskResults={riskResults}
         onAlertSelect={handleAlertSelect}
         onGenerateReport={() => setIsReportOpen(true)}
@@ -210,7 +213,8 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
         <MobileSplitter />
 
         <EwsMap
-          alerts={filteredAlerts}
+          alerts={typeFilter === 'all' ? alerts : alerts.filter((a) => a.type === typeFilter)}
+          allAlerts={alerts}
           riskResults={riskResults}
           selectedProvinceId={selectedProvinceId}
           selectedOfficeId={selectedOfficeId}

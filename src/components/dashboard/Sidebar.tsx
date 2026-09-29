@@ -414,6 +414,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               <option value="karhutla">Karhutla</option>
                               <option value="volcanic">Gunung Api</option>
                               <option value="volcanic_ash">Abu Vulkanik (INA-SIAM)</option>
+                              <option value="air_quality">Kualitas Udara (ISPU)</option>
                             </select>
                           </div>
                           <div className="filter-group">

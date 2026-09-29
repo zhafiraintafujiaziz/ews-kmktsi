@@ -24,6 +24,8 @@ export function getAlertImpactRadiusKm(alert: DisasterAlert): number {
       return 25; // Radius 25 km untuk zona dampak asap pekat & paparan langsung terhadap KPw BI
     case 'kekeringan':
       return 40;
+    case 'air_quality':
+      return 35; // Radius zona pemantauan dampak kualitas udara SPKU
     default:
       return 20;
   }

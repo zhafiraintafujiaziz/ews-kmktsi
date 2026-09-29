@@ -153,6 +153,20 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
               >
                 <span>{renderDisasterIcon(tab.key)}</span>
                 <span>{tab.label}</span>
+                {tab.key === 'air_quality' && (
+                  <span
+                    style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      backgroundColor: '#ef4444',
+                      display: 'inline-block',
+                      marginLeft: '3px',
+                      boxShadow: '0 0 3px rgba(0,0,0,0.3)',
+                    }}
+                    title="Indikator Kualitas Udara ISPU"
+                  />
+                )}
               </button>
             ))}
           </div>
@@ -170,12 +184,36 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
           </div>
 
           {selectedHazard === 'air_quality' && (
-            <div className="kerentanan-ispu-banner">
-              <span>🍃 Sumber: SPKU Kementerian Lingkungan Hidup (KLHK)</span>
-              <a href="https://ispu.kemenlh.go.id/webv5/#/" target="_blank" rel="noopener noreferrer">
-                ispu.kemenlh.go.id ↗
-              </a>
-            </div>
+            <>
+              <div className="kerentanan-ispu-banner">
+                <span>🍃 Sumber: SPKU Kementerian Lingkungan Hidup (KLHK)</span>
+                <a href="https://ispu.kemenlh.go.id/webv5/#/" target="_blank" rel="noopener noreferrer">
+                  ispu.kemenlh.go.id ↗
+                </a>
+              </div>
+              <div className="kerentanan-ispu-legend">
+                <span className="ispu-legend-item">
+                  <span className="ispu-legend-dot" style={{ backgroundColor: '#10b981' }} />
+                  Baik (0-50)
+                </span>
+                <span className="ispu-legend-item">
+                  <span className="ispu-legend-dot" style={{ backgroundColor: '#0284c7' }} />
+                  Sedang (51-100)
+                </span>
+                <span className="ispu-legend-item">
+                  <span className="ispu-legend-dot" style={{ backgroundColor: '#eab308' }} />
+                  Tidak Sehat (101-200)
+                </span>
+                <span className="ispu-legend-item">
+                  <span className="ispu-legend-dot" style={{ backgroundColor: '#ef4444' }} />
+                  Sangat Tidak Sehat (201-300)
+                </span>
+                <span className="ispu-legend-item">
+                  <span className="ispu-legend-dot" style={{ backgroundColor: '#0f172a', border: '1px solid #64748b' }} />
+                  Berbahaya (&gt;300)
+                </span>
+              </div>
+            </>
           )}
 
           <div className="kerentanan-panel-scroll">
@@ -226,7 +264,25 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
                       </div>
                     </div>
                     <div className="kerentanan-row-right">
-                      <span className={`kerentanan-risk-badge ${badgeCls}`}>{badgeLabel}</span>
+                      <span
+                        className={`kerentanan-risk-badge ${badgeCls}`}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                      >
+                        {selectedHazard === 'air_quality' && ispuAssessment && (
+                          <span
+                            style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: IspuService.getCategoryColor(ispuAssessment.category),
+                              display: 'inline-block',
+                              flexShrink: 0,
+                              border: ispuAssessment.category === 'BERBAHAYA' ? '1px solid #94a3b8' : 'none'
+                            }}
+                          />
+                        )}
+                        {badgeLabel}
+                      </span>
                       <span className="kerentanan-score-value">
                         {selectedHazard === 'air_quality' ? `ISPU ${displayVal}` : displayVal}
                       </span>

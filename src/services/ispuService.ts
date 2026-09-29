@@ -1,7 +1,8 @@
-import type { IspuStationInfo, IspuCategory } from '../types';
+import type { DisasterAlert, AlertSeverity, IspuStationInfo, IspuCategory } from '../types';
 import { ISPU_STATIONS_SNAPSHOT } from '../constants/ispuData';
 import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
 import { haversineDistance } from '../utils/geo';
+import { mapTextToProvinceId } from '../utils/provinceMap';
 import { fetchWithCorsProxy } from './proxy';
 
 const ISPU_API_URL = 'https://ispu.kemenlh.go.id/apimobile/v1/getStations';
@@ -259,5 +260,95 @@ export class IspuService {
           bg: 'rgba(16, 185, 129, 0.15)',
         };
     }
+  }
+
+  /**
+   * Return the official ISPU dot color for a category (Permen LHK No. 14/2020).
+   */
+  static getCategoryColor(category: IspuCategory | string): string {
+    const cat = (category || '').toUpperCase();
+    if (cat.includes('BERBAHAYA')) return '#0f172a'; // Hitam (Pekat)
+    if (cat.includes('SANGAT TIDAK SEHAT')) return '#ef4444'; // Merah
+    if (cat.includes('TIDAK SEHAT')) return '#eab308'; // Kuning / Amber
+    if (cat.includes('SEDANG')) return '#0284c7'; // Biru
+    return '#10b981'; // Hijau (Baik)
+  }
+
+  /**
+   * Generate DisasterAlert[] from SPKU stations for Dashboard Utama.
+   * Includes stations with elevated/unhealthy air quality (ISPU > 100),
+   * and stations near KPw BI offices (<= 35 km) with notable pollution.
+   */
+  static async fetchAirQualityAlerts(): Promise<DisasterAlert[]> {
+    const stations = await this.fetchIspuStations();
+    const alerts: DisasterAlert[] = [];
+
+    stations.forEach((station) => {
+      // Cari kantor KPw BI terdekat
+      let nearestOffice: typeof KPWBI_OFFICES[0] | null = null;
+      let nearestOfficeDist = Infinity;
+      for (const office of KPWBI_OFFICES) {
+        const d = haversineDistance(station.latitude, station.longitude, office.latitude, office.longitude);
+        if (d < nearestOfficeDist) {
+          nearestOfficeDist = d;
+          nearestOffice = office;
+        }
+      }
+
+      const cat = (station.category || '').toUpperCase();
+      // Filter ketat: HANYA tampilkan level Tidak Sehat, Sangat Tidak Sehat, dan Berbahaya (ISPU > 100)
+      const isCriticalLevel =
+        station.ispuValue > 100 ||
+        cat.includes('TIDAK SEHAT') ||
+        cat.includes('BERBAHAYA');
+
+      if (!isCriticalLevel || cat === 'SEDANG' || cat === 'BAIK') return;
+
+      let severity: AlertSeverity = 2;
+      if (station.ispuValue > 200 || cat.includes('BERBAHAYA') || cat.includes('SANGAT TIDAK SEHAT')) {
+        severity = 3;
+      } else {
+        severity = 2;
+      }
+
+      const distText = nearestOffice ? ` (±${Math.round(nearestOfficeDist)} km dari ${nearestOffice.name})` : '';
+
+      const description = `Indeks Standar Pencemar Udara (ISPU) resmi KemenLH di wilayah berikut:
+• Stasiun SPKU: ${station.nama} (${station.kota}, ${station.provinsi})
+• Nilai ISPU: ${station.ispuValue}
+• Kategori: ${station.category}
+• Parameter Kritis: ${station.dominantParam}
+• Waktu Observasi: ${station.waktuText}
+• Kantor KPw BI Terdekat: ${nearestOffice?.name || '-'}${distText}
+
+Keterangan: ${station.keterangan || 'Kualitas udara dapat merugikan kesehatan. Disarankan menggunakan masker N95 dan membatasi aktivitas fisik di luar gedung.'}
+
+Rekomendasi Operasional KPw BI Terdekat:
+• Batasi aktivitas fisik personel operasional di luar gedung kantor.
+• Gunakan masker respirator partikulat N95 saat berada di area terbuka.
+• Pastikan sistem sirkulasi udara dan filter presisi HVAC Data Center beroperasi optimal.
+
+Sumber Data: Stasiun Pemantau Kualitas Udara (SPKU) KemenLH / KLHK (Permen LHK No. 14/2020)`.trim();
+
+      alerts.push({
+        id: `ispu-alert-${station.idStasiun.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        type: 'air_quality',
+        severity,
+        provinceId: mapTextToProvinceId(station.provinsi),
+        title: `Kualitas Udara ${station.category} (ISPU ${station.ispuValue}) - ${station.kota}`,
+        description,
+        timestamp: new Date().toISOString(),
+        latitude: station.latitude,
+        longitude: station.longitude,
+        affectedArea: `${station.kota} (${station.nama})`,
+        ispuValue: station.ispuValue,
+        ispuCategory: station.category,
+        ispuParam: station.dominantParam,
+        stationName: station.nama,
+        sourceUrl: 'https://ispu.kemenlh.go.id/webv5/#/'
+      });
+    });
+
+    return alerts.sort((a, b) => (b.ispuValue || 0) - (a.ispuValue || 0));
   }
 }

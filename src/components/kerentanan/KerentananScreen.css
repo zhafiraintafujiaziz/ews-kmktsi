@@ -210,6 +210,34 @@
   text-decoration: underline;
 }
 
+.kerentanan-ispu-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+.ispu-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+}
+
+.ispu-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
 .kerentanan-score-value {
   font-size: 15px;
   font-weight: 700;

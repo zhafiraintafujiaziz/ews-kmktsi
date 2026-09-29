@@ -17,7 +17,53 @@
   justify-content: center;
 }
 
-/* DC / DRC triangle marker container */
+/* DC / DRC building marker container (Gedung Sinergi) - Green building icon */
+.bi-dc-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 2px 6px rgba(16, 185, 129, 0.45));
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.bi-dc-container:hover {
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.8));
+  transform: scale(1.15);
+}
+
+.bi-dc-building {
+  color: #10b981; /* Green color (seperti KP tapi berwarna hijau) */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bi-dc-building.selected {
+  transform: scale(1.3);
+  color: #059669;
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.9));
+}
+
+.bi-dc-building.nearest {
+  color: #8b5cf6;
+  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.8));
+}
+
+.bi-dc-building.has-alert.alert-critical {
+  color: var(--alert-critical);
+  animation: pulse-building-critical 2s infinite cubic-bezier(0.4, 0, 0, 1);
+}
+
+.bi-dc-building.has-alert.alert-warning {
+  color: var(--alert-warning);
+  animation: pulse-building-warning 2s infinite cubic-bezier(0.4, 0, 0, 1);
+}
+
+.bi-dc-building.has-alert.alert-watch {
+  color: var(--alert-watch);
+  animation: pulse-building-watch 2s infinite cubic-bezier(0.4, 0, 0, 1);
+}
+
+/* DC / DRC triangle marker container (legacy alias) */
 .bi-triangle-container {
   display: flex;
   align-items: center;

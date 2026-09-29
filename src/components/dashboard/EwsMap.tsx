@@ -17,6 +17,7 @@ import './EwsMap.css';
 
 export interface EwsMapProps {
   alerts: DisasterAlert[];
+  allAlerts?: DisasterAlert[];
   riskResults?: import('../../types').RiskCalcResult[];
   selectedProvinceId: string | null;
   selectedOfficeId?: string | null;
@@ -50,6 +51,7 @@ function getProvincePotensi(provinceId: string, hazard: 'gempa' | 'karhutla' | '
 
 export const EwsMap: React.FC<EwsMapProps> = ({
   alerts,
+  allAlerts,
   riskResults = [],
   selectedProvinceId,
   selectedOfficeId = null,
@@ -79,6 +81,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     karhutla: true,
     volcanic: true,
     volcanic_ash: true,
+    air_quality: true,
   });
 
   const toggleLayer = (layerKey: keyof typeof mapLayers) => {
@@ -276,6 +279,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
       if (alert.type === 'karhutla' && !mapLayers.karhutla) return false;
       if (alert.type === 'volcanic' && !mapLayers.volcanic) return false;
       if (alert.type === 'volcanic_ash' && !mapLayers.volcanic_ash) return false;
+      if (alert.type === 'air_quality' && !mapLayers.air_quality) return false;
 
       return true;
     });
@@ -289,7 +293,8 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     mapLayers.extreme_weather,
     mapLayers.karhutla,
     mapLayers.volcanic,
-    mapLayers.volcanic_ash
+    mapLayers.volcanic_ash,
+    mapLayers.air_quality
   ]);
 
   // Compute province highlights for extreme_weather alerts (province-level impact instead of circle radius)
@@ -419,6 +424,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
         mapLayers={mapLayers}
         onToggleLayer={toggleLayer}
         selectedAlert={selectedAlert}
+        allAlerts={allAlerts || alerts}
       />
     </div>
   );

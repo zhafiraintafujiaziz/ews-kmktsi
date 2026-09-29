@@ -83,8 +83,8 @@ function createMarkerIcon(
 
   if (office.category === 'dc') {
     return L.divIcon({
-      className: 'custom-marker bi-triangle-container',
-      html: `<svg class="bi-triangle ${classString}" viewBox="0 0 24 24" width="24" height="24"><polygon points="12,2 23,22 1,22" fill="currentColor" stroke="white" stroke-width="2"/></svg>`,
+      className: 'custom-marker bi-dc-container',
+      html: `<svg class="bi-dc-building ${classString}" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" stroke="white" stroke-width="1.2" d="M12,2L1,7v2h22V7L12,2z M4,9v11h3V9H4z M10,9v11h4V9h-4z M17,9v11h3V9h-3z M2,20v2h20v-2H2z"/></svg>`,
       iconSize: [24, 24],
       iconAnchor: [12, 12],
     });
@@ -188,7 +188,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                 <strong>{office.city}</strong> — {office.name}
                 {office.isKantorPusat && ' 🏛️ (Kantor Pusat)'}
                 {office.isKorwil && !office.isKantorPusat && ' ★ Korwil'}
-                {office.category === 'dc' && ' ▲ Data Center'}
+                {office.category === 'dc' && ' 🏛️ (Data Center Sinergi)'}
                 {nearestInfo && (
                   <div style={{ marginTop: '4px', fontSize: '11px', color: '#8b5cf6', fontWeight: 600 }}>
                     ↔️ Terdekat ({nearestInfo.distanceKm.toFixed(1)} km)
