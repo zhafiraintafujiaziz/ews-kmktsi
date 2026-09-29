@@ -1,4 +1,22 @@
-export type DisasterType = 'earthquake' | 'flood' | 'volcanic' | 'volcanic_ash' | 'tsunami' | 'landslide' | 'extreme_weather' | 'karhutla' | 'kekeringan';
+export type DisasterType = 'earthquake' | 'flood' | 'volcanic' | 'volcanic_ash' | 'tsunami' | 'landslide' | 'extreme_weather' | 'karhutla' | 'kekeringan' | 'air_quality';
+
+export type IspuCategory = 'BAIK' | 'SEDANG' | 'TIDAK SEHAT' | 'SANGAT TIDAK SEHAT' | 'BERBAHAYA';
+
+export interface IspuStationInfo {
+  idStasiun: string;
+  nama: string;
+  kota: string;
+  provinsi: string;
+  latitude: number;
+  longitude: number;
+  ispuValue: number;
+  category: IspuCategory;
+  dominantParam: string;
+  waktuText: string;
+  keterangan?: string;
+  color?: string;
+  distanceKm?: number;
+}
 
 export type AlertSeverity = 3 | 2 | 1;
 

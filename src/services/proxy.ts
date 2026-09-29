@@ -12,6 +12,8 @@ const ALLOWED_DOMAINS = new Set([
   'gis.bnpb.go.id',
   'opsroom.sipongidata.my.id',
   'opsroom-sipongi.gakkum.kehutanan.go.id',
+  'ispu.kemenlh.go.id',
+  'ispu.menlhk.go.id',
 ]);
 
 const PUBLIC_PROXIES: Array<{ url: string; wrapped: boolean }> = [

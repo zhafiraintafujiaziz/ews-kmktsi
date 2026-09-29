@@ -31,10 +31,10 @@ export interface EwsMapProps {
 }
 
 const INDONESIA_CENTER: [number, number] = [-2.5489, 118.0149];
-const INARISK_TYPES = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash'];
+const INARISK_TYPES = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash', 'air_quality'];
 const POTENSI_TYPES = ['gempa', 'karhutla', 'cuaca', 'pasang'];
 
-function getProvinceRisk(provinceId: string, hazard: 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash'): number {
+function getProvinceRisk(provinceId: string, hazard: 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality'): number {
   return KPWBI_OFFICES.filter((o) => o.provinceId === provinceId).reduce((max, o) => {
     const idx = BnpbInariskService.getLocalHazardIndex(o.id, hazard);
     return idx > max ? idx : max;
@@ -103,7 +103,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     
     let score = 0;
     if (isInariskFilter) {
-      const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic';
+      const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
       score = getProvinceRisk(provinceId, hazard);
     } else {
       const hazard = activeTypeFilter as 'gempa' | 'karhutla' | 'cuaca' | 'pasang';
@@ -131,9 +131,9 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     let hazardTitle = '';
     
     if (isInariskFilter) {
-      const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic';
+      const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
       score = getProvinceRisk(provinceId, hazard);
-      hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api' }[hazard] ?? hazard;
+      hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api', volcanic_ash: 'Abu Vulkanik', air_quality: 'Kualitas Udara' }[hazard] ?? hazard;
     } else if (isPotensiFilter) {
       const hazard = activeTypeFilter as 'gempa' | 'karhutla' | 'cuaca' | 'pasang';
       score = getProvincePotensi(provinceId, hazard);

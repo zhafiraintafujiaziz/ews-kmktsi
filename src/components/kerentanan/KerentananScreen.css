@@ -147,6 +147,7 @@
   transition: width 0.3s ease;
 }
 
+.kerentanan-score-bar.risk-critical { background-color: #0f172a; }
 .kerentanan-score-bar.risk-high   { background-color: var(--alert-critical); }
 .kerentanan-score-bar.risk-medium { background-color: var(--alert-warning); }
 .kerentanan-score-bar.risk-low    { background-color: var(--alert-watch); }
@@ -169,10 +170,45 @@
   border-radius: 4px;
 }
 
+.kerentanan-risk-badge.risk-critical { background-color: #0f172a; color: #f8fafc; border: 1px solid #334155; }
 .kerentanan-risk-badge.risk-high   { background-color: var(--alert-critical-bg);  color: var(--alert-critical); }
 .kerentanan-risk-badge.risk-medium { background-color: var(--alert-warning-bg);   color: var(--alert-warning); }
 .kerentanan-risk-badge.risk-low    { background-color: var(--alert-watch-bg); color: var(--alert-watch); }
 .kerentanan-risk-badge.risk-none   { background-color: var(--bg-primary); color: var(--text-muted); }
+
+.kerentanan-station-info {
+  font-size: 10px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+}
+
+.kerentanan-ispu-banner {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.08) 0%, rgba(14, 165, 233, 0.04) 100%);
+  border-bottom: 1px solid rgba(2, 132, 199, 0.15);
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kerentanan-ispu-banner a {
+  color: #0284c7;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.kerentanan-ispu-banner a:hover {
+  text-decoration: underline;
+}
 
 .kerentanan-score-value {
   font-size: 15px;

@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { PROVINCES } from '../../constants/provinces';
 import { BnpbInariskService } from '../../services/bnpbInariskService';
+import { IspuService, type OfficeIspuAssessment } from '../../services/ispuService';
 import EwsMap from '../dashboard/EwsMap';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import ScreenshotPreviewModal from '../ui/ScreenshotPreviewModal';
@@ -9,7 +10,7 @@ import MobileSplitter from '../ui/MobileSplitter';
 import '../dashboard/TopBar.css';
 import './KerentananScreen.css';
 
-type InariskHazard = 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash';
+type InariskHazard = 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
 
 interface KerentananScreenProps {
   onBack: () => void;
@@ -21,6 +22,7 @@ const HAZARD_TABS: { key: InariskHazard; label: string }[] = [
   { key: 'kekeringan', label: 'Kekeringan' },
   { key: 'volcanic', label: 'Gunung Api' },
   { key: 'volcanic_ash', label: 'Abu Vulkanik' },
+  { key: 'air_quality', label: 'Kualitas Udara' },
 ];
 
 function riskLevel(score: number): { label: string; cls: string } {
@@ -31,21 +33,48 @@ function riskLevel(score: number): { label: string; cls: string } {
   return { label: 'N/A', cls: 'risk-none' };
 }
 
+interface RankedOfficeItem {
+  office: typeof KPWBI_OFFICES[number];
+  score: number;
+  ispuAssessment: OfficeIspuAssessment | null;
+}
+
 const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
   const [selectedHazard, setSelectedHazard] = useState<InariskHazard>('flood');
   const [selectedProvinceId, setSelectedProvinceId] = useState<string | null>(null);
   const [selectedOfficeId, setSelectedOfficeId] = useState<string | null>(null);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [, setIspuUpdateTick] = useState(0);
+
+  useEffect(() => {
+    // Fetch live stations from KemenLH in background
+    IspuService.fetchIspuStations()
+      .then(() => setIspuUpdateTick((t) => t + 1))
+      .catch((e) => console.warn('Could not refresh ISPU data live:', e));
+  }, []);
 
   const provincesMap = useMemo(() => new Map(PROVINCES.map((p) => [p.id, p])), []);
 
-  const rankedOffices = useMemo(() => {
-    return KPWBI_OFFICES.map((office) => ({
-      office,
-      score: BnpbInariskService.getLocalHazardIndex(office.id, selectedHazard),
-    }))
+  const rankedOffices = useMemo<RankedOfficeItem[]>(() => {
+    return KPWBI_OFFICES.map((office) => {
+      const score = BnpbInariskService.getLocalHazardIndex(office.id, selectedHazard);
+      const ispuAssessment =
+        selectedHazard === 'air_quality'
+          ? IspuService.getOfficeIspuAssessment(office.id)
+          : null;
+      return {
+        office,
+        score,
+        ispuAssessment,
+      };
+    })
       .filter((item) => item.score > 0)
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => {
+        if (selectedHazard === 'air_quality' && a.ispuAssessment && b.ispuAssessment) {
+          return b.ispuAssessment.ispuValue - a.ispuAssessment.ispuValue;
+        }
+        return b.score - a.score;
+      });
   }, [selectedHazard]);
 
   const handleProvinceSelect = (provinceId: string) => {
@@ -88,7 +117,9 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
             <div className="topbar-divider-v" />
             <div className="topbar-brand-text">
               <h1 className="topbar-title">Analisis <span>Kerentanan</span></h1>
-              <span className="topbar-brand-sub">DEWA - BNPB InaRisk</span>
+              <span className="topbar-brand-sub">
+                {selectedHazard === 'air_quality' ? 'DEWA - KemenLH ISPU' : 'DEWA - BNPB InaRisk'}
+              </span>
             </div>
           </div>
 
@@ -132,9 +163,20 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
       <div className="kerentanan-content">
         <aside className="kerentanan-panel">
           <div className="kerentanan-panel-header">
-            <span className="kerentanan-panel-title">Indeks Kerentanan</span>
+            <span className="kerentanan-panel-title">
+              {selectedHazard === 'air_quality' ? 'Peringkat Kualitas Udara (ISPU)' : 'Indeks Kerentanan'}
+            </span>
             <span className="kerentanan-panel-count">{rankedOffices.length} wilayah</span>
           </div>
+
+          {selectedHazard === 'air_quality' && (
+            <div className="kerentanan-ispu-banner">
+              <span>🍃 Sumber: SPKU Kementerian Lingkungan Hidup (KLHK)</span>
+              <a href="https://ispu.kemenlh.go.id/webv5/#/" target="_blank" rel="noopener noreferrer">
+                ispu.kemenlh.go.id ↗
+              </a>
+            </div>
+          )}
 
           <div className="kerentanan-panel-scroll">
             {rankedOffices.length === 0 ? (
@@ -142,10 +184,25 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
                 <p>Tidak ada data kerentanan untuk bencana ini.</p>
               </div>
             ) : (
-              rankedOffices.map(({ office, score }, idx) => {
-                const risk = riskLevel(score);
+              rankedOffices.map(({ office, score, ispuAssessment }, idx) => {
                 const province = provincesMap.get(office.provinceId);
                 const isSelected = selectedOfficeId === office.id;
+
+                let badgeLabel = '';
+                let badgeCls = '';
+                let displayVal = Math.round(score * 100);
+
+                if (selectedHazard === 'air_quality' && ispuAssessment) {
+                  const badge = IspuService.getCategoryBadge(ispuAssessment.category, ispuAssessment.ispuValue);
+                  badgeLabel = badge.label;
+                  badgeCls = badge.cls;
+                  displayVal = ispuAssessment.ispuValue;
+                } else {
+                  const generalRisk = riskLevel(score);
+                  badgeLabel = generalRisk.label;
+                  badgeCls = generalRisk.cls;
+                }
+
                 return (
                   <button
                     key={office.id}
@@ -156,16 +213,23 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
                     <div className="kerentanan-row-info">
                       <span className="kerentanan-office-name">{office.name}</span>
                       <span className="kerentanan-province-name">{province?.name ?? office.provinceId}</span>
+                      {selectedHazard === 'air_quality' && ispuAssessment && (
+                        <div className="kerentanan-station-info">
+                          <span>SPKU: {ispuAssessment.stationName} ({ispuAssessment.distanceKm} km) • Polutan: <strong>{ispuAssessment.dominantParam}</strong></span>
+                        </div>
+                      )}
                       <div className="kerentanan-score-bar-wrap">
                         <div
-                          className={`kerentanan-score-bar ${risk.cls}`}
+                          className={`kerentanan-score-bar ${badgeCls}`}
                           style={{ width: `${Math.round(score * 100)}%` }}
                         />
                       </div>
                     </div>
                     <div className="kerentanan-row-right">
-                      <span className={`kerentanan-risk-badge ${risk.cls}`}>{risk.label}</span>
-                      <span className="kerentanan-score-value">{Math.round(score * 100)}</span>
+                      <span className={`kerentanan-risk-badge ${badgeCls}`}>{badgeLabel}</span>
+                      <span className="kerentanan-score-value">
+                        {selectedHazard === 'air_quality' ? `ISPU ${displayVal}` : displayVal}
+                      </span>
                     </div>
                   </button>
                 );

@@ -7,6 +7,7 @@ import { KPWBI_OFFICES } from '../../../constants/kpwbiOffices';
 import { PROVINCES } from '../../../constants/provinces';
 import { isOfficeAffectedByAlert } from '../../../utils/disasterImpact';
 import { BnpbInariskService } from '../../../services/bnpbInariskService';
+import { IspuService } from '../../../services/ispuService';
 import { renderDisasterIcon } from '../../../utils/alertUtils';
 import type { NearestKpwResult } from '../../../utils/geo';
 import {
@@ -199,9 +200,22 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                   </div>
                 )}
                 {isInariskFilter && (() => {
-                  const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic';
+                  const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
+                  if (hazard === 'air_quality') {
+                    const asmt = IspuService.getOfficeIspuAssessment(office.id);
+                    const color = asmt.category === 'BERBAHAYA' || asmt.category === 'SANGAT TIDAK SEHAT'
+                      ? 'var(--alert-critical)'
+                      : asmt.category === 'TIDAK SEHAT'
+                      ? 'var(--alert-warning)'
+                      : 'var(--alert-watch)';
+                    return (
+                      <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: 700, color }}>
+                        ISPU: {asmt.ispuValue} ({asmt.category})
+                      </div>
+                    );
+                  }
                   const indexVal = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
-                  const hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api' }[hazard];
+                  const hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api', volcanic_ash: 'Abu Vulkanik' }[hazard] || hazard;
                   const val = Math.round(indexVal * 100);
                   const color = val >= 64 ? 'var(--alert-critical)' : val > 40 ? 'var(--alert-warning)' : 'var(--alert-watch)';
                   return (
@@ -216,9 +230,36 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
             <Popup offset={[0, -10]} minWidth={280}>
               {isInariskFilter ? (
                 (() => {
-                  const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic';
+                  const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
+                  if (hazard === 'air_quality') {
+                    const asmt = IspuService.getOfficeIspuAssessment(office.id);
+                    let severity: AlertSeverity = 1;
+                    if (asmt.category === 'BERBAHAYA' || asmt.category === 'SANGAT TIDAK SEHAT') severity = 3;
+                    else if (asmt.category === 'TIDAK SEHAT') severity = 2;
+                    return (
+                      <div className="ews-popup-content">
+                        <div className={`ews-popup-header ${severityToCssClass(severity)}`}>
+                          <span>{renderDisasterIcon('air_quality', undefined, { color: 'inherit' })}</span>
+                          <span>Kualitas Udara (ISPU KemenLH)</span>
+                        </div>
+                        <div className="ews-popup-title" style={{ marginTop: 0 }}>{office.name} ({office.city})</div>
+                        <p className="ews-popup-desc">
+                          Stasiun SPKU: <strong>{asmt.stationName}</strong> ({asmt.distanceKm} km). Parameter Kritis: <strong>{asmt.dominantParam}</strong>. Kategori: <strong style={{ color: asmt.category === 'BERBAHAYA' ? '#ef4444' : 'inherit' }}>{asmt.category}</strong>.
+                        </p>
+                        <div className="ews-popup-footer">
+                          <span className="ews-popup-tag" style={{
+                            color: `var(--alert-${severityToCssClass(severity)})`,
+                            backgroundColor: `var(--alert-${severityToCssClass(severity)}-bg)`,
+                            borderColor: `var(--alert-${severityToCssClass(severity)}-border)`,
+                          }}>
+                            ISPU {asmt.ispuValue} • {asmt.category}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
                   const indexVal = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
-                  const hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api' }[hazard];
+                  const hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api', volcanic_ash: 'Abu Vulkanik' }[hazard] || hazard;
                   const val = Math.round(indexVal * 100);
                   let severity: AlertSeverity = 1;
                   if (val >= 64) severity = 3;

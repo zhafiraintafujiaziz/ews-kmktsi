@@ -1,5 +1,6 @@
 import type { DisasterAlert, AlertSeverity, KpwbiOffice } from '../types';
 import { fetchWithCorsProxy } from './proxy';
+import { IspuService } from './ispuService';
 
 const BASE = 'https://gis.bnpb.go.id/server/rest/services/inarisk';
 
@@ -78,7 +79,11 @@ export class BnpbInariskService {
     }
   }
 
-  static getLocalHazardIndex(officeId: string, hazard: 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash'): number {
+  static getLocalHazardIndex(officeId: string, hazard: 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality'): number {
+    if (hazard === 'air_quality') {
+      return IspuService.getOfficeIspuAssessment(officeId).score;
+    }
+
     let hash = 0;
     const str = officeId + hazard;
     for (let i = 0; i < str.length; i++) {
