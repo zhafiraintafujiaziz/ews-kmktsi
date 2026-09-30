@@ -90,7 +90,7 @@ function buildRiskMailtoUrl(
     `Hormat kami,\n` +
     `DEWA - Disaster Early Warning Alert\n` +
     `(Dikirim via DEWA Dashboard — ${new Date().toLocaleString('id-ID')} WIB)\n` +
-    `http://ews-mktbi.vercel.app\n`
+    `https://ews-kmktsi.vercel.app\n`
   );
 
   return `mailto:${to}?subject=${subject}&body=${body}`;
