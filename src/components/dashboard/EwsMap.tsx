@@ -18,6 +18,7 @@ import './EwsMap.css';
 export interface EwsMapProps {
   alerts: DisasterAlert[];
   allAlerts?: DisasterAlert[];
+  riskAlerts?: DisasterAlert[];
   riskResults?: import('../../types').RiskCalcResult[];
   selectedProvinceId: string | null;
   selectedOfficeId?: string | null;
@@ -52,6 +53,7 @@ function getProvincePotensi(provinceId: string, hazard: 'gempa' | 'karhutla' | '
 export const EwsMap: React.FC<EwsMapProps> = ({
   alerts,
   allAlerts,
+  riskAlerts,
   riskResults = [],
   selectedProvinceId,
   selectedOfficeId = null,
@@ -74,8 +76,8 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     normal: true,
     nearest: true,
     critical: true,
-    warning: true,
-    watch: true,
+    warning: false,
+    watch: false,
     earthquake: true,
     extreme_weather: true,
     karhutla: true,
@@ -234,7 +236,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
       <div style="font-family: var(--font-sans); font-size: 12px; line-height: 1.4; padding: 4px;">
         <strong>Provinsi ${propName}</strong><br/>
         <span>Peringatan Kebencanaan</span><br/>
-        ${weatherAlerts.map((a) => `<div>• [${a.type === 'karhutla' ? 'Karhutla' : 'Cuaca Ekstrem'}] ${a.title}</div>`).join('')}
+        ${weatherAlerts.map((a) => `<div>• [${a.type === 'karhutla' ? 'Karhutla' : 'Cuaca Buruk'}] ${a.title}</div>`).join('')}
         <div style="margin-top: 4px; display:flex; align-items:center; gap:6px">
           <span>Severity:</span>${sevBoxes}
         </div>
@@ -396,6 +398,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
 
         <KpwMarkers
           alerts={visibleAlerts}
+          riskAlerts={riskAlerts}
           riskResults={riskResults}
           activeTypeFilter={activeTypeFilter}
           selectedProvinceId={selectedProvinceId}

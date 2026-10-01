@@ -379,7 +379,7 @@ export async function fetchThreeDayForecast(): Promise<DisasterAlert[]> {
             severity,
             provinceId,
             title: `${statusText} (${dateStr})`,
-            description: `Potensi cuaca ekstrem di Provinsi ${provinceName}: ${statusText}. Rencana perkiraan untuk tanggal ${dateStr}.`,
+            description: `Potensi Cuaca Buruk di Provinsi ${provinceName}: ${statusText}. Rencana perkiraan untuk tanggal ${dateStr}.`,
             timestamp: new Date(Date.now() + idx * 86400000).toISOString(),
             latitude: office.latitude,
             longitude: office.longitude,

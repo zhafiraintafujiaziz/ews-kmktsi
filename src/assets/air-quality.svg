@@ -1,0 +1,18 @@
+<svg width="15" height="8" viewBox="0 0 15 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="WeatherIcon - 2-7">
+<g id="Group Wind">
+<path id="Path 6" d="M4.75684 3.72316C4.75684 3.72316 10.7746 3.77454 12.0776 3.43743C13.3805 3.10032 13.3788 1.35069 12.0776 0.919403C10.7763 0.488117 10.3316 2.02973 10.3316 2.02973" stroke="#4BA9FF" stroke-width="1.25107" stroke-linecap="round"/>
+<path id="Path 7" d="M6.73523 5.75761C6.73523 5.75761 11.1516 5.40211 13.0986 5.75761C15.0456 6.1131 14.4256 7.13293 13.5029 7.17955C12.5802 7.22616 11.7287 6.686 11.7287 6.686" stroke="#4BA9FF" stroke-width="1.25107" stroke-linecap="round"/>
+<path id="Path 52" d="M1.47351 1.53149C1.47351 1.53149 2.81321 1.63043 4.40065 1.63043C5.9881 1.63043 8.13981 1.44482 8.13981 1.44482" stroke="#4BA9FF" stroke-width="1.25107" stroke-linecap="round"/>
+</g>
+<g id="Group Thunder">
+<path id="Path 12" d="M1.85955 3.43994L3.53005 3.43994L2.56967 4.69637L3.69251 4.7153L1.33572 7.20048L1.90678 5.30572H0.861328L1.85955 3.43994Z" fill="url(#paint0_linear_3906_30044)"/>
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_3906_30044" x1="2.01645" y1="5.32021" x2="0.73349" y2="4.79228" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FFD100"/>
+<stop offset="1" stop-color="#FFF0AA"/>
+</linearGradient>
+</defs>
+</svg>

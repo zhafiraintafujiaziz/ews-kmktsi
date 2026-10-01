@@ -5,15 +5,9 @@ import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { renderDisasterIcon, getDisasterTypeStatus } from '../../utils/alertUtils';
 import { Public as PublicIcon } from '@mui/icons-material';
 import { useAlerts } from '../../hooks/useAlerts';
-import { isOfficeAffectedByAlert } from '../../utils/disasterImpact';
-import { BnpbInariskService } from '../../services/bnpbInariskService';
-import {
-  mapDisasterTypeToInariskHazard,
-  mapInariskToVulnerability,
-  vulnerabilityToScore,
-  getRiskLevel,
-} from '../../utils/riskCalculator';
+import { buildOfficeRiskMap } from '../../utils/riskCalculator';
 import ScreenshotPreviewModal from '../ui/ScreenshotPreviewModal';
+import { playAlertSound } from '../../utils/alertSound';
 import './TopBar.css';
 
 interface TopBarProps {
@@ -21,9 +15,9 @@ interface TopBarProps {
   totalAlerts: number;
   criticalAlerts: DisasterAlert[];
   allAlerts: DisasterAlert[];
+  riskAlerts: DisasterAlert[];
   riskResults: RiskCalcResult[];
   onAlertSelect: (alertId: string) => void;
-  onGenerateReport?: () => void;
   selectedType: DisasterType | 'all';
   onTypeChange: (type: DisasterType | 'all') => void;
   onSwitchToKerentanan: () => void;
@@ -39,6 +33,14 @@ const FILTER_OPTIONS: Array<{ value: DisasterType | 'all'; label: string }> = [
   { value: 'volcanic_ash', label: 'Abu Vulkanik' },
   { value: 'air_quality', label: 'Kualitas Udara' },
 ];
+
+function sortNotificationAlerts(alerts: DisasterAlert[]): DisasterAlert[] {
+  return [...alerts].sort((a, b) => {
+    const sevDiff = (b.severity || 0) - (a.severity || 0);
+    if (sevDiff !== 0) return sevDiff;
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
+}
 
 function formatRelativeTime(timestamp: string): string {
   const diffMs = new Date().getTime() - new Date(timestamp).getTime();
@@ -99,7 +101,7 @@ function buildRiskMailtoUrl(
 export const TopBar: React.FC<TopBarProps> = (props) => {
   const {
     allAlerts,
-    onGenerateReport,
+    riskAlerts,
     selectedType,
     onTypeChange,
     onSwitchToKerentanan,
@@ -115,17 +117,13 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
   const [notiOpen, setNotiOpen] = useState(false);
   const notiRef = useRef<HTMLDivElement>(null);
   const [showToast, setShowToast] = useState(false);
+  const [demoAlert, setDemoAlert] = useState<DisasterAlert | null>(null);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const playedToastId = useRef<string | null>(null);
 
-  const latestAlert = useMemo(() => {
-    if (!allAlerts || allAlerts.length === 0) return null;
-    return [...allAlerts].sort((a, b) => {
-      const sevDiff = (b.severity || 0) - (a.severity || 0);
-      if (sevDiff !== 0) return sevDiff;
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-    })[0];
-  }, [allAlerts]);
+  const sortedNotiAlerts = useMemo(() => sortNotificationAlerts(allAlerts ?? []), [allAlerts]);
 
+  const latestAlert = sortedNotiAlerts[0] ?? null;
 
   useEffect(() => {
     const isToastDisabled = localStorage.getItem('bima_toast_disabled') === 'true';
@@ -136,9 +134,27 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     }
   }, [latestAlert]);
 
+  useEffect(() => {
+    if (!showToast || !latestAlert) return;
+    if (playedToastId.current === latestAlert.id) return;
+    playedToastId.current = latestAlert.id;
+    playAlertSound();
+  }, [showToast, latestAlert]);
+
   const handleCloseToast = () => {
+    if (demoAlert) {
+      setDemoAlert(null);
+      return;
+    }
     setShowToast(false);
     localStorage.setItem('bima_toast_disabled', 'true');
+  };
+
+  const handleTestAlert = () => {
+    const highest = sortedNotiAlerts[0];
+    if (!highest) return;
+    setDemoAlert(highest);
+    playAlertSound();
   };
 
   // Close notification dropdown on outside click
@@ -177,44 +193,10 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     return () => document.removeEventListener('mousedown', handler);
   }, [dropdownOpen]);
 
-  // Build a map: officeId -> highest riskLevel from active alerts affecting the office
-  const officeRiskLevels = useMemo(() => {
-    const map = new Map<string, { riskLevel: string; riskScore: number; alerts: DisasterAlert[] }>();
-    
-    KPWBI_OFFICES.forEach((office) => {
-      const officeAlerts = allAlerts.filter((a) => isOfficeAffectedByAlert(office, a));
-      if (officeAlerts.length === 0) return;
-
-      let maxRiskScore = 0;
-      officeAlerts.forEach((alert) => {
-        const isKerentananSupported = ['flood', 'tsunami', 'kekeringan', 'volcanic'].includes(alert.type);
-        let vulScore = 1;
-        if (!isKerentananSupported) {
-          vulScore = 3; // Bypass kerentanan
-        } else {
-          const hazard = mapDisasterTypeToInariskHazard(alert.type);
-          const index = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
-          const vulLevel = mapInariskToVulnerability(index);
-          vulScore = vulnerabilityToScore(vulLevel);
-        }
-        const totalScore = alert.severity * vulScore;
-        if (totalScore > maxRiskScore) {
-          maxRiskScore = totalScore;
-        }
-      });
-
-      if (maxRiskScore > 0) {
-        const riskLevel = getRiskLevel(maxRiskScore);
-        map.set(office.id, {
-          riskLevel,
-          riskScore: maxRiskScore,
-          alerts: officeAlerts,
-        });
-      }
-    });
-    
-    return map;
-  }, [allAlerts]);
+  const officeRiskLevels = useMemo(
+    () => buildOfficeRiskMap(KPWBI_OFFICES, riskAlerts),
+    [riskAlerts],
+  );
 
   // Counts of offices per risk level
   const riskStats = useMemo(() => {
@@ -242,6 +224,9 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     : totalAffectedOffices > 0
     ? `${totalAffectedOffices} KPwBI Dipantau`
     : 'Sistem Normal';
+
+  const toastAlert = demoAlert ?? (showToast ? latestAlert : null);
+  const toastClass = demoAlert ? 'critical' : toastAlert ? severityToCssClass(toastAlert.severity) : 'watch';
 
   return (
     <header className="topbar-container">
@@ -285,13 +270,12 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
             Screenshot
           </button>
 
-          <button className="topbar-report-btn" onClick={onGenerateReport}>
+          <button className="topbar-report-btn" type="button" onClick={handleTestAlert}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="20" x2="18" y2="10" />
-              <line x1="12" y1="20" x2="12" y2="4" />
-              <line x1="6" y1="20" x2="6" y2="14" />
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            Laporan
+            Alert
           </button>
 
           <div className="topbar-status-wrapper" ref={dropdownRef}>
@@ -369,11 +353,14 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                             >
                               <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', flex: 1 }}>
                                 <div className="dropdown-item-emoji" style={{ display: 'flex', gap: '3px', alignItems: 'center', marginTop: '2px' }}>
-                                  {alertIcons.map((type) => (
-                                    <React.Fragment key={type}>
-                                      {renderDisasterIcon(type, undefined, { width: '16px', height: '16px' })}
-                                    </React.Fragment>
-                                  ))}
+                                  {alertIcons.map((type) => {
+                                    const match = detail.alerts.find((a) => a.type === type);
+                                    return (
+                                      <React.Fragment key={type}>
+                                        {renderDisasterIcon(type, undefined, { width: '16px', height: '16px' }, match)}
+                                      </React.Fragment>
+                                    );
+                                  })}
                                 </div>
                                 <div className="dropdown-item-info" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                   <span className="dropdown-item-type" style={{ fontWeight: 600, fontSize: '12px' }}>{office.name}</span>
@@ -466,12 +453,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                       <p>Tidak ada peringatan bencana aktif saat ini.</p>
                     </div>
                   ) : (
-                    [...allAlerts]
-                      .sort((a, b) => {
-                        const sevDiff = (b.severity || 0) - (a.severity || 0);
-                        if (sevDiff !== 0) return sevDiff;
-                        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-                      })
+                    sortedNotiAlerts
                       .map((alert) => {
                         const levelClass = severityToCssClass(alert.severity);
                         const sourceName = alert.type === 'volcanic' ? 'MAGMA' : alert.type === 'volcanic_ash' ? 'INA-SIAM' : alert.type === 'karhutla' ? 'SIPONGI' : 'BMKG';
@@ -487,7 +469,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                           >
                             <div className={`noti-severity-indicator noti-severity-indicator--${levelClass}`} />
                             <div className="dropdown-item-emoji">
-                              {renderDisasterIcon(alert.type, undefined, { width: '18px', height: '18px' })}
+                              {renderDisasterIcon(alert.type, undefined, { width: '18px', height: '18px' }, alert)}
                             </div>
                             <div className="dropdown-item-info">
                               <span className="dropdown-item-type">
@@ -576,14 +558,21 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
 
 
       {/* Toast Notification */}
-      {showToast && latestAlert && (
-        <div className={`bima-toast bima-toast--${severityToCssClass(latestAlert.severity)}`}>
+      {toastAlert && (
+        <div className={`bima-toast bima-toast--${toastClass}`}>
           <div className="bima-toast-header">
             <div className="bima-toast-title" style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '8px' }}>
-              {renderDisasterIcon(latestAlert.type, undefined, { width: '15px', height: '15px' })}
+              {renderDisasterIcon(toastAlert.type, undefined, { width: '15px', height: '15px' }, toastAlert)}
               <span style={{ fontWeight: 'bold' }}>Peringatan Bencana Baru</span>
+              {demoAlert && (
+                <span className="alertcard-sev-badge sev-critical" aria-label="Risiko tertinggi">
+                  {[1, 2, 3].map((i) => (
+                    <span key={i} className="sev-box filled" />
+                  ))}
+                </span>
+              )}
               <span className="bima-toast-time" style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 'normal', marginLeft: 'auto' }}>
-                {formatRelativeTime(latestAlert.timestamp)}
+                {formatRelativeTime(toastAlert.timestamp)}
               </span>
             </div>
             <button className="bima-toast-close" onClick={handleCloseToast} aria-label="Tutup">
@@ -596,12 +585,13 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
             className="bima-toast-body" 
             style={{ cursor: 'pointer' }}
             onClick={() => {
-              onAlertSelect(latestAlert.id);
-              setShowToast(false);
+              onAlertSelect(toastAlert.id);
+              if (demoAlert) setDemoAlert(null);
+              else setShowToast(false);
             }}
           >
-            <span className="bima-toast-alert-title">{latestAlert.title}</span>
-            <span className="bima-toast-alert-desc">{latestAlert.description}</span>
+            <span className="bima-toast-alert-title">{toastAlert.title}</span>
+            <span className="bima-toast-alert-desc">{toastAlert.description}</span>
           </div>
         </div>
       )}

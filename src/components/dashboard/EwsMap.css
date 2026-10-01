@@ -55,12 +55,10 @@
 
 .bi-dc-building.has-alert.alert-warning {
   color: var(--alert-warning);
-  animation: pulse-building-warning 2s infinite cubic-bezier(0.4, 0, 0, 1);
 }
 
 .bi-dc-building.has-alert.alert-watch {
   color: var(--alert-watch);
-  animation: pulse-building-watch 2s infinite cubic-bezier(0.4, 0, 0, 1);
 }
 
 /* DC / DRC triangle marker container (legacy alias) */
@@ -101,12 +99,10 @@
 
 .bi-triangle.has-alert.alert-warning {
   color: var(--alert-warning);
-  animation: pulse-star-warning 2s infinite cubic-bezier(0.4, 0, 0, 1);
 }
 
 .bi-triangle.has-alert.alert-watch {
   color: var(--alert-watch);
-  animation: pulse-star-watch 2s infinite cubic-bezier(0.4, 0, 0, 1);
 }
 
 
@@ -162,12 +158,10 @@
 
 .kp-building.has-alert.alert-warning {
   color: var(--alert-warning);
-  animation: pulse-building-warning 2s infinite cubic-bezier(0.4, 0, 0, 1);
 }
 
 .kp-building.has-alert.alert-watch {
   color: var(--alert-watch);
-  animation: pulse-building-watch 2s infinite cubic-bezier(0.4, 0, 0, 1);
 }
 
 /* Korwil (regional coordinator) offices get a star marker */
@@ -195,16 +189,14 @@
 
 .korwil-star.has-alert.alert-warning {
   color: var(--alert-warning);
-  animation: pulse-star-warning 2s infinite cubic-bezier(0.4, 0, 0, 1);
 }
 
 .korwil-star.has-alert.alert-watch {
   color: var(--alert-watch);
-  animation: pulse-star-watch 2s infinite cubic-bezier(0.4, 0, 0, 1);
 }
 
 
-.marker-dot.has-alert {
+.marker-dot.has-alert.alert-critical {
   width: 18px;
   height: 18px;
   border-width: 2px;
@@ -221,15 +213,13 @@
 .marker-dot.alert-warning {
   background-color: var(--alert-warning);
   border-color: var(--bg-surface);
-  box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.8);
-  animation: pulse-warning 2s infinite cubic-bezier(0.4, 0, 0, 1);
+  box-shadow: var(--shadow-sm);
 }
 
 .marker-dot.alert-watch {
   background-color: var(--alert-watch);
   border-color: var(--bg-surface);
-  box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.8);
-  animation: pulse-watch 2s infinite cubic-bezier(0.4, 0, 0, 1);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Keyframes for alerts */

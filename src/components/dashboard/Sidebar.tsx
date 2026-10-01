@@ -4,14 +4,7 @@ import { severityToCssClass } from '../../types';
 import { PROVINCES } from '../../constants/provinces';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { renderDisasterIcon } from '../../utils/alertUtils';
-import { isOfficeAffectedByAlert } from '../../utils/disasterImpact';
-import { BnpbInariskService } from '../../services/bnpbInariskService';
-import {
-  mapDisasterTypeToInariskHazard,
-  mapInariskToVulnerability,
-  vulnerabilityToScore,
-  getRiskLevel,
-} from '../../utils/riskCalculator';
+import { buildOfficeRiskMap } from '../../utils/riskCalculator';
 import AlertCard from './AlertCard';
 import './Sidebar.css';
 
@@ -79,44 +72,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     'Sulawesi, Maluku, & Papua': true,
   });
 
-  // Build a map: officeId -> highest riskLevel from active alerts affecting the office
-  const officeRiskLevels = useMemo(() => {
-    const map = new Map<string, { riskLevel: string; riskScore: number; alerts: DisasterAlert[] }>();
-    
-    KPWBI_OFFICES.forEach((office) => {
-      const officeAlerts = filteredAlerts.filter((a) => isOfficeAffectedByAlert(office, a));
-      if (officeAlerts.length === 0) return;
-
-      let maxRiskScore = 0;
-      officeAlerts.forEach((alert) => {
-        const isKerentananSupported = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash'].includes(alert.type);
-        let vulScore = 1;
-        if (!isKerentananSupported) {
-          vulScore = 3; // Bypass kerentanan
-        } else {
-          const hazard = mapDisasterTypeToInariskHazard(alert.type);
-          const index = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
-          const vulLevel = mapInariskToVulnerability(index);
-          vulScore = vulnerabilityToScore(vulLevel);
-        }
-        const totalScore = alert.severity * vulScore;
-        if (totalScore > maxRiskScore) {
-          maxRiskScore = totalScore;
-        }
-      });
-
-      if (maxRiskScore > 0) {
-        const riskLevel = getRiskLevel(maxRiskScore);
-        map.set(office.id, {
-          riskLevel,
-          riskScore: maxRiskScore,
-          alerts: officeAlerts,
-        });
-      }
-    });
-    
-    return map;
-  }, [filteredAlerts]);
+  const officeRiskLevels = useMemo(
+    () => buildOfficeRiskMap(KPWBI_OFFICES, filteredAlerts),
+    [filteredAlerts],
+  );
 
   // Counts of offices per risk level
   const riskStats = useMemo(() => {
@@ -410,7 +369,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             <select className="filter-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as DisasterType | 'all')}>
                               <option value="all">Semua Jenis</option>
                               <option value="earthquake">Gempa Bumi</option>
-                              <option value="extreme_weather">Cuaca Ekstrem</option>
+                              <option value="extreme_weather">Cuaca Buruk</option>
                               <option value="karhutla">Karhutla</option>
                               <option value="volcanic">Gunung Api</option>
                               <option value="volcanic_ash">Abu Vulkanik (INA-SIAM)</option>

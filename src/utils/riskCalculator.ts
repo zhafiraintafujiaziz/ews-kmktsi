@@ -1,6 +1,79 @@
-import type { DisasterAlert, DisasterEvent, VulnerabilityLevel, RiskLevel, MarkedLocation, RiskCalcResult } from '../types';
+import type { DisasterAlert, DisasterEvent, VulnerabilityLevel, RiskLevel, MarkedLocation, RiskCalcResult, KpwbiOffice } from '../types';
 import { haversineDistance } from './geo';
-import { getAlertImpactRadiusKm } from './disasterImpact';
+import { getAlertImpactRadiusKm, isOfficeAffectedByAlert } from './disasterImpact';
+import { BnpbInariskService } from '../services/bnpbInariskService';
+
+/** Tipe bencana yang skornya memakai indeks kerentanan InaRisk. Selain ini, skor kerentanan dipaksa 3. */
+export const KERENTANAN_SUPPORTED_TYPES = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash'] as const;
+
+export function isKerentananSupportedType(type: string): boolean {
+  return (KERENTANAN_SUPPORTED_TYPES as readonly string[]).includes(type);
+}
+
+export interface OfficeAlertRisk {
+  alert: DisasterAlert;
+  vulScore: number;
+  totalScore: number;
+  isKerentananSupported: boolean;
+}
+
+export interface OfficeRiskEntry {
+  riskLevel: RiskLevel;
+  riskScore: number;
+  alerts: DisasterAlert[];
+}
+
+/** Skor satu alert terhadap satu kantor, sama dengan kartu Tingkat Risiko. */
+export function scoreAlertForOffice(officeId: string, alert: DisasterAlert): OfficeAlertRisk {
+  const isKerentananSupported = isKerentananSupportedType(alert.type);
+  let vulScore = 1;
+  if (!isKerentananSupported) {
+    vulScore = 3;
+  } else {
+    const hazard = mapDisasterTypeToInariskHazard(alert.type);
+    const index = BnpbInariskService.getLocalHazardIndex(officeId, hazard);
+    const vulLevel = mapInariskToVulnerability(index);
+    vulScore = vulnerabilityToScore(vulLevel);
+  }
+  return {
+    alert,
+    vulScore,
+    totalScore: alert.severity * vulScore,
+    isKerentananSupported,
+  };
+}
+
+/**
+ * Risiko tertinggi tiap kantor dari alert yang memengaruhinya.
+ * Kantor tanpa alert, atau dengan skor 0, tidak masuk peta.
+ */
+export function buildOfficeRiskMap(
+  offices: KpwbiOffice[],
+  alerts: DisasterAlert[],
+): Map<string, OfficeRiskEntry> {
+  const map = new Map<string, OfficeRiskEntry>();
+
+  offices.forEach((office) => {
+    const officeAlerts = alerts.filter((a) => isOfficeAffectedByAlert(office, a));
+    if (officeAlerts.length === 0) return;
+
+    let maxRiskScore = 0;
+    officeAlerts.forEach((alert) => {
+      const { totalScore } = scoreAlertForOffice(office.id, alert);
+      if (totalScore > maxRiskScore) maxRiskScore = totalScore;
+    });
+
+    if (maxRiskScore > 0) {
+      map.set(office.id, {
+        riskLevel: getRiskLevel(maxRiskScore),
+        riskScore: maxRiskScore,
+        alerts: officeAlerts,
+      });
+    }
+  });
+
+  return map;
+}
 
 /**
  * Mengonversi enum string tingkat kerentanan ke skor angka.

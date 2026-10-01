@@ -28,7 +28,7 @@ const SEV_CONFIG: Array<{ key: 'critical' | 'warning' | 'watch'; num: AlertSever
 
 const DISASTER_TYPES_CONFIG: Array<{ key: 'earthquake' | 'extreme_weather' | 'karhutla' | 'volcanic' | 'volcanic_ash' | 'air_quality'; label: string }> = [
   { key: 'earthquake', label: 'Gempa Bumi' },
-  { key: 'extreme_weather', label: 'Cuaca Ekstrem' },
+  { key: 'extreme_weather', label: 'Cuaca Buruk' },
   { key: 'karhutla', label: 'Kebakaran Hutan' },
   { key: 'volcanic', label: 'Gunung Api' },
   { key: 'volcanic_ash', label: 'Abu Vulkanik' },
@@ -142,7 +142,12 @@ const MapLegend: React.FC<MapLegendProps> = ({
                     style={{ cursor: 'pointer' }}
                   >
                     <span className="legend-shape-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {renderDisasterIcon(key, undefined, { width: '16px', height: '16px' })}
+                      {renderDisasterIcon(
+                        key,
+                        undefined,
+                        { width: '16px', height: '16px' },
+                        key === 'extreme_weather' ? { title: 'badai' } : undefined
+                      )}
                     </span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flex: 1 }}>
                       {label}

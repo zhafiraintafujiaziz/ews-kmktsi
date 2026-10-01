@@ -29,7 +29,7 @@ const EMPTY_FORM: LaporanForm = {
 
 const SUMBER_OPTIONS = [
   'Gempa Bumi', 'Banjir', 'Tanah Longsor', 'Angin Kencang',
-  'Kebakaran', 'Tsunami', 'Erupsi Gunung Api', 'Cuaca Ekstrem', 'Lainnya',
+  'Kebakaran', 'Tsunami', 'Erupsi Gunung Api', 'Cuaca Buruk', 'Lainnya',
 ];
 
 const STORAGE_KEY = 'ews-mktbi:laporan-kpw';

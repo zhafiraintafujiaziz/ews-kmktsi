@@ -186,12 +186,12 @@ const fetchAllSources = async () => {
     }
   }
 
-  cachedLoadingSources = ['Gempa BMKG', 'Cuaca Ekstrem BMKG', 'Peringatan Dini Cuaca BMKG', 'Prakiraan 3 Hari BMKG', 'Curah Hujan Tinggi BMKG', 'Live Gunung Api Magma', 'Sipongi Karhutla', 'Abu Vulkanik INA-SIAM', 'ISPU Kualitas Udara'];
+  cachedLoadingSources = ['Gempa BMKG', 'Cuaca Buruk BMKG', 'Peringatan Dini Cuaca BMKG', 'Prakiraan 3 Hari BMKG', 'Curah Hujan Tinggi BMKG', 'Live Gunung Api Magma', 'Sipongi Karhutla', 'Abu Vulkanik INA-SIAM', 'ISPU Kualitas Udara'];
   notifyListeners();
 
   const apis = [
     { call: fetchLatestEarthquakes, name: 'Gempa BMKG' },
-    { call: fetchExtremeWeather, name: 'Cuaca Ekstrem BMKG' },
+    { call: fetchExtremeWeather, name: 'Cuaca Buruk BMKG' },
     { call: fetchEarlyWarning, name: 'Peringatan Dini Cuaca BMKG' },
     { call: fetchThreeDayForecast, name: 'Prakiraan 3 Hari BMKG' },
     { call: fetchHighRainfallWarning, name: 'Curah Hujan Tinggi BMKG' },

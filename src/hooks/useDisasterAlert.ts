@@ -10,6 +10,7 @@ import {
   findAffectedLocations,
   vulnerabilityToScore,
   getRiskLevel,
+  isKerentananSupportedType,
 } from '../utils/riskCalculator';
 
 export const useDisasterAlert = () => {
@@ -53,8 +54,7 @@ export const useDisasterAlert = () => {
         let maxRiskScore = event.disasterScore * 1; // worst case: disasterScore × Rendah
         let maxRiskLevel = getRiskLevel(maxRiskScore);
 
-        const kerentananDisasters = ['flood', 'tsunami', 'kekeringan', 'volcanic'];
-        const isKerentananSupported = kerentananDisasters.includes(event.type);
+        const isKerentananSupported = isKerentananSupportedType(event.type);
 
         if (affectedLocations.length > 0) {
           if (!isKerentananSupported) {

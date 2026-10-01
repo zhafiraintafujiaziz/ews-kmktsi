@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Marker, Tooltip, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import type { DisasterAlert, DisasterType, KpwbiOffice, AlertSeverity, RiskCalcResult } from '../../../types';
@@ -11,15 +11,15 @@ import { IspuService } from '../../../services/ispuService';
 import { renderDisasterIcon } from '../../../utils/alertUtils';
 import type { NearestKpwResult } from '../../../utils/geo';
 import {
-  mapDisasterTypeToInariskHazard,
-  mapInariskToVulnerability,
-  vulnerabilityToScore,
+  buildOfficeRiskMap,
+  scoreAlertForOffice,
   getRiskLevel,
 } from '../../../utils/riskCalculator';
 
 
 interface KpwMarkersProps {
   alerts: DisasterAlert[];
+  riskAlerts?: DisasterAlert[];
   riskResults: RiskCalcResult[];
   activeTypeFilter: DisasterType | 'all';
   selectedProvinceId: string | null;
@@ -100,6 +100,7 @@ function createMarkerIcon(
 
 const KpwMarkers: React.FC<KpwMarkersProps> = ({
   alerts,
+  riskAlerts,
   activeTypeFilter,
   selectedProvinceId,
   selectedOfficeId,
@@ -111,6 +112,10 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
   selectedAlertId,
 }) => {
   const isInariskFilter = ['flood', 'tsunami', 'kekeringan', 'volcanic'].includes(activeTypeFilter);
+  const officeRiskMap = useMemo(
+    () => buildOfficeRiskMap(KPWBI_OFFICES, riskAlerts ?? alerts),
+    [riskAlerts, alerts],
+  );
 
   return (
     <>
@@ -144,30 +149,10 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
       }).map((office) => {
         const nearestInfo = nearestOffices.find((n) => n.office.id === office.id);
         const officeAlerts = alerts.filter((a) => isOfficeAffectedByAlert(office, a));
-        
-        // Calculate the highest risk score for this office across all active alerts (including province-wide ones)
-        let maxRiskScore = 0;
-        officeAlerts.forEach((alert) => {
-          const isKerentananSupported = ['flood', 'tsunami', 'kekeringan', 'volcanic'].includes(alert.type);
-          let vulScore = 1;
-          if (!isKerentananSupported) {
-            vulScore = 3; // Bypass kerentanan
-          } else {
-            const hazard = mapDisasterTypeToInariskHazard(alert.type);
-            const index = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
-            const vulLevel = mapInariskToVulnerability(index);
-            vulScore = vulnerabilityToScore(vulLevel);
-          }
-          const totalScore = alert.severity * vulScore;
-          if (totalScore > maxRiskScore) {
-            maxRiskScore = totalScore;
-          }
-        });
-
-        let riskSeverity: AlertSeverity | null = null;
-        if (maxRiskScore >= 7) riskSeverity = 3;
-        else if (maxRiskScore >= 4) riskSeverity = 2;
-        else if (maxRiskScore > 0) riskSeverity = 1;
+        const officeRisk = officeRiskMap.get(office.id);
+        const riskSeverity: AlertSeverity | null = officeRisk
+          ? (officeRisk.riskLevel === 'Tinggi' ? 3 : officeRisk.riskLevel === 'Sedang' ? 2 : 1)
+          : null;
 
         return (
           <Marker
@@ -322,20 +307,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                           ⚠️ Bencana Terdampak ({officeAlerts.length})
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '160px', overflowY: 'auto', paddingRight: '2px' }}>
-                          {officeAlerts.map((alert) => {
-                            const isKerentananSupported = ['flood', 'tsunami', 'kekeringan', 'volcanic'].includes(alert.type);
-                            let vulScore = 1;
-                            if (!isKerentananSupported) {
-                              vulScore = 3; // Bypass kerentanan
-                            } else {
-                              const hazard = mapDisasterTypeToInariskHazard(alert.type);
-                              const indexVal = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
-                              const vulLevel = mapInariskToVulnerability(indexVal);
-                              vulScore = vulnerabilityToScore(vulLevel);
-                            }
-                            const totalScore = alert.severity * vulScore;
-                            return { alert, totalScore, vulScore, isKerentananSupported };
-                          })
+                          {officeAlerts.map((alert) => scoreAlertForOffice(office.id, alert))
                           .sort((a, b) => b.totalScore - a.totalScore)
                           .map(({ alert, totalScore, vulScore, isKerentananSupported }) => {
                             const indexValStr = isKerentananSupported ? `${vulScore}/3` : 'N/A';
@@ -358,7 +330,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                    <span style={{ display: 'inline-flex' }}>{renderDisasterIcon(alert.type, undefined, { color: 'inherit', width: '12px', height: '12px' })}</span>
+                                    <span style={{ display: 'inline-flex' }}>{renderDisasterIcon(alert.type, undefined, { color: 'inherit', width: '12px', height: '12px' }, alert)}</span>
                                     <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '160px' }} title={alert.title}>{alert.title}</span>
                                   </div>
                                   <span style={{ 

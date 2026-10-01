@@ -92,7 +92,7 @@ const MingguanTab: React.FC<MingguanTabProps> = () => {
         <div className="perkiraan-panel-scroll">
           {rankedOffices.length === 0 ? (
             <div className="perkiraan-empty">
-              <p>Belum ada data prakiraan cuaca ekstrem 3 hari ke depan.</p>
+              <p>Belum ada data prakiraan Cuaca Buruk 3 hari ke depan.</p>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>Data diambil otomatis dari BMKG setiap 60 detik.</p>
             </div>
           ) : (

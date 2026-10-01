@@ -56,15 +56,17 @@ function getCircleRadius(alert: DisasterAlert): number {
   }
 }
 
+/** Dotted air-quality area: green (watch), yellow (warning), red (critical). */
+function getAirQualityAreaColor(severity: AlertSeverity): string {
+  if (severity >= 3) return '#dc2626';
+  if (severity === 2) return '#eab308';
+  return '#16a34a';
+}
+
 function getCircleConfig(alert: DisasterAlert): CircleConfig {
   let color = SEV_COLORS[alert.severity] || 'var(--alert-critical)';
-  if (alert.type === 'air_quality' && alert.ispuCategory) {
-    const cat = alert.ispuCategory.toUpperCase();
-    if (cat.includes('BERBAHAYA')) color = '#0f172a';
-    else if (cat.includes('SANGAT TIDAK SEHAT')) color = '#ef4444';
-    else if (cat.includes('TIDAK SEHAT')) color = '#eab308';
-    else if (cat.includes('SEDANG')) color = '#0284c7';
-    else color = '#10b981';
+  if (alert.type === 'air_quality') {
+    color = getAirQualityAreaColor(alert.severity);
   }
   const radius = getCircleRadius(alert);
 
@@ -105,32 +107,6 @@ function getBottomRightCoords(centerLat: number, centerLng: number, radiusMeters
   const destLng = (destLngRad * 180) / Math.PI;
 
   return [destLat, destLng];
-}
-
-/**
- * Compute equilateral triangle coordinates centered on (lat, lng).
- * Top vertex points North (0 deg), other vertices at 120 deg and 240 deg.
- */
-function computeAirQualityTriangle(lat: number, lng: number, radiusKm: number = 24): [number, number][] {
-  const bearings = [0, 120, 240];
-  const R = 6371; // Earth's mean radius in km
-  return bearings.map((bearing) => {
-    const bearingRad = (bearing * Math.PI) / 180;
-    const latRad = (lat * Math.PI) / 180;
-    const lngRad = (lng * Math.PI) / 180;
-    const dOverR = radiusKm / R;
-
-    const destLatRad = Math.asin(
-      Math.sin(latRad) * Math.cos(dOverR) +
-      Math.cos(latRad) * Math.sin(dOverR) * Math.cos(bearingRad)
-    );
-    const destLngRad = lngRad + Math.atan2(
-      Math.sin(bearingRad) * Math.sin(dOverR) * Math.cos(latRad),
-      Math.cos(dOverR) - Math.sin(latRad) * Math.sin(destLatRad)
-    );
-
-    return [(destLatRad * 180) / Math.PI, (destLngRad * 180) / Math.PI];
-  });
 }
 
 function sevTagStyle(severity: AlertSeverity) {
@@ -233,7 +209,11 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
         const iconType = (alert.type === 'volcanic_ash' || (alert.type === 'volcanic' && sigmetInfo))
           ? 'volcanic_ash'
           : alert.type;
-        const iconHtml = getDisasterIconHtml(iconType, isVolcano ? '#ea580c' : pathOptions.color);
+        // Cuaca Buruk markers always use the Map Legend icon (badai / lightning).
+        const iconSource = alert.type === 'extreme_weather'
+          ? { title: 'badai' }
+          : { id: alert.id, title: alert.title, description: alert.description };
+        const iconHtml = getDisasterIconHtml(iconType, isVolcano ? '#ea580c' : pathOptions.color, iconSource);
         const sevColor = SEV_COLORS[alert.severity] || 'var(--alert-critical)';
 
         const customIcon = L.divIcon({
@@ -271,7 +251,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
           <div className="ews-popup-content" style={{ maxWidth: '330px' }}>
             <div className={`ews-popup-header ${severityToCssClass(alert.severity)}`}>
               <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                {renderDisasterIcon(iconType, undefined, { color: 'inherit' })}
+                {renderDisasterIcon(iconType, undefined, { color: 'inherit' }, iconSource)}
               </span>
               <span>{alert.title}</span>
             </div>
@@ -381,7 +361,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
               {isVolcano ? (
                 <span style={{ fontSize: '10.5px', color: '#ea580c', fontWeight: 600 }}>Poligon SIGMET INA-SIAM</span>
               ) : isProvinceAlert ? (
-                <span>Provinsi terdampak cuaca ekstrem</span>
+                <span>Provinsi terdampak Cuaca Buruk</span>
               ) : (
                 <span>Radius: {(radius / 1000).toFixed(0)} km</span>
               )}
@@ -495,10 +475,11 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
               </Circle>
             )}
 
-            {/* 2b. Air Quality Hazard: Triangular Polygon Diagram (Bentuk Segitiga) */}
+            {/* 2b. Air Quality Hazard: circular impact range */}
             {alert.type === 'air_quality' && center && (
-              <Polygon
-                positions={computeAirQualityTriangle(center[0], center[1], 24)}
+              <Circle
+                center={center}
+                radius={radius}
                 pathOptions={{
                   color: pathOptions.color,
                   fillColor: pathOptions.color,
@@ -517,8 +498,9 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
                   <div>
                     <strong>{alert.title}</strong><br />
                     <span style={{ color: pathOptions.color, fontWeight: 700 }}>
-                      ▲ Diagram Kualitas Udara (SPKU KemenLH)
+                      Radius Kualitas Udara (SPKU KemenLH)
                     </span><br />
+                    Radius Dampak: {(radius / 1000).toFixed(0)} km<br />
                     Nilai ISPU: <strong>{alert.ispuValue}</strong> ({alert.ispuCategory})<br />
                     Parameter Kritis: {alert.ispuParam || 'PM2.5'}<br />
                     Stasiun: {alert.stationName}<br />
@@ -534,7 +516,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
                   </div>
                 </Tooltip>
                 <Popup>{popupContent}</Popup>
-              </Polygon>
+              </Circle>
             )}
 
             {/* 3. Hazard Marker Icon */}

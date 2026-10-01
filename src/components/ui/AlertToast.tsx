@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { DisasterAlert } from '../../types';
 import { PROVINCES } from '../../constants/provinces';
 import { renderDisasterIcon } from '../../utils/alertUtils';
+import { playAlertSound } from '../../utils/alertSound';
 import './AlertToast.css';
 
 export interface ToastItem {
@@ -28,7 +29,7 @@ function timeAgo(iso: string): string {
 
 const TYPE_LABEL: Record<string, string> = {
   earthquake:    'Gempa Bumi',
-  extreme_weather: 'Cuaca Ekstrem',
+  extreme_weather: 'Cuaca Buruk',
   karhutla:      'Kebakaran Hutan (Karhutla)',
   flood:         'Banjir',
   tsunami:       'Tsunami',
@@ -47,6 +48,10 @@ function SingleToast({ item, onDismiss }: { item: ToastItem; onDismiss: () => vo
     setExiting(true);
     setTimeout(onDismiss, 260);
   }, [onDismiss]);
+
+  useEffect(() => {
+    playAlertSound();
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(handleDismiss, DURATION);
@@ -76,7 +81,7 @@ function SingleToast({ item, onDismiss }: { item: ToastItem; onDismiss: () => vo
       </div>
 
       <div className="toast-body">
-        <span className="toast-emoji">{renderDisasterIcon(alert.type)}</span>
+        <span className="toast-emoji">{renderDisasterIcon(alert.type, undefined, undefined, alert)}</span>
         <div className="toast-info">
           <span className="toast-type">{TYPE_LABEL[alert.type] ?? alert.type}</span>
           <span className="toast-title">{alert.title}</span>

@@ -18,7 +18,7 @@ const TYPE_LABELS: Record<string, string> = {
   volcanic_ash:    'Abu Vulkanik (INA-SIAM)',
   tsunami:         'Tsunami',
   landslide:       'Longsor',
-  extreme_weather: 'Cuaca Ekstrem',
+  extreme_weather: 'Cuaca Buruk',
   karhutla:        'Karhutla',
   kekeringan:      'Kekeringan',
   air_quality:     'Kualitas Udara (ISPU)',
@@ -304,7 +304,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, province, isSelecte
 
       <div className="alertcard-header">
         <div className="alertcard-type-row">
-          <span className="alertcard-icon">{renderDisasterIcon(alert.type)}</span>
+          <span className="alertcard-icon">{renderDisasterIcon(alert.type, undefined, undefined, alert)}</span>
           <span className="alertcard-type-label">{TYPE_LABELS[alert.type] ?? alert.type}</span>
         </div>
         <div className={`alertcard-sev-badge sev-${sevCss}`}>

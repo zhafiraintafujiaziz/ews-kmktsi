@@ -50,7 +50,7 @@ export const DisasterAlertBanner: React.FC<DisasterAlertBannerProps> = ({ active
             <div className="banner-main">
               <div className="banner-left">
                 <span className="banner-emoji-wrapper">
-                  <span className="banner-emoji">{renderDisasterIcon(alert.event.type)}</span>
+                  <span className="banner-emoji">{renderDisasterIcon(alert.event.type, undefined, undefined, { id: alert.event.id, title: alert.event.title })}</span>
                   <span className="banner-pulse-ring" />
                 </span>
                 <div className="banner-info">
