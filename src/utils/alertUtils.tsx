@@ -5,7 +5,6 @@ import floodIcon from '../assets/flood.png';
 import droughtIcon from '../assets/drought.png';
 import lightningIcon from '../assets/lightning.png';
 import airQualityIcon from '../assets/air-quality.svg';
-import { IspuService } from '../services/ispuService';
 
 export const VolcanoWithCloudIcon: React.FC<{ size?: string | number; className?: string; style?: React.CSSProperties }> = ({
   size = '20px',
@@ -258,7 +257,8 @@ export function getDisasterTypeStatus(
     }
     const worst = ispuAlerts.reduce((prev, curr) => ((curr.ispuValue || 0) > (prev.ispuValue || 0) ? curr : prev), ispuAlerts[0]);
     const cat = worst.ispuCategory || 'BAIK';
-    const color = IspuService.getCategoryColor(cat);
+    const maxSev = Math.max(...ispuAlerts.map((a) => a.severity || 1));
+    const color = maxSev === 3 ? '#ef4444' : maxSev === 2 ? '#f59e0b' : '#0284c7';
     return { color, label: `${cat} (ISPU ${worst.ispuValue || '-'})`, count: ispuAlerts.length };
   }
 

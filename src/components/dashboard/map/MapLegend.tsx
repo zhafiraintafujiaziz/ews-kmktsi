@@ -152,17 +152,16 @@ const MapLegend: React.FC<MapLegendProps> = ({
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flex: 1 }}>
                       {label}
                       <span
+                        className="legend-count-badge"
                         style={{
-                          width: '7px',
-                          height: '7px',
-                          borderRadius: '50%',
-                          backgroundColor: status.color,
-                          display: 'inline-block',
-                          boxShadow: status.color === '#ef4444' ? '0 0 5px #ef4444' : '0 0 2px rgba(0,0,0,0.3)',
-                          flexShrink: 0,
+                          color: status.color,
+                          backgroundColor: `${status.color}18`,
+                          borderColor: `${status.color}55`,
                         }}
-                        title={`Status ${label}: ${status.label}`}
-                      />
+                        title={`${status.count} Peringatan`}
+                      >
+                        {status.count}
+                      </span>
                     </span>
                     <span className={`legend-ios-toggle ${mapLayers[key] ? 'on' : 'off'}`}>
                       <span className="legend-ios-thumb" />

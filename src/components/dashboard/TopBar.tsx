@@ -520,19 +520,6 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                   )}
                 </span>
                 <span>{opt.label}</span>
-                <span
-                  style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: status.color,
-                    display: 'inline-block',
-                    marginLeft: '4px',
-                    boxShadow: status.color === '#ef4444' ? '0 0 6px #ef4444' : '0 0 3px rgba(0,0,0,0.3)',
-                    flexShrink: 0,
-                  }}
-                  title={`Status ${opt.label}: ${status.label}`}
-                />
               </button>
             );
           })}

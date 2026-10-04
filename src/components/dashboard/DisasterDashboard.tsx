@@ -35,10 +35,17 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const shownAlertIds = useRef<Set<string>>(new Set());
 
-  // Active alert window (last 7 days) so ongoing alerts don't vanish across days
+  // Display window only. The fetch keeps the longer history.
   const minTimestamp = useMemo(() => {
-    return Date.now() - 7 * 24 * 3600 * 1000;
+    return Date.now() - 3 * 24 * 3600 * 1000;
   }, []);
+
+  const recentAlerts = useMemo(() => {
+    return alerts.filter((a) => {
+      if (a.isForecast) return false;
+      return new Date(a.timestamp).getTime() >= minTimestamp;
+    });
+  }, [alerts, minTimestamp]);
 
   const todayActiveAlerts = useMemo(() => {
     return activeAlerts.filter((calc) => {
@@ -90,21 +97,16 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
   }, []);
 
   const calculatedCriticalAlerts = useMemo(() => {
-    return alerts.filter((a) => {
-      if (a.isForecast) return false;
-      if (new Date(a.timestamp).getTime() < minTimestamp) return false;
+    return recentAlerts.filter((a) => {
       if (typeFilter !== 'all' && a.type !== typeFilter) return false;
       const riskRes = riskResults.find((r) => r.event.id === a.id);
       if (riskRes) return riskRes.riskLevel === 'Tinggi';
       return a.severity === 3;
     });
-  }, [alerts, riskResults, typeFilter, minTimestamp]);
+  }, [recentAlerts, riskResults, typeFilter]);
 
   const filteredAlerts = useMemo(() => {
-    return alerts.filter((a) => {
-      if (a.isForecast) return false;
-      if (new Date(a.timestamp).getTime() < minTimestamp) return false;
-
+    return recentAlerts.filter((a) => {
       const riskRes = riskResults.find((r) => r.event.id === a.id);
       const effectiveRiskLevel = riskRes 
         ? riskRes.riskLevel 
@@ -118,14 +120,12 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
       if (typeFilter !== 'all' && a.type !== typeFilter) return false;
       return true;
     });
-  }, [alerts, riskResults, severityFilter, typeFilter, minTimestamp]);
+  }, [recentAlerts, riskResults, severityFilter, typeFilter]);
 
   const filteredStats = useMemo(() => {
     const stats: Record<AlertSeverity | 'total', number> = { 3: 0, 2: 0, 1: 0, total: 0 };
 
-    alerts.forEach((a) => {
-      if (a.isForecast) return;
-      if (new Date(a.timestamp).getTime() < minTimestamp) return;
+    recentAlerts.forEach((a) => {
       if (typeFilter !== 'all' && a.type !== typeFilter) return;
 
       const riskRes = riskResults.find((r) => r.event.id === a.id);
@@ -147,7 +147,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
     }
 
     return stats;
-  }, [alerts, riskResults, severityFilter, typeFilter, minTimestamp]);
+  }, [recentAlerts, riskResults, severityFilter, typeFilter]);
 
   const handleProvinceSelect = (provinceId: string) => {
     setSelectedProvinceId(provinceId);
@@ -175,7 +175,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
         criticalCount={filteredStats[3]}
         totalAlerts={filteredAlerts.length}
         criticalAlerts={calculatedCriticalAlerts}
-        allAlerts={alerts}
+        allAlerts={recentAlerts}
         riskAlerts={filteredAlerts}
         riskResults={riskResults}
         onAlertSelect={handleAlertSelect}
@@ -208,8 +208,8 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
         <MobileSplitter />
 
         <EwsMap
-          alerts={typeFilter === 'all' ? alerts : alerts.filter((a) => a.type === typeFilter)}
-          allAlerts={alerts}
+          alerts={typeFilter === 'all' ? recentAlerts : recentAlerts.filter((a) => a.type === typeFilter)}
+          allAlerts={recentAlerts}
           riskAlerts={filteredAlerts}
           riskResults={riskResults}
           selectedProvinceId={selectedProvinceId}

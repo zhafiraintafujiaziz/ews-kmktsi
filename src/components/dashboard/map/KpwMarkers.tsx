@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Marker, Tooltip, Popup } from 'react-leaflet';
+import { Marker, Tooltip, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { DisasterAlert, DisasterType, KpwbiOffice, AlertSeverity, RiskCalcResult } from '../../../types';
 import { severityToCssClass } from '../../../types';
@@ -8,7 +8,7 @@ import { PROVINCES } from '../../../constants/provinces';
 import { isOfficeAffectedByAlert } from '../../../utils/disasterImpact';
 import { BnpbInariskService } from '../../../services/bnpbInariskService';
 import { IspuService } from '../../../services/ispuService';
-import { renderDisasterIcon } from '../../../utils/alertUtils';
+import { classifyExtremeWeather, renderDisasterIcon } from '../../../utils/alertUtils';
 import type { NearestKpwResult } from '../../../utils/geo';
 import {
   buildOfficeRiskMap,
@@ -44,8 +44,64 @@ interface KpwMarkersProps {
   selectedAlertId?: string | null;
 }
 
+const KPW_PANE = 'kpwMarkers';
+
+const TYPE_LABEL: Record<string, string> = {
+  earthquake: 'Gempa',
+  extreme_weather: 'Cuaca',
+  karhutla: 'Karhutla',
+  volcanic: 'Gunung Api',
+  volcanic_ash: 'Abu Vulkanik',
+  air_quality: 'Udara',
+  flood: 'Banjir',
+  tsunami: 'Tsunami',
+  landslide: 'Longsor',
+  kekeringan: 'Kekeringan',
+};
+
+const WEATHER_DETAIL: Record<string, string> = {
+  hujan: 'Hujan',
+  hujan_lebat: 'Hujan lebat',
+  hujan_petir: 'Petir',
+  badai: 'Badai',
+  angin: 'Angin',
+};
+
 function getProvinceName(provinceId: string): string {
   return PROVINCES.find((p) => p.id === provinceId)?.name ?? provinceId;
+}
+
+function useKpwPane() {
+  const map = useMap();
+  if (!map.getPane(KPW_PANE)) {
+    const pane = map.createPane(KPW_PANE);
+    pane.style.zIndex = '620';
+  }
+}
+
+function alertDetail(alert: DisasterAlert): string | null {
+  if (alert.type === 'earthquake' && alert.magnitude != null) {
+    return `M ${alert.magnitude}`;
+  }
+  if (alert.type === 'extreme_weather') {
+    return WEATHER_DETAIL[classifyExtremeWeather(alert)] ?? null;
+  }
+  return null;
+}
+
+function summarizeOfficeAlerts(alerts: DisasterAlert[]) {
+  const groups = new Map<string, DisasterAlert[]>();
+  for (const alert of alerts) {
+    const list = groups.get(alert.type) ?? [];
+    list.push(alert);
+    groups.set(alert.type, list);
+  }
+  return [...groups.entries()]
+    .map(([type, list]) => {
+      const top = [...list].sort((a, b) => b.severity - a.severity)[0];
+      return { type, count: list.length, alert: top, detail: alertDetail(top) };
+    })
+    .sort((a, b) => b.alert.severity - a.alert.severity || b.count - a.count);
 }
 
 function createMarkerIcon(
@@ -111,6 +167,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
   mapLayers,
   selectedAlertId,
 }) => {
+  useKpwPane();
   const isInariskFilter = ['flood', 'tsunami', 'kekeringan', 'volcanic'].includes(activeTypeFilter);
   const officeRiskMap = useMemo(
     () => buildOfficeRiskMap(KPWBI_OFFICES, riskAlerts ?? alerts),
@@ -158,6 +215,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
           <Marker
             key={office.id}
             position={[office.latitude, office.longitude]}
+            pane={KPW_PANE}
             icon={createMarkerIcon(office, riskSeverity, selectedOfficeId, nearestOffices)}
             zIndexOffset={office.isKantorPusat ? 1000 : office.isKorwil ? 500 : 0}
             ref={(ref) => { markerRefs.current[office.id] = ref; }}
@@ -179,11 +237,30 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                     ↔️ Terdekat ({nearestInfo.distanceKm.toFixed(1)} km)
                   </div>
                 )}
-                {officeAlerts.length > 0 && (
-                  <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--alert-critical)', fontWeight: 600 }}>
-                    ⚠️ {officeAlerts.length} Alert Terdampak
-                  </div>
-                )}
+                {officeAlerts.length > 0 && (() => {
+                  const summary = summarizeOfficeAlerts(officeAlerts);
+                  const shown = summary.slice(0, 3);
+                  const extra = summary.length - shown.length;
+                  return (
+                    <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      {shown.map((row) => (
+                        <div key={row.type} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          <span style={{ display: 'inline-flex' }}>
+                            {renderDisasterIcon(row.type, undefined, { width: '12px', height: '12px' }, row.alert)}
+                          </span>
+                          <span>
+                            {TYPE_LABEL[row.type] ?? row.type}
+                            {row.detail ? ` · ${row.detail}` : ''}
+                            {row.count > 1 ? ` ×${row.count}` : ''}
+                          </span>
+                        </div>
+                      ))}
+                      {extra > 0 && (
+                        <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>+{extra}</div>
+                      )}
+                    </div>
+                  );
+                })()}
                 {isInariskFilter && (() => {
                   const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
                   if (hazard === 'air_quality') {
