@@ -428,6 +428,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
           riskAlerts={riskAlerts}
           riskResults={riskResults}
           activeTypeFilter={activeTypeFilter}
+          isKerentananView={isKerentananView}
           selectedProvinceId={selectedProvinceId}
           selectedOfficeId={selectedOfficeId}
           nearestOffices={nearestOffices}

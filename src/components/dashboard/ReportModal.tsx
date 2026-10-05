@@ -12,6 +12,7 @@ import {
   mapDisasterTypeToInariskHazard,
   vulnerabilityToScore,
   getRiskLevel,
+  scoreAlertForOffice,
 } from '../../utils/riskCalculator';
 import * as XLSX from 'xlsx';
 
@@ -92,6 +93,13 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, alert
           let rScoreVal: number | undefined;
           const event = mapAlertToDisasterEvent(alert);
           if (event) {
+            if (event.type === 'air_quality') {
+              const { totalScore } = scoreAlertForOffice(office.id, alert);
+              if (totalScore !== null) {
+                rScoreVal = totalScore;
+                riskLevelStr = getRiskLevel(totalScore);
+              }
+            }
             const kerentananDisasters = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash'];
             const isKerentananSupported = kerentananDisasters.includes(event.type);
             if (isKerentananSupported) {

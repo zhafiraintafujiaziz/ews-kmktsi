@@ -1,9 +1,9 @@
-import type { DisasterAlert, AlertSeverity, IspuStationInfo, IspuCategory } from '../types';
+import type { DisasterAlert, IspuStationInfo, IspuCategory } from '../types';
 import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
 import { haversineDistance } from '../utils/geo';
 import { mapTextToProvinceId } from '../utils/provinceMap';
 import { fetchWithCorsProxy } from './proxy';
-import { getIspuCategory, getIspuStyle } from '../constants/ispuCategories';
+import { getIspuAlertSeverity, getIspuCategory, getIspuStyle } from '../constants/ispuCategories';
 
 const ISPU_API_URL = 'https://ispu.kemenlh.go.id/apimobile/v1/getStations';
 
@@ -243,21 +243,8 @@ export class IspuService {
         }
       }
 
-      const cat = (station.category || '').toUpperCase();
-      // Filter ketat: HANYA tampilkan level Tidak Sehat, Sangat Tidak Sehat, dan Berbahaya (ISPU > 100)
-      const isCriticalLevel =
-        station.ispuValue > 100 ||
-        cat.includes('TIDAK SEHAT') ||
-        cat.includes('BERBAHAYA');
-
-      if (!isCriticalLevel || cat === 'SEDANG' || cat === 'BAIK') return;
-
-      let severity: AlertSeverity = 2;
-      if (station.ispuValue > 200 || cat.includes('BERBAHAYA') || cat.includes('SANGAT TIDAK SEHAT')) {
-        severity = 3;
-      } else {
-        severity = 2;
-      }
+      const severity = getIspuAlertSeverity(station.category);
+      if (severity === null) return;
 
       const distText = nearestOffice ? ` (±${Math.round(nearestOfficeDist)} km dari ${nearestOffice.name})` : '';
 

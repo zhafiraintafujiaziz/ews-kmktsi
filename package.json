@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test tests/freshness.test.ts tests/disasterRecord.test.ts",
+    "test": "node --experimental-strip-types --test tests/freshness.test.ts tests/disasterRecord.test.ts tests/ispuRisk.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

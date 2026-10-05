@@ -11,6 +11,7 @@ import {
   vulnerabilityToScore,
   getRiskLevel,
   isKerentananSupportedType,
+  scoreAlertForOffice,
 } from '../utils/riskCalculator';
 
 export const useDisasterAlert = () => {
@@ -24,12 +25,27 @@ export const useDisasterAlert = () => {
 
   const riskResults = useMemo<RiskCalcResult[]>(() => {
     if (isLoading) return [];
-    return alerts.flatMap((alert) => {
-      if (alert.isForecast || !isKerentananSupportedType(alert.type)) return [];
+    return alerts.flatMap<RiskCalcResult>((alert) => {
+      if (alert.isForecast || (alert.type !== 'air_quality' && !isKerentananSupportedType(alert.type))) return [];
       const event = mapAlertToDisasterEvent(alert);
       if (!event) return [];
       const affectedLocations = findAffectedLocations(event, markedLocations);
       if (affectedLocations.length === 0) return [];
+
+      if (alert.type === 'air_quality') {
+        const { totalScore } = scoreAlertForOffice(affectedLocations[0].id, alert);
+        if (totalScore === null) return [];
+        const riskLevel = getRiskLevel(totalScore);
+        return [{
+          event,
+          vulnerabilityLevel: null,
+          vulnerabilityScore: null,
+          riskScore: totalScore,
+          riskLevel,
+          affectedLocations,
+          shouldAlert: riskLevel === 'Tinggi',
+        }];
+      }
 
       const hazard = mapDisasterTypeToInariskHazard(event.type);
       const indices = affectedLocations

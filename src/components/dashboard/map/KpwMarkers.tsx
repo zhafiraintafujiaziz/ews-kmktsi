@@ -22,6 +22,7 @@ interface KpwMarkersProps {
   riskAlerts?: DisasterAlert[];
   riskResults: RiskCalcResult[];
   activeTypeFilter: DisasterType | 'all';
+  isKerentananView?: boolean;
   selectedProvinceId: string | null;
   selectedOfficeId: string | null;
   nearestOffices: NearestKpwResult[];
@@ -52,7 +53,7 @@ const TYPE_LABEL: Record<string, string> = {
   karhutla: 'Karhutla',
   volcanic: 'Gunung Api',
   volcanic_ash: 'Abu Vulkanik',
-  air_quality: 'Udara',
+  air_quality: 'Kualitas Udara',
   flood: 'Banjir',
   tsunami: 'Tsunami',
   landslide: 'Longsor',
@@ -161,6 +162,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
   alerts,
   riskAlerts,
   activeTypeFilter,
+  isKerentananView = false,
   selectedProvinceId,
   selectedOfficeId,
   nearestOffices,
@@ -171,7 +173,8 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
   selectedAlertId,
 }) => {
   useKpwPane();
-  const isInariskFilter = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'air_quality'].includes(activeTypeFilter);
+  const isInariskFilter = ['flood', 'tsunami', 'kekeringan', 'volcanic'].includes(activeTypeFilter)
+    || (isKerentananView && activeTypeFilter === 'air_quality');
   const officeRiskMap = useMemo(
     () => buildOfficeRiskMap(KPWBI_OFFICES, riskAlerts ?? alerts),
     [riskAlerts, alerts],
@@ -210,7 +213,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
         const nearestInfo = nearestOffices.find((n) => n.office.id === office.id);
         const officeAlerts = alerts.filter((a) => isOfficeAffectedByAlert(office, a));
         const officeRisk = officeRiskMap.get(office.id);
-        const ispuAssessment = activeTypeFilter === 'air_quality' ? IspuService.getOfficeIspuAssessment(office.id) : null;
+        const ispuAssessment = isKerentananView && activeTypeFilter === 'air_quality' ? IspuService.getOfficeIspuAssessment(office.id) : null;
         const riskSeverity: AlertSeverity | null = officeRisk
           ? (officeRisk.riskLevel === 'Tinggi' ? 3 : officeRisk.riskLevel === 'Sedang' ? 2 : 1)
           : null;
@@ -391,7 +394,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '160px', overflowY: 'auto', paddingRight: '2px' }}>
                           {officeAlerts.map((alert) => scoreAlertForOffice(office.id, alert))
-                          .filter((risk): risk is typeof risk & { totalScore: number; vulScore: number } => risk.totalScore !== null && risk.vulScore !== null)
+                          .filter((risk): risk is typeof risk & { totalScore: number } => risk.totalScore !== null)
                           .sort((a, b) => b.totalScore - a.totalScore)
                           .map(({ alert, totalScore, vulScore, isKerentananSupported }) => {
                             const indexValStr = isKerentananSupported ? `${vulScore}/3` : 'N/A';
@@ -426,7 +429,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                                   </span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)' }}>
-                                  <span>Alert: {disasterScore}/3 • Kerentanan: {indexValStr}</span>
+                                  <span>{alert.type === 'air_quality' ? `Keparahan: ${disasterScore}/3` : `Alert: ${disasterScore}/3 • Kerentanan: ${indexValStr}`}</span>
                                   <span style={{ 
                                     fontWeight: 600, 
                                     color: totalScore >= 7 ? 'var(--alert-critical)' : totalScore >= 4 ? 'var(--alert-warning)' : 'var(--alert-watch)' 

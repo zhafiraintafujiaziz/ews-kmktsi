@@ -3,7 +3,7 @@ import { haversineDistance } from './geo';
 import { getAlertImpactRadiusKm, isOfficeAffectedByAlert } from './disasterImpact';
 import { BnpbInariskService } from '../services/bnpbInariskService';
 
-/** Tipe bencana yang skornya memakai indeks kerentanan InaRisk. Selain ini, skor kerentanan dipaksa 3. */
+/** Tipe bencana yang skornya memakai indeks kerentanan InaRisk. ISPU memakai keparahan langsung. */
 export const KERENTANAN_SUPPORTED_TYPES = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash'] as const;
 
 export function isKerentananSupportedType(type: string): boolean {
@@ -25,6 +25,10 @@ export interface OfficeRiskEntry {
 
 /** Skor satu alert terhadap satu kantor, sama dengan kartu Tingkat Risiko. */
 export function scoreAlertForOffice(officeId: string, alert: DisasterAlert): OfficeAlertRisk {
+  if (alert.type === 'air_quality') {
+    // Normalize severity 1/2/3 to the shared 1-9 risk scale, without a vulnerability assessment.
+    return { alert, vulScore: null, totalScore: alert.severity * 3, isKerentananSupported: false };
+  }
   const isKerentananSupported = isKerentananSupportedType(alert.type);
   let vulScore: number | null = null;
   if (isKerentananSupported) {

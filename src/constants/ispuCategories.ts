@@ -1,4 +1,4 @@
-import type { IspuCategory } from '../types';
+import type { AlertSeverity, IspuCategory } from '../types';
 
 export const ISPU_CATEGORIES = [
   { category: 'BAIK', label: 'Baik', range: '0-50', color: '#00cc00', textColor: '#000000' },
@@ -14,6 +14,15 @@ export function getIspuCategory(value: number): IspuCategory {
   if (value > 100) return 'TIDAK SEHAT';
   if (value > 50) return 'SEDANG';
   return 'BAIK';
+}
+
+export function getIspuAlertSeverity(category: IspuCategory): AlertSeverity | null {
+  switch (category) {
+    case 'TIDAK SEHAT': return 1;
+    case 'SANGAT TIDAK SEHAT': return 2;
+    case 'BERBAHAYA': return 3;
+    default: return null;
+  }
 }
 
 export function getIspuStyle(category: IspuCategory | string, value?: number) {

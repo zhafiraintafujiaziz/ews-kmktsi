@@ -152,8 +152,8 @@ export interface MarkedLocation {
 
 export interface RiskCalcResult {
   event: DisasterEvent;
-  vulnerabilityLevel: VulnerabilityLevel;
-  vulnerabilityScore: number; // 1, 2, atau 3
+  vulnerabilityLevel: VulnerabilityLevel | null; // null untuk risiko ISPU berbasis keparahan
+  vulnerabilityScore: number | null; // 1, 2, atau 3; null jika kerentanan tidak digunakan
   riskScore: number;          // disasterScore × vulnerabilityScore (1–9)
   riskLevel: RiskLevel;       // mapping dari riskScore
   affectedLocations: MarkedLocation[]; // lokasi terdampak dalam radius
