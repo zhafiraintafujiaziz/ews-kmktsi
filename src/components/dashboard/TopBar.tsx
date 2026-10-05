@@ -113,10 +113,15 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
   const [timeStr, setTimeStr] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [disasterFiltersOpen, setDisasterFiltersOpen] = useState(false);
+  const disasterFilterToggleRef = useRef<HTMLButtonElement>(null);
 
   const [notiOpen, setNotiOpen] = useState(false);
   const notiRef = useRef<HTMLDivElement>(null);
-  const [showToast, setShowToast] = useState(false);
+  const [toastDisabled, setToastDisabled] = useState(
+    () => localStorage.getItem('bima_toast_disabled') === 'true',
+  );
+  const [dismissedToastAlert, setDismissedToastAlert] = useState<DisasterAlert | null>(null);
   const [demoAlert, setDemoAlert] = useState<DisasterAlert | null>(null);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const playedToastId = useRef<string | null>(null);
@@ -125,14 +130,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
 
   const latestAlert = sortedNotiAlerts[0] ?? null;
 
-  useEffect(() => {
-    const isToastDisabled = localStorage.getItem('bima_toast_disabled') === 'true';
-    if (latestAlert && !isToastDisabled) {
-      setShowToast(true);
-    } else {
-      setShowToast(false);
-    }
-  }, [latestAlert]);
+  const showToast = latestAlert !== null && !toastDisabled && latestAlert !== dismissedToastAlert;
 
   useEffect(() => {
     if (!showToast || !latestAlert) return;
@@ -146,7 +144,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
       setDemoAlert(null);
       return;
     }
-    setShowToast(false);
+    setToastDisabled(true);
     localStorage.setItem('bima_toast_disabled', 'true');
   };
 
@@ -229,7 +227,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
   const toastClass = demoAlert ? 'critical' : toastAlert ? severityToCssClass(toastAlert.severity) : 'watch';
 
   return (
-    <header className="topbar-container">
+    <header className="topbar-container dashboard-topbar">
       <div className="topbar-first-row">
         <div className="topbar-brand">
           <div className="topbar-logo" style={{ overflow: 'hidden', padding: 0 }}>
@@ -275,7 +273,6 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            Alert
           </button>
 
           <div className="topbar-status-wrapper" ref={dropdownRef}>
@@ -502,27 +499,51 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
       </div>
 
       <div className="topbar-center">
-        <div className="topbar-filter-group">
-          {FILTER_OPTIONS.map((opt) => {
-            const status = getDisasterTypeStatus(opt.value, allAlerts);
-            return (
-              <button
-                key={opt.value}
-                className={`topbar-filter-pill${selectedType === opt.value ? ' active' : ''}`}
-                onClick={() => onTypeChange(opt.value)}
-                title={`Filter: ${opt.label} • Status: ${status.label}`}
-              >
-                <span>
-                  {opt.value === 'all' ? (
-                    <PublicIcon style={{ width: '14px', height: '14px', display: 'inline-block', verticalAlign: 'middle' }} />
-                  ) : (
-                    renderDisasterIcon(opt.value, undefined, { width: '14px', height: '14px' })
-                  )}
-                </span>
-                <span>{opt.label}</span>
-              </button>
-            );
-          })}
+        <div className="topbar-filter-group dashboard-disaster-filter" onKeyDown={(event) => {
+          if (event.key === 'Escape' && disasterFiltersOpen) {
+            event.stopPropagation();
+            setDisasterFiltersOpen(false);
+            disasterFilterToggleRef.current?.focus();
+          }
+        }}>
+          <button
+            ref={disasterFilterToggleRef}
+            type="button"
+            className="disaster-filter-toggle"
+            aria-expanded={disasterFiltersOpen}
+            aria-controls="dashboard-disaster-options"
+            onClick={() => setDisasterFiltersOpen((open) => !open)}
+          >
+            <span>Bencana</span>
+            <span className="disaster-filter-selection">{FILTER_OPTIONS.find((option) => option.value === selectedType)?.label}</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className={disasterFiltersOpen ? 'rotated' : ''}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          <div id="dashboard-disaster-options" className="disaster-filter-options" hidden={!disasterFiltersOpen} role="group" aria-label="Jenis bencana">
+            {FILTER_OPTIONS.map((opt) => {
+              const status = getDisasterTypeStatus(opt.value, allAlerts);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  aria-pressed={selectedType === opt.value}
+                  className={`topbar-filter-pill${selectedType === opt.value ? ' active' : ''}`}
+                  onClick={() => onTypeChange(opt.value)}
+                  title={`Filter: ${opt.label} • Status: ${status.label}`}
+                >
+                  <span>
+                    {opt.value === 'all' ? (
+                      <PublicIcon style={{ width: '14px', height: '14px', display: 'inline-block', verticalAlign: 'middle' }} />
+                    ) : (
+                      renderDisasterIcon(opt.value, undefined, { width: '14px', height: '14px' })
+                    )}
+                  </span>
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="topbar-divider-v" />
         <button className="topbar-nav-btn" onClick={onSwitchToKerentanan}>
@@ -574,7 +595,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
             onClick={() => {
               onAlertSelect(toastAlert.id);
               if (demoAlert) setDemoAlert(null);
-              else setShowToast(false);
+              else setDismissedToastAlert(latestAlert);
             }}
           >
             <span className="bima-toast-alert-title">{toastAlert.title}</span>

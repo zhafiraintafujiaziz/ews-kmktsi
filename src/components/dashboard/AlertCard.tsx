@@ -299,6 +299,17 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, province, isSelecte
     <div
       className={`alertcard-container alertcard-sev-${sevCss}${isSelected ? ' selected' : ''}`}
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      aria-label={alert.title}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
     >
       <div className={`alertcard-stripe ${sevCss}`} />
 

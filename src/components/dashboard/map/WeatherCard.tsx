@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchProvinceWeatherForecast } from '../../../services/bmkgService';
+import type { WeatherData } from '../../../types/weather';
 import {
   Warning as WarningIcon,
   WaterDrop as WaterDropIcon,
@@ -10,29 +11,6 @@ import './WeatherCard.css';
 interface WeatherCardProps {
   provinceId: string;
   cityName: string;
-}
-
-interface WeatherItem {
-  datetime: string;
-  t: number;
-  weather_desc: string;
-  weather_desc_en: string;
-  ws: number;
-  wd: string;
-  hu: number;
-  image: string;
-  local_datetime: string;
-}
-
-interface WeatherData {
-  lokasi: {
-    provinsi: string;
-    kotkab: string;
-    kecamatan: string;
-    desa: string;
-    timezone: string;
-  };
-  cuaca: WeatherItem[][];
 }
 
 export const WeatherCard: React.FC<WeatherCardProps> = ({ provinceId, cityName }) => {
@@ -52,9 +30,9 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ provinceId, cityName }
           setWeatherData(data);
           setSelectedDayIdx(0);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (active) {
-          setError(err.message || 'Gagal memuat cuaca');
+          setError(err instanceof Error && err.message ? err.message : 'Gagal memuat cuaca');
         }
       } finally {
         if (active) {

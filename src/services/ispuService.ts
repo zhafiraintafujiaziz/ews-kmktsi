@@ -1,11 +1,21 @@
 import type { DisasterAlert, AlertSeverity, IspuStationInfo, IspuCategory } from '../types';
-import { ISPU_STATIONS_SNAPSHOT } from '../constants/ispuData';
 import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
 import { haversineDistance } from '../utils/geo';
 import { mapTextToProvinceId } from '../utils/provinceMap';
 import { fetchWithCorsProxy } from './proxy';
 
 const ISPU_API_URL = 'https://ispu.kemenlh.go.id/apimobile/v1/getStations';
+
+function parseObservationTime(value: string): Date | null {
+  const months: Record<string, string> = {
+    januari: 'January', februari: 'February', maret: 'March', april: 'April', mei: 'May',
+    juni: 'June', juli: 'July', agustus: 'August', september: 'September', oktober: 'October',
+    november: 'November', desember: 'December',
+  };
+  const normalized = value.replace(/\b([A-Za-z]+)\b/g, (part) => months[part.toLowerCase()] ?? part);
+  const parsed = new Date(normalized);
+  return Number.isFinite(parsed.getTime()) ? parsed : null;
+}
 
 export interface OfficeIspuAssessment {
   officeId: string;
@@ -21,12 +31,12 @@ export interface OfficeIspuAssessment {
 }
 
 export class IspuService {
-  private static cachedStations: IspuStationInfo[] = ISPU_STATIONS_SNAPSHOT;
+  private static cachedStations: IspuStationInfo[] = [];
   private static lastFetchTime: number = 0;
   private static readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache
 
   /**
-   * Fetch live stations from KemenLH ISPU API, falling back to cached snapshot.
+   * Fetch current stations from KemenLH. Stale or undated readings are ignored.
    */
   static async fetchIspuStations(): Promise<IspuStationInfo[]> {
     const now = Date.now();
@@ -35,23 +45,23 @@ export class IspuService {
     }
 
     try {
-      const data = await fetchWithCorsProxy(ISPU_API_URL) as { rows?: any[] };
+      const data = await fetchWithCorsProxy(ISPU_API_URL) as { rows?: Record<string, unknown>[] };
       const rows = data?.rows;
+      if (!Array.isArray(rows)) throw new Error('ISPU response does not contain station rows');
 
-      if (Array.isArray(rows) && rows.length > 0) {
+      {
         const parsed: IspuStationInfo[] = rows.map((r) => {
-          let val = 0;
-          try {
-            val = Math.round(parseFloat(r.val || '0'));
-          } catch {
-            val = 0;
-          }
+          const text = (value: unknown): string => typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+          const categoryInfo = r.kategori && typeof r.kategori === 'object' ? r.kategori as Record<string, unknown> : {};
+          const val = Number(r.val);
+          const waktuText = text(r.waktu_text || r.waktu) || 'Terkini';
+          const observedAt = parseObservationTime(waktuText);
 
-          const rawParam = r.param || '';
+          const rawParam = text(r.param);
           const cleanParam = rawParam.replace(/<sub>|<\/sub>/gi, '');
 
           let cat: IspuCategory = 'BAIK';
-          const rawCat = (r.cat || '').toUpperCase();
+          const rawCat = text(r.cat).toUpperCase();
           if (rawCat.includes('BERBAHAYA') || val > 300) cat = 'BERBAHAYA';
           else if (rawCat.includes('SANGAT TIDAK SEHAT') || val > 200) cat = 'SANGAT TIDAK SEHAT';
           else if (rawCat.includes('TIDAK SEHAT') || val > 100) cat = 'TIDAK SEHAT';
@@ -59,41 +69,44 @@ export class IspuService {
           else cat = 'BAIK';
 
           return {
-            idStasiun: r.id_stasiun || '',
-            nama: r.nama || '',
-            kota: r.kota || '',
-            provinsi: r.provinsi || '',
-            latitude: parseFloat(r.lat || '0'),
-            longitude: parseFloat(r.lon || '0'),
+            idStasiun: text(r.id_stasiun),
+            nama: text(r.nama),
+            kota: text(r.kota),
+            provinsi: text(r.provinsi),
+            latitude: parseFloat(text(r.lat) || '0'),
+            longitude: parseFloat(text(r.lon) || '0'),
             ispuValue: val,
             category: cat,
-            dominantParam: cleanParam || 'PM2.5',
-            waktuText: r.waktu_text || r.waktu || 'Terkini',
-            keterangan: r.kategori?.keterangan || '',
-            color: r.kategori?.color || '#0ea5e9',
+            dominantParam: cleanParam,
+            waktuText,
+            observedAt: observedAt?.toISOString(),
+            keterangan: text(categoryInfo.keterangan),
+            color: text(categoryInfo.color) || '#0ea5e9',
           };
-        }).filter((s) => !isNaN(s.latitude) && !isNaN(s.longitude) && s.latitude !== 0 && s.longitude !== 0);
-
-        if (parsed.length > 0) {
-          this.cachedStations = parsed;
-          this.lastFetchTime = now;
-          return this.cachedStations;
-        }
+        }).filter((s) => Number.isFinite(s.ispuValue) && s.ispuValue >= 0
+          && Number.isFinite(s.latitude) && Number.isFinite(s.longitude)
+          && s.latitude !== 0 && s.longitude !== 0
+          && Boolean(s.observedAt) && now - Date.parse(s.observedAt!) <= 24 * 60 * 60 * 1000
+          && Date.parse(s.observedAt!) <= now);
+        this.cachedStations = parsed;
+        this.lastFetchTime = now;
+        return parsed;
       }
     } catch (err) {
-      console.warn('IspuService: Live fetch failed, using official snapshot.', err);
+      console.warn('IspuService: Live fetch failed.', err);
+      this.cachedStations = this.cachedStations.filter((station) => station.observedAt
+        && now - Date.parse(station.observedAt) <= 24 * 60 * 60 * 1000);
+      throw err;
     }
-
-    return this.cachedStations;
   }
 
   /**
    * Return cached stations immediately (sync).
    */
   static getStations(): IspuStationInfo[] {
-    return this.cachedStations && this.cachedStations.length > 0
-      ? this.cachedStations
-      : ISPU_STATIONS_SNAPSHOT;
+    this.cachedStations = this.cachedStations.filter((station) => station.observedAt
+      && Date.now() - Date.parse(station.observedAt) <= 24 * 60 * 60 * 1000);
+    return this.cachedStations;
   }
 
   /**
@@ -156,37 +169,15 @@ export class IspuService {
   static getOfficeIspuAssessment(
     officeId: string,
     stations?: IspuStationInfo[]
-  ): OfficeIspuAssessment {
+  ): OfficeIspuAssessment | null {
     const office = KPWBI_OFFICES.find((o) => o.id === officeId);
     if (!office) {
-      return {
-        officeId,
-        ispuValue: 50,
-        category: 'SEDANG',
-        dominantParam: 'PM2.5',
-        stationName: 'Stasiun Regional',
-        stationCity: 'Indonesia',
-        stationProvince: '',
-        distanceKm: 0,
-        score: 0.35,
-        waktuText: 'Hari ini',
-      };
+      return null;
     }
 
     const nearestResult = this.getNearestStation(office.latitude, office.longitude, stations);
     if (!nearestResult) {
-      return {
-        officeId,
-        ispuValue: 50,
-        category: 'SEDANG',
-        dominantParam: 'PM2.5',
-        stationName: 'SPKU Estimasi',
-        stationCity: office.city,
-        stationProvince: office.region,
-        distanceKm: 0,
-        score: 0.35,
-        waktuText: 'Estimasi Regional',
-      };
+      return null;
     }
 
     const { station, distanceKm } = nearestResult;
@@ -216,12 +207,13 @@ export class IspuService {
   /**
    * Return category styling & badge details based on Permen LHK No. 14/2020.
    */
-  static getCategoryBadge(category: IspuCategory, _ispuVal?: number): {
+  static getCategoryBadge(category: IspuCategory, ispuVal?: number): {
     label: string;
     cls: 'risk-critical' | 'risk-high' | 'risk-medium' | 'risk-low';
     color: string;
     bg: string;
   } {
+    void ispuVal;
     switch (category) {
       case 'BERBAHAYA':
         return {
@@ -337,7 +329,7 @@ Sumber Data: Stasiun Pemantau Kualitas Udara (SPKU) KemenLH / KLHK (Permen LHK N
         provinceId: mapTextToProvinceId(station.provinsi),
         title: `Kualitas Udara ${station.category} (ISPU ${station.ispuValue}) - ${station.kota}`,
         description,
-        timestamp: new Date().toISOString(),
+        timestamp: station.observedAt!,
         latitude: station.latitude,
         longitude: station.longitude,
         affectedArea: `${station.kota} (${station.nama})`,

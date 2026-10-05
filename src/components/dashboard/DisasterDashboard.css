@@ -32,8 +32,10 @@
   
   .map-wrapper {
     width: 100%;
-    height: var(--map-ratio-mobile, 60vh);
+    height: var(--dashboard-map-ratio-mobile, 60%);
     order: 1;
+    flex: 0 0 auto;
+    max-height: min(75%, calc(100% - 240px));
   }
 }
 

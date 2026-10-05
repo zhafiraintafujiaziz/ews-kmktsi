@@ -3,27 +3,35 @@
   flex-direction: column;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   padding: 10px 12px 10px 16px;
   cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   flex-shrink: 0;
   gap: 5px;
 }
 
 .alertcard-container:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  background-color: var(--bg-primary);
   border-color: var(--border-active);
 }
 
 .alertcard-container.selected {
   border-color: var(--accent-primary);
   background-color: var(--accent-light);
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
+}
+
+.alertcard-container:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alertcard-container { transition: none; }
 }
 
 /* Left severity stripe */
@@ -32,7 +40,7 @@
   left: 0;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 3px;
 }
 
 .alertcard-stripe.critical { background-color: var(--alert-critical); }

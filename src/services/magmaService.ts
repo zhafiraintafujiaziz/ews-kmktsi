@@ -72,56 +72,8 @@ export function getJakartaDateString(d: Date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-const FALLBACK_VOLCANO_REPORTS: VolcanoReport[] = [
-  {
-    no: 1,
-    name: 'Lewotobi Laki-laki',
-    visual: 'Teramati asap kawah utama berwarna kelabu tebal setinggi 1000 meter condong ke barat daya. Terjadi erupsi eksplosif berulang.',
-    seismicity: [
-      { count: 12, type: 'Gempa Letusan/Erupsi' },
-      { count: 24, type: 'Gempa Hembusan' },
-      { count: 8, type: 'Gempa Vulkanik Dangkal' }
-    ],
-    recommendation: 'Masyarakat dan wisatawan di sekitar G. Lewotobi Laki-laki tidak melakukan aktivitas apapun dalam radius 7 km dari pusat erupsi.',
-    level: 'IV'
-  },
-  {
-    no: 2,
-    name: 'Semeru',
-    visual: 'Gunung api terlihat jelas hingga tertutup kabut. Teramati asap kawah putih kelabu setinggi 500 meter.',
-    seismicity: [
-      { count: 19, type: 'Gempa Letusan/Erupsi' },
-      { count: 6, type: 'Gempa Guguran' }
-    ],
-    recommendation: 'Tidak melakukan aktivitas apapun di sektor tenggara di sepanjang Besuk Kobokan, sejauh 13 km dari puncak.',
-    level: 'III'
-  },
-  {
-    no: 3,
-    name: 'Marapi',
-    visual: 'Teramati asap kawah berwarna putih dan kelabu tebal tinggi 400 meter di atas puncak kawah.',
-    seismicity: [
-      { count: 5, type: 'Gempa Hembusan' },
-      { count: 3, type: 'Gempa Vulkanik Dalam' }
-    ],
-    recommendation: 'Masyarakat di sekitar G. Marapi tidak memasuki wilayah radius 4.5 km dari pusat aktivitas (Kawah Verbeek).',
-    level: 'III'
-  },
-  {
-    no: 4,
-    name: 'Ibu',
-    visual: 'Teramati asap kawah kelabu tebal tinggi 800 meter condong ke arah barat laut. Suara gemuruh lemah terdengar.',
-    seismicity: [
-      { count: 15, type: 'Gempa Letusan/Erupsi' },
-      { count: 18, type: 'Gempa Hembusan' }
-    ],
-    recommendation: 'Masyarakat tidak beraktivitas dalam radius 4 km dan perluasan sektoral 7 km.',
-    level: 'III'
-  }
-];
-
 export const MagmaService = {
-  async fetchDailyReport(dateStr: string, fallbackToMock: boolean = true): Promise<VolcanoReport[]> {
+  async fetchDailyReport(dateStr: string): Promise<VolcanoReport[]> {
     const url = `https://magma.esdm.go.id/v1/gunung-api/laporan-harian/${dateStr}`;
     try {
       const htmlText = await fetchHtmlWithCorsProxy(url);
@@ -140,7 +92,9 @@ export const MagmaService = {
 
         const titleText = titleEl.textContent || '';
         let level: VolcanoLevel | null = null;
-        if (titleText.includes('Level III')) {
+        if (titleText.includes('Level IV')) {
+          level = 'IV';
+        } else if (titleText.includes('Level III')) {
           level = 'III';
         } else if (titleText.includes('Level II')) {
           level = 'II';
@@ -175,25 +129,14 @@ export const MagmaService = {
         });
       }
 
-      if (reports.length === 0) {
-        if (!fallbackToMock) {
-          throw new Error('Scraping returned 0 reports');
-        }
-        console.warn('Scraping returned 0 reports');
-        return [];
-      }
-
       return reports;
     } catch (e) {
-      if (!fallbackToMock) {
-        throw e;
-      }
       console.warn('Failed to fetch from MAGMA Indonesia:', e);
-      return [];
+      throw e;
     }
   },
 
-  async fetchLiveAlerts(fallbackToMock: boolean = true): Promise<DisasterAlert[]> {
+  async fetchLiveAlerts(): Promise<DisasterAlert[]> {
     const today = new Date();
     const yesterday = new Date(today.getTime() - 24 * 3600000);
 
@@ -202,8 +145,8 @@ export const MagmaService = {
 
     try {
       const results = await Promise.allSettled([
-        this.fetchDailyReport(todayStr, fallbackToMock),
-        this.fetchDailyReport(yesterdayStr, fallbackToMock)
+        this.fetchDailyReport(todayStr),
+        this.fetchDailyReport(yesterdayStr)
       ]);
 
       const todayReports = results[0].status === 'fulfilled' ? results[0].value : [];
@@ -224,21 +167,15 @@ export const MagmaService = {
         mergedMap.set(r.name, r);
       });
 
-      let finalReports = Array.from(mergedMap.values());
-      if (finalReports.length === 0) {
-        finalReports = [...FALLBACK_VOLCANO_REPORTS];
-      }
+      const finalReports = Array.from(mergedMap.values());
 
       return finalReports.map((report) => {
         const isToday = todayReports.some((tr) => tr.name === report.name);
         return volcanoReportToAlert(report, isToday ? todayStr : yesterdayStr);
       });
     } catch (e) {
-      if (!fallbackToMock) {
-        throw e;
-      }
-      console.warn('Failed to load live volcano alerts, using verified snapshots:', e);
-      return FALLBACK_VOLCANO_REPORTS.map((report) => volcanoReportToAlert(report, todayStr));
+      console.warn('Failed to load live volcano alerts:', e);
+      throw e;
     }
   }
 };
@@ -266,10 +203,10 @@ export function getProvinceIdForVolcano(volcanoName: string): string {
   if (name.includes('soputan')) return 'ID-SA'; // Sulawesi Utara
   if (name.includes('raung')) return 'ID-JI'; // Jawa Timur
   if (name.includes('lokon')) return 'ID-SA'; // Sulawesi Utara
-  return 'ID-JT'; // Default / Fallback to Jawa Tengah
+  return 'unknown';
 }
 
-export function getVolcanoCoordinates(name: string): [number, number] {
+export function getVolcanoCoordinates(name: string): [number, number] | null {
   const n = name.toLowerCase();
   if (n.includes('awu')) return [3.682, 125.446];
   if (n.includes('lewotobi')) return [-8.542, 122.775];
@@ -292,7 +229,7 @@ export function getVolcanoCoordinates(name: string): [number, number] {
   if (n.includes('soputan')) return [1.112, 124.73];
   if (n.includes('raung')) return [-8.125, 114.042];
   if (n.includes('lokon')) return [1.358, 124.792];
-  return [-2.5489, 118.0149]; // Default center of Indonesia
+  return null;
 }
 
 export function volcanoReportToAlert(report: VolcanoReport, dateStr: string): DisasterAlert {
@@ -332,7 +269,6 @@ ${report.recommendation}`;
     title: `Gunung ${report.name} - ${statusLabel}`,
     description: fullDescription,
     timestamp: new Date(dateStr).toISOString(),
-    latitude: coords[0],
-    longitude: coords[1]
+    ...(coords ? { latitude: coords[0], longitude: coords[1] } : {})
   };
 }

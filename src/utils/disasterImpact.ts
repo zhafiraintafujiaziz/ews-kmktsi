@@ -47,6 +47,5 @@ export function isOfficeAffectedByAlert(office: KpwbiOffice, alert: DisasterAler
     return distance <= radius;
   }
   
-  // Fallback to old province-based matching if alert has no coordinates
-  return alert.provinceId === office.provinceId;
+  return false;
 }

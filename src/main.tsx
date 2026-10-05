@@ -5,6 +5,13 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+// Discard the retired alert cache without inspecting its contents.
+try {
+  localStorage.removeItem('ews_cached_alerts');
+} catch {
+  // Storage can be unavailable in restricted browser contexts.
+}
+
 class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error|null, errorInfo: ErrorInfo|null}> {
   state = { hasError: false, error: null as Error | null, errorInfo: null as ErrorInfo | null };
   static getDerivedStateFromError(error: Error) { return { hasError: true, error, errorInfo: null }; }

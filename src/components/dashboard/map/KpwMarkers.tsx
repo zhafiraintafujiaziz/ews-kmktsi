@@ -265,6 +265,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                   const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
                   if (hazard === 'air_quality') {
                     const asmt = IspuService.getOfficeIspuAssessment(office.id);
+                    if (!asmt) return <div style={{ marginTop: '4px', fontSize: '11px' }}>Current data unavailable</div>;
                     const color = asmt.category === 'BERBAHAYA' || asmt.category === 'SANGAT TIDAK SEHAT'
                       ? 'var(--alert-critical)'
                       : asmt.category === 'TIDAK SEHAT'
@@ -277,6 +278,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                     );
                   }
                   const indexVal = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
+                  if (indexVal === null) return <div style={{ marginTop: '4px', fontSize: '11px' }}>Current data unavailable</div>;
                   const hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api', volcanic_ash: 'Abu Vulkanik' }[hazard] || hazard;
                   const val = Math.round(indexVal * 100);
                   const color = val >= 64 ? 'var(--alert-critical)' : val > 40 ? 'var(--alert-warning)' : 'var(--alert-watch)';
@@ -295,6 +297,9 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                   const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
                   if (hazard === 'air_quality') {
                     const asmt = IspuService.getOfficeIspuAssessment(office.id);
+                    if (!asmt) {
+                      return <div className="ews-popup-content"><div className="ews-popup-title">{office.name} ({office.city})</div><p>Current data unavailable</p></div>;
+                    }
                     let severity: AlertSeverity = 1;
                     if (asmt.category === 'BERBAHAYA' || asmt.category === 'SANGAT TIDAK SEHAT') severity = 3;
                     else if (asmt.category === 'TIDAK SEHAT') severity = 2;
@@ -321,6 +326,9 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                     );
                   }
                   const indexVal = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
+                  if (indexVal === null) {
+                    return <div className="ews-popup-content"><div className="ews-popup-title">{office.name} ({office.city})</div><p>Current data unavailable</p></div>;
+                  }
                   const hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api', volcanic_ash: 'Abu Vulkanik' }[hazard] || hazard;
                   const val = Math.round(indexVal * 100);
                   let severity: AlertSeverity = 1;
@@ -385,6 +393,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '160px', overflowY: 'auto', paddingRight: '2px' }}>
                           {officeAlerts.map((alert) => scoreAlertForOffice(office.id, alert))
+                          .filter((risk): risk is typeof risk & { totalScore: number; vulScore: number } => risk.totalScore !== null && risk.vulScore !== null)
                           .sort((a, b) => b.totalScore - a.totalScore)
                           .map(({ alert, totalScore, vulScore, isKerentananSupported }) => {
                             const indexValStr = isKerentananSupported ? `${vulScore}/3` : 'N/A';

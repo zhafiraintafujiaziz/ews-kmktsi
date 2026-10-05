@@ -13,6 +13,7 @@ export interface IspuStationInfo {
   category: IspuCategory;
   dominantParam: string;
   waktuText: string;
+  observedAt?: string;
   keterangan?: string;
   color?: string;
   distanceKm?: number;
@@ -76,6 +77,9 @@ export interface DisasterAlert {
   title: string;
   description: string;
   timestamp: string; // ISO string or format
+  validFrom?: string;
+  validUntil?: string;
+  sourceGeometry?: unknown;
   latitude?: number; // Epi-center or event latitude
   longitude?: number; // Epi-center or event longitude
   magnitude?: number; // Optional magnitude for earthquakes
@@ -121,7 +125,6 @@ export interface VolcanoReport {
 
 export type { MegathrustZone } from '../constants/megathrustZones';
 export type { RingOfFireArc, VolcanoPoint } from '../constants/ringOfFire';
-export type { EnsoPhase, EnsoMonth, EnsoOutlook } from '../constants/ensoData';
 export type { ChecklistItemDef, ChecklistStatus } from '../constants/preparednessChecklist';
 
 // === Disaster Risk Calculator Types ===

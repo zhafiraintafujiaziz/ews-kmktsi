@@ -3,11 +3,10 @@ import { Circle, Tooltip, Marker, Popup, Polygon, Polyline } from 'react-leaflet
 import L from 'leaflet';
 import type { DisasterAlert, AlertSeverity } from '../../../types';
 import { severityToCssClass } from '../../../types';
-import { KPWBI_OFFICES } from '../../../constants/kpwbiOffices';
 import { PROVINCES } from '../../../constants/provinces';
 import { isValidCoord } from '../../../utils/geo';
 import { getDisasterIconHtml, renderDisasterIcon } from '../../../utils/alertUtils';
-import { computeTrajectoryArrow, computeDispersionPentagon, InaSiamService } from '../../../services/inaSiamService';
+import { computeTrajectoryArrow, InaSiamService } from '../../../services/inaSiamService';
 
 interface AlertCirclesProps {
   alerts: DisasterAlert[];
@@ -172,9 +171,6 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
 
         if (isValidCoord(alert.latitude, alert.longitude)) {
           center = [Number(alert.latitude), Number(alert.longitude)];
-        } else {
-          const office = KPWBI_OFFICES.find((o) => o.provinceId === alert.provinceId);
-          if (office) center = [office.latitude, office.longitude];
         }
 
         if (!center) return null;
@@ -191,15 +187,12 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
           if (!polygonCoords && sigmetInfo && sigmetInfo.coordinates.length >= 3) {
             polygonCoords = sigmetInfo.coordinates;
             windBearing = sigmetInfo.bearing;
-          } else if (!polygonCoords && center) {
-            windBearing = windBearing ?? 240;
-            polygonCoords = computeDispersionPentagon(center[0], center[1], windBearing, 95);
           }
         }
 
         const hasPolygon = isVolcano && polygonCoords && polygonCoords.length >= 3;
-        const arrowData = isVolcano && center
-          ? computeTrajectoryArrow(center[0], center[1], windBearing ?? 240, 65)
+        const arrowData = isVolcano && center && windBearing !== undefined
+          ? computeTrajectoryArrow(center[0], center[1], windBearing, 65)
           : null;
 
         const { radius, pathOptions } = getCircleConfig(alert);

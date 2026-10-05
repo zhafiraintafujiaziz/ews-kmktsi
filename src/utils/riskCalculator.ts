@@ -12,8 +12,8 @@ export function isKerentananSupportedType(type: string): boolean {
 
 export interface OfficeAlertRisk {
   alert: DisasterAlert;
-  vulScore: number;
-  totalScore: number;
+  vulScore: number | null;
+  totalScore: number | null;
   isKerentananSupported: boolean;
 }
 
@@ -26,19 +26,16 @@ export interface OfficeRiskEntry {
 /** Skor satu alert terhadap satu kantor, sama dengan kartu Tingkat Risiko. */
 export function scoreAlertForOffice(officeId: string, alert: DisasterAlert): OfficeAlertRisk {
   const isKerentananSupported = isKerentananSupportedType(alert.type);
-  let vulScore = 1;
-  if (!isKerentananSupported) {
-    vulScore = 3;
-  } else {
+  let vulScore: number | null = null;
+  if (isKerentananSupported) {
     const hazard = mapDisasterTypeToInariskHazard(alert.type);
     const index = BnpbInariskService.getLocalHazardIndex(officeId, hazard);
-    const vulLevel = mapInariskToVulnerability(index);
-    vulScore = vulnerabilityToScore(vulLevel);
+    if (index !== null) vulScore = vulnerabilityToScore(mapInariskToVulnerability(index));
   }
   return {
     alert,
     vulScore,
-    totalScore: alert.severity * vulScore,
+    totalScore: vulScore === null ? null : alert.severity * vulScore,
     isKerentananSupported,
   };
 }
@@ -60,7 +57,7 @@ export function buildOfficeRiskMap(
     let maxRiskScore = 0;
     officeAlerts.forEach((alert) => {
       const { totalScore } = scoreAlertForOffice(office.id, alert);
-      if (totalScore > maxRiskScore) maxRiskScore = totalScore;
+      if (totalScore !== null && totalScore > maxRiskScore) maxRiskScore = totalScore;
     });
 
     if (maxRiskScore > 0) {

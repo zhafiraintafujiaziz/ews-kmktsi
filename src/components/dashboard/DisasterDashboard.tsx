@@ -31,14 +31,21 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
   const [selectedOfficeId, setSelectedOfficeId] = useState<string | null>(null);
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches);
+  const effectiveSidebarCollapsed = isSidebarCollapsed && !isMobile;
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)');
+    const handleChange = (event: MediaQueryListEvent) => setIsMobile(event.matches);
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, []);
 
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const shownAlertIds = useRef<Set<string>>(new Set());
 
   // Display window only. The fetch keeps the longer history.
-  const minTimestamp = useMemo(() => {
-    return Date.now() - 3 * 24 * 3600 * 1000;
-  }, []);
+  const [minTimestamp] = useState(() => Date.now() - 3 * 24 * 3600 * 1000);
 
   const recentAlerts = useMemo(() => {
     return alerts.filter((a) => {
@@ -201,7 +208,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
           setTypeFilter={setTypeFilter}
           isLoading={isLoading}
           loadingSources={loadingSources}
-          isCollapsed={isSidebarCollapsed}
+          isCollapsed={effectiveSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed((c) => !c)}
         />
 
@@ -219,7 +226,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
           onOfficeSelect={handleOfficeSelect}
           onAlertSelect={handleAlertSelect}
           activeTypeFilter={typeFilter}
-          isSidebarCollapsed={isSidebarCollapsed}
+          isSidebarCollapsed={effectiveSidebarCollapsed}
         />
       </div>
 

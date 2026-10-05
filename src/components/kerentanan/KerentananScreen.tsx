@@ -56,19 +56,19 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
   const provincesMap = useMemo(() => new Map(PROVINCES.map((p) => [p.id, p])), []);
 
   const rankedOffices = useMemo<RankedOfficeItem[]>(() => {
-    return KPWBI_OFFICES.map((office) => {
+    return KPWBI_OFFICES.flatMap((office) => {
       const score = BnpbInariskService.getLocalHazardIndex(office.id, selectedHazard);
+      if (score === null || score <= 0) return [];
       const ispuAssessment =
         selectedHazard === 'air_quality'
           ? IspuService.getOfficeIspuAssessment(office.id)
           : null;
-      return {
+      return [{
         office,
         score,
         ispuAssessment,
-      };
+      }];
     })
-      .filter((item) => item.score > 0)
       .sort((a, b) => {
         if (selectedHazard === 'air_quality' && a.ispuAssessment && b.ispuAssessment) {
           return b.ispuAssessment.ispuValue - a.ispuAssessment.ispuValue;
