@@ -3,6 +3,7 @@ import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
 import { haversineDistance } from '../utils/geo';
 import { mapTextToProvinceId } from '../utils/provinceMap';
 import { fetchWithCorsProxy } from './proxy';
+import { getIspuCategory, getIspuStyle } from '../constants/ispuCategories';
 
 const ISPU_API_URL = 'https://ispu.kemenlh.go.id/apimobile/v1/getStations';
 
@@ -60,13 +61,7 @@ export class IspuService {
           const rawParam = text(r.param);
           const cleanParam = rawParam.replace(/<sub>|<\/sub>/gi, '');
 
-          let cat: IspuCategory = 'BAIK';
-          const rawCat = text(r.cat).toUpperCase();
-          if (rawCat.includes('BERBAHAYA') || val > 300) cat = 'BERBAHAYA';
-          else if (rawCat.includes('SANGAT TIDAK SEHAT') || val > 200) cat = 'SANGAT TIDAK SEHAT';
-          else if (rawCat.includes('TIDAK SEHAT') || val > 100) cat = 'TIDAK SEHAT';
-          else if (rawCat.includes('SEDANG') || val > 50) cat = 'SEDANG';
-          else cat = 'BAIK';
+          const cat = getIspuCategory(val);
 
           return {
             idStasiun: text(r.id_stasiun),
@@ -81,7 +76,7 @@ export class IspuService {
             waktuText,
             observedAt: observedAt?.toISOString(),
             keterangan: text(categoryInfo.keterangan),
-            color: text(categoryInfo.color) || '#0ea5e9',
+            color: this.getCategoryColor(cat),
           };
         }).filter((s) => Number.isFinite(s.ispuValue) && s.ispuValue >= 0
           && Number.isFinite(s.latitude) && Number.isFinite(s.longitude)
@@ -205,7 +200,7 @@ export class IspuService {
   }
 
   /**
-   * Return category styling & badge details based on Permen LHK No. 14/2020.
+   * Return category styling and badge details from the source legend.
    */
   static getCategoryBadge(category: IspuCategory, ispuVal?: number): {
     label: string;
@@ -213,57 +208,18 @@ export class IspuService {
     color: string;
     bg: string;
   } {
-    void ispuVal;
-    switch (category) {
-      case 'BERBAHAYA':
-        return {
-          label: 'BERBAHAYA',
-          cls: 'risk-critical',
-          color: '#ffffff',
-          bg: '#18181b', // Pure dark / black
-        };
-      case 'SANGAT TIDAK SEHAT':
-        return {
-          label: 'SANGAT TIDAK SEHAT',
-          cls: 'risk-high',
-          color: '#ef4444',
-          bg: 'rgba(239, 68, 68, 0.15)',
-        };
-      case 'TIDAK SEHAT':
-        return {
-          label: 'TIDAK SEHAT',
-          cls: 'risk-high',
-          color: '#f59e0b',
-          bg: 'rgba(245, 158, 11, 0.15)',
-        };
-      case 'SEDANG':
-        return {
-          label: 'SEDANG',
-          cls: 'risk-medium',
-          color: '#0284c7',
-          bg: 'rgba(2, 132, 199, 0.15)',
-        };
-      case 'BAIK':
-      default:
-        return {
-          label: 'BAIK',
-          cls: 'risk-low',
-          color: '#10b981',
-          bg: 'rgba(16, 185, 129, 0.15)',
-        };
-    }
+    const style = getIspuStyle(category, ispuVal);
+    const cls = style.category === 'BERBAHAYA' ? 'risk-critical'
+      : style.category === 'SANGAT TIDAK SEHAT' || style.category === 'TIDAK SEHAT' ? 'risk-high'
+      : style.category === 'SEDANG' ? 'risk-medium' : 'risk-low';
+    return { label: style.category, cls, color: style.textColor, bg: style.color };
   }
 
   /**
-   * Return the official ISPU dot color for a category (Permen LHK No. 14/2020).
+   * Return the ISPU category color from the source legend.
    */
-  static getCategoryColor(category: IspuCategory | string): string {
-    const cat = (category || '').toUpperCase();
-    if (cat.includes('BERBAHAYA')) return '#0f172a'; // Hitam (Pekat)
-    if (cat.includes('SANGAT TIDAK SEHAT')) return '#ef4444'; // Merah
-    if (cat.includes('TIDAK SEHAT')) return '#eab308'; // Kuning / Amber
-    if (cat.includes('SEDANG')) return '#0284c7'; // Biru
-    return '#10b981'; // Hijau (Baik)
+  static getCategoryColor(category: IspuCategory | string, ispuVal?: number): string {
+    return getIspuStyle(category, ispuVal).color;
   }
 
   /**

@@ -6,6 +6,7 @@ import floodIcon from '../assets/flood.png';
 import droughtIcon from '../assets/drought.png';
 import lightningIcon from '../assets/lightning.png';
 import airQualityIcon from '../assets/air-quality.svg';
+import { getIspuStyle } from '../constants/ispuCategories';
 
 export interface DisasterIconSource {
   id?: string;
@@ -209,16 +210,14 @@ export function getDisasterTypeStatus(
     return { color: '#16a34a', label: `Rendah / Informasi (${alerts.length} Peringatan)`, count: alerts.length };
   }
 
-  if (type === 'air_quality' || type === 'kualitas_udara') {
+  if (type === 'air_quality' || type === 'kualitas_udara' || type === 'ispu') {
     const ispuAlerts = alerts.filter((a) => a.type === 'air_quality');
     if (ispuAlerts.length === 0) {
-      return { color: '#10b981', label: 'Baik / Normal', count: 0 };
+      return { color: getIspuStyle('BAIK').color, label: 'Baik / Normal', count: 0 };
     }
     const worst = ispuAlerts.reduce((prev, curr) => ((curr.ispuValue || 0) > (prev.ispuValue || 0) ? curr : prev), ispuAlerts[0]);
-    const cat = worst.ispuCategory || 'BAIK';
-    const maxSev = Math.max(...ispuAlerts.map((a) => a.severity || 1));
-    const color = maxSev === 3 ? '#ef4444' : maxSev === 2 ? '#f59e0b' : '#16a34a';
-    return { color, label: `${cat} (ISPU ${worst.ispuValue || '-'})`, count: ispuAlerts.length };
+    const style = getIspuStyle(worst.ispuCategory || 'BAIK', worst.ispuValue);
+    return { color: style.color, label: `${style.category} (ISPU ${worst.ispuValue ?? '-'})`, count: ispuAlerts.length };
   }
 
   const typeAlerts = alerts.filter((a) => a.type === type);

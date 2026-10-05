@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import type { DisasterAlert, AlertSeverity } from '../../../types';
 import { renderDisasterIcon, getDisasterTypeStatus } from '../../../utils/alertUtils';
+import { ISPU_CATEGORIES } from '../../../constants/ispuCategories';
 
 interface MapLegendProps {
   isInariskFilter: boolean;
+  isAirQualityFilter?: boolean;
   mapLayers: {
     critical: boolean;
     warning: boolean;
@@ -37,6 +39,7 @@ const DISASTER_TYPES_CONFIG: Array<{ key: 'earthquake' | 'extreme_weather' | 'ka
 
 const MapLegend: React.FC<MapLegendProps> = ({
   isInariskFilter,
+  isAirQualityFilter = false,
   mapLayers,
   onToggleLayer,
   selectedAlert,
@@ -58,7 +61,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
             <img src="/manggala-logo.png" alt="Manggala Agni Logo" title="Manggala Agni" className="legend-agency-logo" style={{ zIndex: 1 }} />
           </div>
           <span className="legend-title" style={{ marginLeft: '6px' }}>
-            {isInariskFilter ? 'Indikator Wilayah (InaRisk)' : 'Map Legend'}
+            {isAirQualityFilter ? 'Kategori ISPU' : isInariskFilter ? 'Indikator Wilayah (InaRisk)' : 'Map Legend'}
           </span>
         </div>
         <svg
@@ -78,7 +81,15 @@ const MapLegend: React.FC<MapLegendProps> = ({
 
       {isExpanded && (
         <div className="legend-content">
-          {SEV_CONFIG.map(({ key, num, label, color }) => {
+          {isAirQualityFilter && ISPU_CATEGORIES.map(({ category, label, range, color }) => (
+            <div className="legend-item" key={category}>
+              <span className="legend-shape-icon">
+                <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '50%', backgroundColor: color, border: '1px solid #64748b' }} />
+              </span>
+              <span>{label} ({range})</span>
+            </div>
+          ))}
+          {!isAirQualityFilter && SEV_CONFIG.map(({ key, num, label, color }) => {
             const show = !selectedAlert || selectedSeverity === num;
             if (!show) return null;
             const count = allAlerts.filter((alert) => alert.severity === num).length;

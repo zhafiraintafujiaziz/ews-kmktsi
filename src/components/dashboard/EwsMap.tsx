@@ -7,6 +7,7 @@ import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { findNearestOffices } from '../../utils/geo';
 import { mapTextToProvinceId } from '../../utils/provinceMap';
 import { BnpbInariskService } from '../../services/bnpbInariskService';
+import { IspuService } from '../../services/ispuService';
 import MapController from './map/MapController';
 import MapEventsHandler from './map/MapEventsHandler';
 import AlertCircles from './map/AlertCircles';
@@ -46,6 +47,15 @@ function getProvinceRisk(provinceId: string, hazard: 'flood' | 'tsunami' | 'keke
     .map((office) => BnpbInariskService.getLocalHazardIndex(office.id, hazard))
     .filter((value): value is number => value !== null);
   return values.length > 0 ? Math.max(...values) : null;
+}
+
+function getProvinceIspu(provinceId: string) {
+  const assessments = KPWBI_OFFICES.filter((office) => office.provinceId === provinceId)
+    .map((office) => IspuService.getOfficeIspuAssessment(office.id))
+    .filter((assessment) => assessment !== null);
+  return assessments.reduce<typeof assessments[number] | null>(
+    (worst, current) => !worst || current.ispuValue > worst.ispuValue ? current : worst, null,
+  );
 }
 
 function getProvincePotensi(): null {
@@ -158,6 +168,12 @@ export const EwsMap: React.FC<EwsMapProps> = ({
       return { fillColor: 'transparent', fillOpacity: 0, color: 'transparent', weight: 0, bubblingMouseEvents: false };
     }
     const provinceId = mapTextToProvinceId(feature?.properties.Propinsi || '');
+    if (activeTypeFilter === 'air_quality') {
+      const assessment = getProvinceIspu(provinceId);
+      if (!assessment) return { fillColor: 'transparent', fillOpacity: 0, color: 'rgba(0,0,0,0.12)', weight: 0.8, bubblingMouseEvents: false };
+      const color = IspuService.getCategoryColor(assessment.category);
+      return { fillColor: color, fillOpacity: 0.3, color, weight: 1.5, bubblingMouseEvents: false };
+    }
     
     let score: number | null = null;
     if (isInariskFilter) {
@@ -184,7 +200,13 @@ export const EwsMap: React.FC<EwsMapProps> = ({
   const onEachFeature = (feature: ProvinceFeature, layer: L.Layer) => {
     const propName = feature.properties.Propinsi || '';
     const provinceId = mapTextToProvinceId(propName);
-    
+    if (activeTypeFilter === 'air_quality') {
+      const assessment = getProvinceIspu(provinceId);
+      const badge = assessment ? IspuService.getCategoryBadge(assessment.category, assessment.ispuValue) : null;
+      layer.bindTooltip(`<div style="font-family: var(--font-sans); font-size: 12px; padding: 4px;"><strong>Provinsi ${propName}</strong><br/>${assessment && badge ? `ISPU: <strong>${assessment.ispuValue}</strong><br/><span style="background:${badge.bg};color:${badge.color};padding:2px 4px;border-radius:3px">${badge.label}</span>` : 'Current data unavailable'}</div>`, { sticky: true });
+      return;
+    }
+
     let score: number | null = null;
     let hazardTitle = '';
     
@@ -429,6 +451,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
 
       <MapLegend
         isInariskFilter={isInariskFilter}
+        isAirQualityFilter={activeTypeFilter === 'air_quality'}
         mapLayers={mapLayers}
         onToggleLayer={toggleLayer}
         selectedAlert={selectedAlert}

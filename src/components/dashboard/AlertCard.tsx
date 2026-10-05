@@ -2,6 +2,7 @@ import React from 'react';
 import type { DisasterAlert, Province } from '../../types';
 import { severityToCssClass } from '../../types';
 import { renderDisasterIcon } from '../../utils/alertUtils';
+import { getIspuStyle } from '../../constants/ispuCategories';
 
 interface AlertCardProps {
   alert: DisasterAlert;
@@ -147,28 +148,8 @@ function renderMetrics(alert: DisasterAlert) {
 
     case 'air_quality': {
       const ispuVal = alert.ispuValue || 0;
-      const ispuCat = alert.ispuCategory || 'BAIK';
-      let dotColor = '#10b981'; // Baik (Hijau)
-      let catBg = 'rgba(16, 185, 129, 0.15)';
-      let catColor = '#059669';
-
-      if (ispuCat === 'BERBAHAYA' || ispuVal > 300) {
-        dotColor = '#0f172a';
-        catBg = '#0f172a';
-        catColor = '#ffffff';
-      } else if (ispuCat === 'SANGAT TIDAK SEHAT' || ispuVal > 200) {
-        dotColor = '#ef4444';
-        catBg = '#fee2e2';
-        catColor = '#dc2626';
-      } else if (ispuCat === 'TIDAK SEHAT' || ispuVal > 100) {
-        dotColor = '#eab308';
-        catBg = '#fef9c3';
-        catColor = '#b45309';
-      } else if (ispuCat === 'SEDANG' || ispuVal > 50) {
-        dotColor = '#0284c7';
-        catBg = '#e0f2fe';
-        catColor = '#0369a1';
-      }
+      const style = getIspuStyle(alert.ispuCategory || 'BAIK', alert.ispuValue);
+      const ispuCat = style.category;
 
       return (
         <div className="alertcard-metrics">
@@ -176,8 +157,8 @@ function renderMetrics(alert: DisasterAlert) {
             <span
               className="metric-chip"
               style={{
-                background: catBg,
-                color: catColor,
+                background: style.color,
+                color: style.textColor,
                 fontWeight: 700,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -189,7 +170,8 @@ function renderMetrics(alert: DisasterAlert) {
                   width: '7px',
                   height: '7px',
                   borderRadius: '50%',
-                  backgroundColor: dotColor,
+                  backgroundColor: style.color,
+                  border: '1px solid currentColor',
                   display: 'inline-block',
                 }}
               />
@@ -293,6 +275,8 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, province, isSelecte
 
   const sevCss = severityToCssClass(alert.severity);
   const sevBoxCount = alert.severity;
+  const ispuStyle = alert.type === 'air_quality'
+    ? getIspuStyle(alert.ispuCategory || 'BAIK', alert.ispuValue) : undefined;
 
   return (
     <div
@@ -310,7 +294,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, province, isSelecte
         }
       }}
     >
-      <div className={`alertcard-stripe ${sevCss}`} />
+      <div className={`alertcard-stripe ${sevCss}`} style={ispuStyle ? { backgroundColor: ispuStyle.color } : undefined} />
 
       <div className="alertcard-header">
         <div className="alertcard-type-row">
@@ -319,7 +303,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, province, isSelecte
         </div>
         <div className={`alertcard-sev-badge sev-${sevCss}`}>
           {[1, 2, 3].map((i) => (
-            <span key={i} className={`sev-box${i <= sevBoxCount ? ' filled' : ''}`} />
+            <span key={i} className={`sev-box${i <= sevBoxCount ? ' filled' : ''}`} style={ispuStyle && i <= sevBoxCount ? { backgroundColor: ispuStyle.color } : undefined} />
           ))}
         </div>
       </div>

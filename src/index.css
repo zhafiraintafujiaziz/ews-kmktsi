@@ -517,6 +517,38 @@ html, body, #root {
   transform: scale(0.97);
 }
 
+.full-page-capture-control {
+  display: inline-flex;
+  position: relative;
+}
+
+.topbar-report-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.topbar-report-btn.screenshot-captured,
+.topbar-report-btn.screenshot-captured:hover {
+  background-color: #15803d;
+}
+
+.topbar-report-btn.screenshot-captured:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.screenshot-capture-spinner {
+  animation: screenshot-capture-spin 0.8s linear infinite;
+}
+
+@keyframes screenshot-capture-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screenshot-capture-spinner { animation: none; }
+}
+
 /* ── Status chip ─────────────────────────────────────────── */
 .topbar-status {
   @apply [display:flex];

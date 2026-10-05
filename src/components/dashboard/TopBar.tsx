@@ -9,7 +9,7 @@ import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import { useAlerts } from '../../hooks/useAlerts';
 import { buildOfficeRiskMap } from '../../utils/riskCalculator';
-import ScreenshotPreviewModal from '../ui/ScreenshotPreviewModal';
+import FullPageCaptureButton from '../ui/FullPageCaptureButton';
 import { playAlertSound } from '../../utils/alertSound';
 
 interface TopBarProps {
@@ -35,6 +35,19 @@ const FILTER_OPTIONS: Array<{ value: DisasterType | 'all'; label: string }> = [
   { value: 'volcanic_ash', label: 'Abu Vulkanik' },
   { value: 'air_quality', label: 'Kualitas Udara' },
 ];
+
+function DisasterSelectChevron(props: React.ComponentProps<'svg'>) {
+  return (
+    <svg
+      {...props}
+      viewBox="0 0 24 24" width="12" height="12" fill="none"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
 
 function renderFilterIcon(type: DisasterType | 'all'): React.ReactNode {
   if (type === 'all') return <PublicIcon sx={{ fontSize: 16 }} />;
@@ -133,7 +146,6 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
   );
   const [dismissedToastAlert, setDismissedToastAlert] = useState<DisasterAlert | null>(null);
   const [demoAlert, setDemoAlert] = useState<DisasterAlert | null>(null);
-  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const playedToastId = useRef<string | null>(null);
 
   const sortedNotiAlerts = useMemo(() => sortNotificationAlerts(allAlerts ?? []), [allAlerts]);
@@ -273,6 +285,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
               value={selectedType}
               onChange={(event) => onTypeChange(event.target.value as typeof selectedType)}
               inputProps={{ 'aria-label': 'Jenis bencana' }}
+              IconComponent={DisasterSelectChevron}
               renderValue={(value) => (
                 <span className="dashboard-disaster-option" title={FILTER_OPTIONS.find((option) => option.value === value)?.label}>
                   <span className="dashboard-disaster-option-icon" aria-hidden="true">{renderFilterIcon(value)}</span>
@@ -280,7 +293,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                 </span>
               )}
               sx={{
-                width: 140,
+                width: 120,
                 height: 34,
                 borderRadius: 'var(--radius-sm)',
                 backgroundColor: 'var(--accent-light)',
@@ -293,7 +306,12 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                 '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border-default)' },
                 '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--accent-primary)' },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--accent-primary)' },
-                '& .MuiSelect-icon': { color: 'var(--accent-primary)', fontSize: 20 },
+                '& .MuiSelect-icon': {
+                  color: 'var(--accent-primary)',
+                  fontSize: 12,
+                  right: 12,
+                  transition: 'transform 0.18s ease',
+                },
               }}
               MenuProps={{
                 slotProps: {
@@ -354,23 +372,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
 
           <span className="topbar-clock">{timeStr || '—'}</span>
 
-          <button className="topbar-report-btn" onClick={async () => {
-            try {
-              const mapElement = document.querySelector('.map-wrapper');
-              if (!mapElement) return;
-              const domtoimage = (await import('dom-to-image-more')).default;
-              const dataUrl = await domtoimage.toPng(mapElement as HTMLElement);
-              setScreenshotUrl(dataUrl);
-            } catch (error) {
-              console.error('Gagal mengambil screenshot', error);
-            }
-          }}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-              <circle cx="12" cy="13" r="4"></circle>
-            </svg>
-            Screenshot
-          </button>
+          <FullPageCaptureButton filename="Dashboard_EWS" />
 
           <button className="topbar-report-btn" type="button" onClick={handleTestAlert} aria-label="Uji notifikasi" title="Uji notifikasi">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -674,11 +676,6 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
         </div>
       )}
 
-      <ScreenshotPreviewModal
-        isOpen={!!screenshotUrl}
-        imageDataUrl={screenshotUrl}
-        onClose={() => setScreenshotUrl(null)}
-      />
     </header>
   );
 };

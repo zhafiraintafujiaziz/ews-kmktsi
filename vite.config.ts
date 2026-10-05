@@ -23,5 +23,8 @@ function localProxyPlugin(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), powerApps(), tailwindcss(), localProxyPlugin()],
+  optimizeDeps: {
+    include: ['html2canvas-pro'],
+  },
 });
 
