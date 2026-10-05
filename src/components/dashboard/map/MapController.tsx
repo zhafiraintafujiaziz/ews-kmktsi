@@ -21,24 +21,25 @@ const MapController: React.FC<MapControllerProps> = ({ selectedOffice, selectedA
   const prevResetTrigger = useRef(resetTrigger);
 
   useEffect(() => {
-    // Force Leaflet to update its size when container bounds change
-    map.invalidateSize();
-
     const container = map.getContainer();
-    if (!container) return;
+    let resizeFrame = 0;
+    const updateSize = () => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        if (container.clientWidth > 0 && container.clientHeight > 0) {
+          map.invalidateSize({ animate: false, debounceMoveend: true });
+        }
+      });
+    };
 
-    const resizeObserver = new ResizeObserver(() => {
-      map.invalidateSize();
-    });
-
-    if (container.parentElement) {
-      resizeObserver.observe(container.parentElement);
-    } else {
-      resizeObserver.observe(container);
-    }
+    // Measure after layout, including when a hidden map becomes visible.
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(container);
+    updateSize();
 
     return () => {
       resizeObserver.disconnect();
+      cancelAnimationFrame(resizeFrame);
     };
   }, [map]);
 
@@ -67,7 +68,7 @@ const MapController: React.FC<MapControllerProps> = ({ selectedOffice, selectedA
         if (isValidCoord(selectedOffice.latitude, selectedOffice.longitude)) {
           map.flyTo([selectedOffice.latitude, selectedOffice.longitude], zoom ?? DETAIL_ZOOM, { duration: 1.5, animate: true });
         }
-      } else {
+      } else if (map.getZoom() !== DEFAULT_ZOOM || !map.getCenter().equals(INDONESIA_CENTER)) {
         map.flyTo(INDONESIA_CENTER, DEFAULT_ZOOM, { duration: 1.5, animate: true });
       }
     } catch (err) {

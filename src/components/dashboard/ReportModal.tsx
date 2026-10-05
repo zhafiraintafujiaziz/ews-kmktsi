@@ -14,7 +14,6 @@ import {
   getRiskLevel,
 } from '../../utils/riskCalculator';
 import * as XLSX from 'xlsx';
-import './ReportModal.css';
 
 interface ReportModalProps {
   isOpen: boolean;

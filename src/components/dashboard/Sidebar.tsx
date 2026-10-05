@@ -6,7 +6,6 @@ import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import { buildOfficeRiskMap } from '../../utils/riskCalculator';
 import AlertCard from './AlertCard';
-import './Sidebar.css';
 
 const SEV_LABEL: Record<AlertSeverity, string> = {
   3: 'Tinggi',

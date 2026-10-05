@@ -13,8 +13,6 @@ import AlertCircles from './map/AlertCircles';
 import KpwMarkers from './map/KpwMarkers';
 import NearestKpwPanel from './map/NearestKpwPanel';
 import MapLegend from './map/MapLegend';
-import 'leaflet/dist/leaflet.css';
-import './EwsMap.css';
 
 export interface EwsMapProps {
   alerts: DisasterAlert[];
@@ -80,8 +78,8 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     normal: true,
     nearest: true,
     critical: true,
-    warning: false,
-    watch: false,
+    warning: true,
+    watch: true,
     earthquake: true,
     extreme_weather: true,
     karhutla: true,
@@ -363,7 +361,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
       <MapContainer center={INDONESIA_CENTER} zoom={5} className="map-container-element" zoomControl minZoom={4} maxZoom={18}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         {isInariskFilter && geoJsonData && (

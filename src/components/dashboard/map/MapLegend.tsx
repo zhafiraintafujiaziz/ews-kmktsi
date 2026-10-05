@@ -81,6 +81,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
           {SEV_CONFIG.map(({ key, num, label, color }) => {
             const show = !selectedAlert || selectedSeverity === num;
             if (!show) return null;
+            const count = allAlerts.filter((alert) => alert.severity === num).length;
             return (
               <div
                 key={key}
@@ -98,14 +99,28 @@ const MapLegend: React.FC<MapLegendProps> = ({
                     }} />
                   ))}
                 </span>
-                <span>{isInariskFilter ? (() => {
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flex: 1 }}>{isInariskFilter ? (() => {
                   const inariskLabels: Record<number, string> = { 
                     3: 'Kerentanan Tinggi (61-100)', 
                     2: 'Kerentanan Sedang (31-60)', 
                     1: 'Kerentanan Rendah (0-30)' 
                   };
                   return inariskLabels[num];
-                })() : label}</span>
+                })() : label}
+                  {!isInariskFilter && (
+                    <span
+                      className="legend-count-badge"
+                      style={{
+                        color,
+                        backgroundColor: `var(--alert-${key}-bg)`,
+                        borderColor: `var(--alert-${key}-border)`,
+                      }}
+                      title={`${count} Peringatan`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </span>
                 {!isInariskFilter && (
                   <span className={`legend-ios-toggle ${mapLayers[key] ? 'on' : 'off'}`}>
                     <span className="legend-ios-thumb" />

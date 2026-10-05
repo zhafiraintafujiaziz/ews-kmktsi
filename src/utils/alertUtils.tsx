@@ -206,7 +206,7 @@ export function getDisasterTypeStatus(
     const maxSev = Math.max(...alerts.map((a) => a.severity || 1));
     if (maxSev === 3) return { color: '#ef4444', label: `Tinggi / Kritis (${alerts.length} Peringatan)`, count: alerts.length };
     if (maxSev === 2) return { color: '#f59e0b', label: `Sedang / Waspada (${alerts.length} Peringatan)`, count: alerts.length };
-    return { color: '#0284c7', label: `Rendah / Informasi (${alerts.length} Peringatan)`, count: alerts.length };
+    return { color: '#16a34a', label: `Rendah / Informasi (${alerts.length} Peringatan)`, count: alerts.length };
   }
 
   if (type === 'air_quality' || type === 'kualitas_udara') {
@@ -217,7 +217,7 @@ export function getDisasterTypeStatus(
     const worst = ispuAlerts.reduce((prev, curr) => ((curr.ispuValue || 0) > (prev.ispuValue || 0) ? curr : prev), ispuAlerts[0]);
     const cat = worst.ispuCategory || 'BAIK';
     const maxSev = Math.max(...ispuAlerts.map((a) => a.severity || 1));
-    const color = maxSev === 3 ? '#ef4444' : maxSev === 2 ? '#f59e0b' : '#0284c7';
+    const color = maxSev === 3 ? '#ef4444' : maxSev === 2 ? '#f59e0b' : '#16a34a';
     return { color, label: `${cat} (ISPU ${worst.ispuValue || '-'})`, count: ispuAlerts.length };
   }
 
@@ -228,7 +228,7 @@ export function getDisasterTypeStatus(
   const maxSev = Math.max(...typeAlerts.map((a) => a.severity || 1));
   if (maxSev === 3) return { color: '#ef4444', label: `Tinggi / Kritis (${typeAlerts.length} Aktif)`, count: typeAlerts.length };
   if (maxSev === 2) return { color: '#f59e0b', label: `Sedang / Waspada (${typeAlerts.length} Aktif)`, count: typeAlerts.length };
-  return { color: '#0284c7', label: `Rendah / Informasi (${typeAlerts.length} Aktif)`, count: typeAlerts.length };
+  return { color: '#16a34a', label: `Rendah / Informasi (${typeAlerts.length} Aktif)`, count: typeAlerts.length };
 }
 
 

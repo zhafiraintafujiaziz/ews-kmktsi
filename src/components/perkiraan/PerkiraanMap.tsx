@@ -12,7 +12,6 @@ import { RING_OF_FIRE_ARCS, VOLCANO_POINTS } from '../../constants/ringOfFire';
 import type { DisasterAlert, AlertSeverity } from '../../types';
 import MapController from '../dashboard/map/MapController';
 import MapEventsHandler from '../dashboard/map/MapEventsHandler';
-import 'leaflet/dist/leaflet.css';
 
 export type PerkiraanMapMode = 'mingguan' | 'iklim' | 'gempa';
 
@@ -183,7 +182,7 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         {geoJsonData && (

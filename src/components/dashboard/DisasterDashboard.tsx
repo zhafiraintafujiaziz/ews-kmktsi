@@ -10,7 +10,6 @@ import EwsMap from './EwsMap';
 import AlertToast from '../ui/AlertToast';
 import type { ToastItem } from '../ui/AlertToast';
 import MobileSplitter from '../ui/MobileSplitter';
-import './DisasterDashboard.css';
 
 interface DisasterDashboardProps {
   onSwitchToKerentanan: () => void;

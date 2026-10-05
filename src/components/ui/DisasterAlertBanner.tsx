@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import type { RiskCalcResult } from '../../types';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import { haversineDistance } from '../../utils/geo';
-import './DisasterAlertBanner.css';
 
 interface DisasterAlertBannerProps {
   activeAlerts: RiskCalcResult[];

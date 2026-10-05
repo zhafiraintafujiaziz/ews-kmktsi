@@ -2,7 +2,7 @@ import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
+import './index.css';
 import App from './App.tsx'
 
 // Discard the retired alert cache without inspecting its contents.

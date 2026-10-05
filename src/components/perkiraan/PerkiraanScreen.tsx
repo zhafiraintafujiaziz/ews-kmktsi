@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import MingguanTab from './MingguanTab';
 import JangkaPanjangTab from './JangkaPanjangTab';
-import '../dashboard/TopBar.css';
-import './PerkiraanScreen.css';
 
 type MainTab = 'mingguan' | 'jangka_panjang';
 

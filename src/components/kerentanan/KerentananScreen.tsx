@@ -7,8 +7,6 @@ import EwsMap from '../dashboard/EwsMap';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import ScreenshotPreviewModal from '../ui/ScreenshotPreviewModal';
 import MobileSplitter from '../ui/MobileSplitter';
-import '../dashboard/TopBar.css';
-import './KerentananScreen.css';
 
 type InariskHazard = 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
 

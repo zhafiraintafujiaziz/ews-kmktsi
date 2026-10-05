@@ -2,7 +2,6 @@ import React from 'react';
 import type { DisasterAlert, Province } from '../../types';
 import { severityToCssClass } from '../../types';
 import { renderDisasterIcon } from '../../utils/alertUtils';
-import './AlertCard.css';
 
 interface AlertCardProps {
   alert: DisasterAlert;

@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import './MobileSplitter.css';
 
 export const MobileSplitter: React.FC = () => {
   const isDragging = useRef(false);

@@ -3,7 +3,6 @@ import type { DisasterAlert } from '../../types';
 import { PROVINCES } from '../../constants/provinces';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import { playAlertSound } from '../../utils/alertSound';
-import './AlertToast.css';
 
 export interface ToastItem {
   toastId: string;

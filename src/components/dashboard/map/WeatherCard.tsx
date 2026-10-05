@@ -6,7 +6,6 @@ import {
   WaterDrop as WaterDropIcon,
   Air as AirIcon
 } from '@mui/icons-material';
-import './WeatherCard.css';
 
 interface WeatherCardProps {
   provinceId: string;

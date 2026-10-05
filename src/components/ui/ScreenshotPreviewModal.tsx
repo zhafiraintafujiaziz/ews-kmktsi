@@ -1,5 +1,4 @@
 import React from 'react';
-import './ScreenshotPreviewModal.css';
 
 interface ScreenshotPreviewModalProps {
   isOpen: boolean;
