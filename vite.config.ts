@@ -1,7 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { powerApps } from "@microsoft/power-apps-vite/plugin";
-// @ts-ignore
 import proxyHandler from "./api/proxy.mjs";
 
 function localProxyPlugin(): Plugin {
@@ -22,6 +22,9 @@ function localProxyPlugin(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), powerApps(), localProxyPlugin()],
+  plugins: [react(), powerApps(), tailwindcss(), localProxyPlugin()],
+  optimizeDeps: {
+    include: ['html2canvas-pro'],
+  },
 });
 

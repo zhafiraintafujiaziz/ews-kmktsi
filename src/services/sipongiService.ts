@@ -221,53 +221,8 @@ export const KABUPATEN_COORDINATES: Record<string, [number, number]> = {
   'KOTA PALEMBANG': [-2.9888, 104.7565],
 };
 
-// Titik tengah geografis umum tiap Provinsi (jika kabupaten tidak terdaftar, koordinat ini berjarak aman di pedalaman)
-const PROVINCE_GEOGRAPHIC_CENTERS: Record<string, [number, number]> = {
-  'aceh': [4.3000, 96.9000],
-  'sumatera utara': [2.2000, 99.1000],
-  'sumatera barat': [-0.8500, 100.7000],
-  'riau': [0.5500, 101.7000],
-  'kepulauan riau': [3.5000, 108.0000],
-  'jambi': [-1.6500, 102.8000],
-  'bengkulu': [-3.7000, 102.4000],
-  'sumatera selatan': [-3.3000, 104.0000],
-  'kepulauan bangka belitung': [-2.5000, 106.3000],
-  'bangka belitung': [-2.5000, 106.3000],
-  'lampung': [-4.9000, 105.1000],
-  'dki jakarta': [-6.2500, 106.8500],
-  'jakarta': [-6.2500, 106.8500],
-  'jawa barat': [-7.1000, 107.6000],
-  'banten': [-6.5000, 106.1000],
-  'jawa tengah': [-7.3000, 109.9000],
-  'di yogyakarta': [-7.9000, 110.4500],
-  'yogyakarta': [-7.9000, 110.4500],
-  'jawa timur': [-7.7500, 112.5000],
-  'bali': [-8.4500, 115.1500],
-  'nusa tenggara barat': [-8.6500, 117.4000],
-  'nusa tenggara timur': [-8.7000, 121.2000],
-  'kalimantan barat': [-0.1000, 111.1000],
-  'kalimantan tengah': [-1.8000, 113.2000],
-  'kalimantan selatan': [-2.9000, 115.4000],
-  'kalimantan timur': [0.5000, 116.5000],
-  'kalimantan utara': [3.1000, 116.2000],
-  'sulawesi utara': [0.9000, 124.3000],
-  'gorontalo': [0.7000, 122.4000],
-  'sulawesi tengah': [-1.4000, 121.2000],
-  'sulawesi barat': [-2.4000, 119.3000],
-  'sulawesi selatan': [-4.1000, 120.1000],
-  'sulawesi tenggara': [-4.2000, 122.2000],
-  'maluku': [-3.3000, 129.5000],
-  'maluku utara': [0.8000, 127.9000],
-  'papua barat': [-1.8000, 132.9000],
-  'papua': [-4.0000, 138.5000],
-  'papua selatan': [-7.2000, 139.8000],
-  'papua tengah': [-3.8000, 136.5000],
-  'papua pegunungan': [-4.2000, 139.1000],
-};
-
-export function getSipongiCoordinates(regency: string, province: string): [number, number] {
+export function getSipongiCoordinates(regency: string): [number, number] | null {
   const rClean = (regency || '').toUpperCase().trim();
-  const pClean = (province || '').toLowerCase().trim();
 
   // 1. Cek pencocokan persis atau parsial di tabel koordinat riil Kabupaten/Kota
   for (const [kabName, coords] of Object.entries(KABUPATEN_COORDINATES)) {
@@ -276,25 +231,18 @@ export function getSipongiCoordinates(regency: string, province: string): [numbe
     }
   }
 
-  // 2. Fallback aman ke titik tengah geografis pedalaman provinsi (bukan ibukota/KPw)
-  for (const [provName, coords] of Object.entries(PROVINCE_GEOGRAPHIC_CENTERS)) {
-    if (pClean.includes(provName)) {
-      return coords;
-    }
-  }
-
-  return [-2.5489, 118.0149]; // Center of Indonesia default
+  return null;
 }
 
-export function clusterToAlert(cluster: ConsolidatedHotspotCluster, index: number): DisasterAlert {
-  const coords = getSipongiCoordinates(cluster.kabupaten, cluster.provinsi);
-  const timestamp = new Date().toISOString();
+export function clusterToAlert(cluster: ConsolidatedHotspotCluster, index: number, periodStart: string, periodEnd: string): DisasterAlert {
+  const coords = getSipongiCoordinates(cluster.kabupaten);
   const satText = cluster.sumberList.join(', ');
 
   // Hitung jarak ke kantor KPw BI terdekat
   let nearestOfficeName = '';
   let nearestDistKm = 9999;
   for (const office of KPWBI_OFFICES) {
+    if (!coords) break;
     const dist = haversineDistance(coords[0], coords[1], office.latitude, office.longitude);
     if (dist < nearestDistKm) {
       nearestDistKm = Math.round(dist * 10) / 10;
@@ -330,9 +278,10 @@ Sumber Data: SIPONGI KEMENHUT / KLHK`.trim();
     provinceId: mapTextToProvinceId(cluster.provinsi),
     title: `Karhutla - Hotspot Sipongi (${cluster.kabupaten})`,
     description,
-    timestamp,
-    latitude: coords[0],
-    longitude: coords[1],
+    timestamp: periodStart,
+    validFrom: periodStart,
+    validUntil: periodEnd,
+    ...(coords ? { latitude: coords[0], longitude: coords[1] } : {}),
     affectedArea: cluster.kabupaten,
     hotspotCount: cluster.counter,
     satellites: cluster.sumberList
@@ -345,9 +294,11 @@ export const SipongiService = {
    * Hanya menampilkan klaster titik panas tingkat SANGAT TINGGI (counter >= 5)
    * dengan konsolidasi multi-satelit (NASA + LAPAN) per kabupaten untuk mencegah spam.
    */
-  async fetchKarhutlaAlerts(fallbackToMock: boolean = true): Promise<DisasterAlert[]> {
+  async fetchKarhutlaAlerts(): Promise<DisasterAlert[]> {
     const apiBase = "https://opsroom.sipongidata.my.id";
     try {
+      const periodEnd = new Date();
+      const periodStart = new Date(periodEnd.getTime() - 24 * 60 * 60 * 1000);
       // Query hotspot data from the last 24 hours for both satellites
       const satellites = ["all-lapan", "all-nasa"];
       
@@ -359,14 +310,12 @@ export const SipongiService = {
 
       let rawRows: SipongiRow[] = [];
       for (const res of results) {
-        if (res && (res as any).data && Array.isArray((res as any).data)) {
-          rawRows = rawRows.concat((res as any).data as SipongiRow[]);
+        if (res && typeof res === 'object' && 'data' in res && Array.isArray(res.data)) {
+          rawRows = rawRows.concat(res.data as SipongiRow[]);
         }
       }
 
-      if (rawRows.length === 0) {
-        throw new Error("Sipongi API returned 0 results");
-      }
+      if (rawRows.length === 0) return [];
 
       // Konsolidasi data multi-satelit per Kabupaten & Provinsi
       const clusterMap = new Map<string, ConsolidatedHotspotCluster>();
@@ -403,7 +352,8 @@ export const SipongiService = {
         .filter((cluster) => {
           if (cluster.counter >= 100) return true;
           if (cluster.counter >= 5) {
-            const coords = getSipongiCoordinates(cluster.kabupaten, cluster.provinsi);
+            const coords = getSipongiCoordinates(cluster.kabupaten);
+            if (!coords) return false;
             const isNearKpw = KPWBI_OFFICES.some((office) => {
               const dist = haversineDistance(coords[0], coords[1], office.latitude, office.longitude);
               return dist <= 50;
@@ -414,47 +364,10 @@ export const SipongiService = {
         })
         .sort((a, b) => b.counter - a.counter);
 
-      if (qualifiedClusters.length === 0) {
-        qualifiedClusters.push(
-          {
-            provinsi: 'Kalimantan Tengah',
-            kabupaten: 'Kotawaringin Timur',
-            sumberList: ['TERRA', 'SNPP', 'NOAA-20'],
-            confidence: 'High',
-            counter: 128
-          },
-          {
-            provinsi: 'Kalimantan Barat',
-            kabupaten: 'Ketapang',
-            sumberList: ['TERRA', 'AQUA', 'SNPP'],
-            confidence: 'High',
-            counter: 104
-          }
-        );
-      }
-
-      return qualifiedClusters.map((cluster, idx) => clusterToAlert(cluster, idx));
+      return qualifiedClusters.map((cluster, idx) => clusterToAlert(cluster, idx, periodStart.toISOString(), periodEnd.toISOString()));
     } catch (e) {
-      console.warn("Failed to fetch from Sipongi, using verified hotspot clusters:", e);
-      if (!fallbackToMock) {
-        throw e;
-      }
-      return [
-        {
-          provinsi: 'Kalimantan Tengah',
-          kabupaten: 'Kotawaringin Timur',
-          sumberList: ['TERRA', 'SNPP', 'NOAA-20'],
-          confidence: 'High',
-          counter: 128
-        },
-        {
-          provinsi: 'Kalimantan Barat',
-          kabupaten: 'Ketapang',
-          sumberList: ['TERRA', 'AQUA', 'SNPP'],
-          confidence: 'High',
-          counter: 104
-        }
-      ].map((cluster, idx) => clusterToAlert(cluster, idx));
+      console.warn("Failed to fetch from Sipongi:", e);
+      throw e;
     }
   }
 };

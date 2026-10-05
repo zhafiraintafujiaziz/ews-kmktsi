@@ -48,10 +48,10 @@ const MingguanTab: React.FC<MingguanTabProps> = () => {
     return KPWBI_OFFICES.map((office) => {
       const forecastSev = getForecastSeverity(office.provinceId, forecastAlerts);
       const floodScore = BnpbInariskService.getLocalHazardIndex(office.id, 'flood');
-      const rank = getSeverityRank(forecastSev) * 100 + floodScore * 100;
+      const rank = getSeverityRank(forecastSev) * 100 + (floodScore ?? 0) * 100;
       return { office, forecastSev, floodScore, rank };
     })
-      .filter((item) => item.forecastSev !== null || item.floodScore > 0.3)
+      .filter((item) => item.forecastSev !== null || (item.floodScore !== null && item.floodScore > 0.3))
       .sort((a, b) => b.rank - a.rank);
   }, [forecastAlerts]);
 
@@ -115,7 +115,7 @@ const MingguanTab: React.FC<MingguanTabProps> = () => {
                           <FlashOnIcon style={{ fontSize: 10 }} /> {SEV_LABEL[forecastSev]}
                         </span>
                       )}
-                      {floodScore > 0.3 && (
+                      {floodScore !== null && floodScore > 0.3 && (
                         <span className="perkiraan-badge flood" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                           <WaterDropIcon style={{ fontSize: 10 }} /> Banjir {Math.round(floodScore * 100)}
                         </span>

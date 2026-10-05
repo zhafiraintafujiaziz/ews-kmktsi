@@ -22,6 +22,7 @@ interface KpwMarkersProps {
   riskAlerts?: DisasterAlert[];
   riskResults: RiskCalcResult[];
   activeTypeFilter: DisasterType | 'all';
+  isKerentananView?: boolean;
   selectedProvinceId: string | null;
   selectedOfficeId: string | null;
   nearestOffices: NearestKpwResult[];
@@ -52,7 +53,7 @@ const TYPE_LABEL: Record<string, string> = {
   karhutla: 'Karhutla',
   volcanic: 'Gunung Api',
   volcanic_ash: 'Abu Vulkanik',
-  air_quality: 'Udara',
+  air_quality: 'Kualitas Udara',
   flood: 'Banjir',
   tsunami: 'Tsunami',
   landslide: 'Longsor',
@@ -108,7 +109,8 @@ function createMarkerIcon(
   office: KpwbiOffice,
   riskSeverity: AlertSeverity | null,
   selectedOfficeId: string | null,
-  nearestOffices: NearestKpwResult[]
+  nearestOffices: NearestKpwResult[],
+  ispuColor?: string
 ): L.DivIcon {
   const classes: string[] = [];
   if (riskSeverity) classes.push('has-alert', `alert-${severityToCssClass(riskSeverity)}`);
@@ -118,11 +120,13 @@ function createMarkerIcon(
     classes.push('nearest');
   }
   const classString = classes.join(' ');
+  const ispuSvgStyle = ispuColor ? `style="color:${ispuColor}"` : '';
+  const ispuDotStyle = ispuColor ? `style="background-color:${ispuColor}"` : '';
 
   if (office.isKantorPusat) {
     return L.divIcon({
       className: 'custom-marker kp-marker-container',
-      html: `<svg class="kp-building ${classString}" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12,2L1,7v2h22V7L12,2z M4,9v11h3V9H4z M10,9v11h4V9h-4z M17,9v11h3V9h-3z M2,20v2h20v-2H2z"/></svg>`,
+      html: `<svg ${ispuSvgStyle} class="kp-building ${classString}" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12,2L1,7v2h22V7L12,2z M4,9v11h3V9H4z M10,9v11h4V9h-4z M17,9v11h3V9h-3z M2,20v2h20v-2H2z"/></svg>`,
       iconSize: [24, 24],
       iconAnchor: [12, 12],
     });
@@ -131,7 +135,7 @@ function createMarkerIcon(
   if (office.isKorwil) {
     return L.divIcon({
       className: 'custom-marker korwil-marker-container',
-      html: `<svg class="korwil-star ${classString}" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" stroke="white" stroke-width="2" d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z"/></svg>`,
+      html: `<svg ${ispuSvgStyle} class="korwil-star ${classString}" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" stroke="white" stroke-width="2" d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z"/></svg>`,
       iconSize: [24, 24],
       iconAnchor: [12, 12],
     });
@@ -140,7 +144,7 @@ function createMarkerIcon(
   if (office.category === 'dc') {
     return L.divIcon({
       className: 'custom-marker bi-dc-container',
-      html: `<svg class="bi-dc-building ${classString}" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" stroke="white" stroke-width="1.2" d="M12,2L1,7v2h22V7L12,2z M4,9v11h3V9H4z M10,9v11h4V9h-4z M17,9v11h3V9h-3z M2,20v2h20v-2H2z"/></svg>`,
+      html: `<svg ${ispuSvgStyle} class="bi-dc-building ${classString}" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" stroke="white" stroke-width="1.2" d="M12,2L1,7v2h22V7L12,2z M4,9v11h3V9H4z M10,9v11h4V9h-4z M17,9v11h3V9h-3z M2,20v2h20v-2H2z"/></svg>`,
       iconSize: [24, 24],
       iconAnchor: [12, 12],
     });
@@ -148,7 +152,7 @@ function createMarkerIcon(
 
   return L.divIcon({
     className: 'custom-marker',
-    html: `<div class="${['marker-dot', ...classes].join(' ')}"></div>`,
+    html: `<div ${ispuDotStyle} class="${['marker-dot', ...classes].join(' ')}"></div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
   });
@@ -158,6 +162,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
   alerts,
   riskAlerts,
   activeTypeFilter,
+  isKerentananView = false,
   selectedProvinceId,
   selectedOfficeId,
   nearestOffices,
@@ -168,7 +173,8 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
   selectedAlertId,
 }) => {
   useKpwPane();
-  const isInariskFilter = ['flood', 'tsunami', 'kekeringan', 'volcanic'].includes(activeTypeFilter);
+  const isInariskFilter = ['flood', 'tsunami', 'kekeringan', 'volcanic'].includes(activeTypeFilter)
+    || (isKerentananView && activeTypeFilter === 'air_quality');
   const officeRiskMap = useMemo(
     () => buildOfficeRiskMap(KPWBI_OFFICES, riskAlerts ?? alerts),
     [riskAlerts, alerts],
@@ -207,6 +213,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
         const nearestInfo = nearestOffices.find((n) => n.office.id === office.id);
         const officeAlerts = alerts.filter((a) => isOfficeAffectedByAlert(office, a));
         const officeRisk = officeRiskMap.get(office.id);
+        const ispuAssessment = isKerentananView && activeTypeFilter === 'air_quality' ? IspuService.getOfficeIspuAssessment(office.id) : null;
         const riskSeverity: AlertSeverity | null = officeRisk
           ? (officeRisk.riskLevel === 'Tinggi' ? 3 : officeRisk.riskLevel === 'Sedang' ? 2 : 1)
           : null;
@@ -216,7 +223,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
             key={office.id}
             position={[office.latitude, office.longitude]}
             pane={KPW_PANE}
-            icon={createMarkerIcon(office, riskSeverity, selectedOfficeId, nearestOffices)}
+            icon={createMarkerIcon(office, riskSeverity, selectedOfficeId, nearestOffices, ispuAssessment ? IspuService.getCategoryColor(ispuAssessment.category) : undefined)}
             zIndexOffset={office.isKantorPusat ? 1000 : office.isKorwil ? 500 : 0}
             ref={(ref) => { markerRefs.current[office.id] = ref; }}
             eventHandlers={{
@@ -265,11 +272,8 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                   const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
                   if (hazard === 'air_quality') {
                     const asmt = IspuService.getOfficeIspuAssessment(office.id);
-                    const color = asmt.category === 'BERBAHAYA' || asmt.category === 'SANGAT TIDAK SEHAT'
-                      ? 'var(--alert-critical)'
-                      : asmt.category === 'TIDAK SEHAT'
-                      ? 'var(--alert-warning)'
-                      : 'var(--alert-watch)';
+                    if (!asmt) return <div style={{ marginTop: '4px', fontSize: '11px' }}>Current data unavailable</div>;
+                    const color = IspuService.getCategoryColor(asmt.category);
                     return (
                       <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: 700, color }}>
                         ISPU: {asmt.ispuValue} ({asmt.category})
@@ -277,6 +281,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                     );
                   }
                   const indexVal = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
+                  if (indexVal === null) return <div style={{ marginTop: '4px', fontSize: '11px' }}>Current data unavailable</div>;
                   const hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api', volcanic_ash: 'Abu Vulkanik' }[hazard] || hazard;
                   const val = Math.round(indexVal * 100);
                   const color = val >= 64 ? 'var(--alert-critical)' : val > 40 ? 'var(--alert-warning)' : 'var(--alert-watch)';
@@ -295,24 +300,25 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                   const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
                   if (hazard === 'air_quality') {
                     const asmt = IspuService.getOfficeIspuAssessment(office.id);
-                    let severity: AlertSeverity = 1;
-                    if (asmt.category === 'BERBAHAYA' || asmt.category === 'SANGAT TIDAK SEHAT') severity = 3;
-                    else if (asmt.category === 'TIDAK SEHAT') severity = 2;
+                    if (!asmt) {
+                      return <div className="ews-popup-content"><div className="ews-popup-title">{office.name} ({office.city})</div><p>Current data unavailable</p></div>;
+                    }
+                    const badge = IspuService.getCategoryBadge(asmt.category, asmt.ispuValue);
                     return (
                       <div className="ews-popup-content">
-                        <div className={`ews-popup-header ${severityToCssClass(severity)}`}>
+                        <div className="ews-popup-header" style={{ color: badge.color, backgroundColor: badge.bg }}>
                           <span>{renderDisasterIcon('air_quality', undefined, { color: 'inherit' })}</span>
                           <span>Kualitas Udara (ISPU KemenLH)</span>
                         </div>
                         <div className="ews-popup-title" style={{ marginTop: 0 }}>{office.name} ({office.city})</div>
                         <p className="ews-popup-desc">
-                          Stasiun SPKU: <strong>{asmt.stationName}</strong> ({asmt.distanceKm} km). Parameter Kritis: <strong>{asmt.dominantParam}</strong>. Kategori: <strong style={{ color: asmt.category === 'BERBAHAYA' ? '#ef4444' : 'inherit' }}>{asmt.category}</strong>.
+                          Stasiun SPKU: <strong>{asmt.stationName}</strong> ({asmt.distanceKm} km). Parameter Kritis: <strong>{asmt.dominantParam}</strong>. Kategori: <strong style={{ color: IspuService.getCategoryColor(asmt.category) }}>{asmt.category}</strong>.
                         </p>
                         <div className="ews-popup-footer">
                           <span className="ews-popup-tag" style={{
-                            color: `var(--alert-${severityToCssClass(severity)})`,
-                            backgroundColor: `var(--alert-${severityToCssClass(severity)}-bg)`,
-                            borderColor: `var(--alert-${severityToCssClass(severity)}-border)`,
+                            color: badge.color,
+                            backgroundColor: badge.bg,
+                            borderColor: badge.bg,
                           }}>
                             ISPU {asmt.ispuValue} • {asmt.category}
                           </span>
@@ -321,6 +327,9 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                     );
                   }
                   const indexVal = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
+                  if (indexVal === null) {
+                    return <div className="ews-popup-content"><div className="ews-popup-title">{office.name} ({office.city})</div><p>Current data unavailable</p></div>;
+                  }
                   const hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api', volcanic_ash: 'Abu Vulkanik' }[hazard] || hazard;
                   const val = Math.round(indexVal * 100);
                   let severity: AlertSeverity = 1;
@@ -385,6 +394,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '160px', overflowY: 'auto', paddingRight: '2px' }}>
                           {officeAlerts.map((alert) => scoreAlertForOffice(office.id, alert))
+                          .filter((risk): risk is typeof risk & { totalScore: number } => risk.totalScore !== null)
                           .sort((a, b) => b.totalScore - a.totalScore)
                           .map(({ alert, totalScore, vulScore, isKerentananSupported }) => {
                             const indexValStr = isKerentananSupported ? `${vulScore}/3` : 'N/A';
@@ -419,7 +429,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                                   </span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)' }}>
-                                  <span>Alert: {disasterScore}/3 • Kerentanan: {indexValStr}</span>
+                                  <span>{alert.type === 'air_quality' ? `Keparahan: ${disasterScore}/3` : `Alert: ${disasterScore}/3 • Kerentanan: ${indexValStr}`}</span>
                                   <span style={{ 
                                     fontWeight: 600, 
                                     color: totalScore >= 7 ? 'var(--alert-critical)' : totalScore >= 4 ? 'var(--alert-warning)' : 'var(--alert-watch)' 

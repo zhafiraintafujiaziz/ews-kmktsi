@@ -1,15 +1,15 @@
-name,lat,lng,provinceId,level,impactRadiusKm
-Awu,3.682,125.446,ID-SA,III,150
-Lewotobi Laki-laki,-8.542,122.775,ID-NT,III,150
-Merapi,-7.54,110.446,ID-YO,III,150
-Semeru,-8.108,112.922,ID-JI,III,150
-Anak Krakatau,-6.102,105.423,ID-LA,II,100
-Bromo,-7.942,112.953,ID-JI,II,100
-Dukono,1.693,127.894,ID-MU,II,100
-Gamalama,0.8,127.325,ID-MU,II,100
-Ili Lewotolok,-8.272,123.505,ID-NT,II,100
-Kerinci,-1.697,101.264,ID-JA,II,100
-Marapi,-0.381,100.473,ID-SB,II,100
-Sinabung,3.17,98.392,ID-SU,II,100
-Agung,-8.343,115.508,ID-BA,II,100
-Rinjani,-8.412,116.467,ID-NB,II,100
+name,lat,lng,provinceId
+Awu,3.682,125.446,ID-SA
+Lewotobi Laki-laki,-8.542,122.775,ID-NT
+Merapi,-7.54,110.446,ID-YO
+Semeru,-8.108,112.922,ID-JI
+Anak Krakatau,-6.102,105.423,ID-LA
+Bromo,-7.942,112.953,ID-JI
+Dukono,1.693,127.894,ID-MU
+Gamalama,0.8,127.325,ID-MU
+Ili Lewotolok,-8.272,123.505,ID-NT
+Kerinci,-1.697,101.264,ID-JA
+Marapi,-0.381,100.473,ID-SB
+Sinabung,3.17,98.392,ID-SU
+Agung,-8.343,115.508,ID-BA
+Rinjani,-8.412,116.467,ID-NB

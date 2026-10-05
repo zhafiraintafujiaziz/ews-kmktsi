@@ -73,3 +73,8 @@ export default defineConfig([
   },
 ])
 ```
+## Styling conventions
+
+Keep all application CSS in `src/index.css`, the single main application stylesheet. It imports Tailwind theme and utilities without Preflight, and disables source scanning because custom selectors use `@apply`. Keep application selectors and custom rules unlayered so their precedence against Leaflet and other styles remains predictable.
+
+Keep design values in `src/styles/design-tokens.css`. Add `@theme inline` aliases in `src/index.css` that reference those existing custom properties; do not rename the source tokens. Keep complex animations, transitions, scrollbar rules, and vendor-specific overrides as ordinary CSS when that preserves behavior.

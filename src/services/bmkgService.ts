@@ -1,4 +1,5 @@
 import type { DisasterAlert, AlertSeverity } from '../types';
+import type { WeatherData } from '../types/weather';
 import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
 import { findNearestKpwOffice } from '../utils/geo';
 import { mapTextToProvinceId } from '../utils/provinceMap';
@@ -24,33 +25,6 @@ interface BmkgResponse {
   };
 }
 
-const FALLBACK_EARTHQUAKES: BmkgEarthquake[] = [
-  {
-    Tanggal: '29 Sep 2026',
-    Jam: '10:45:12 WIB',
-    DateTime: new Date(Date.now() - 3600000).toISOString(),
-    Coordinates: '-6.85,107.02',
-    Lintang: '6.85 LS',
-    Bujur: '107.02 BT',
-    Magnitude: '4.9',
-    Kedalaman: '10 km',
-    Wilayah: 'Pusat gempa berada di darat 15 km Barat Daya Kab. Cianjur',
-    Dirasakan: 'III-IV Cianjur, II-III Sukabumi, II Bogor'
-  },
-  {
-    Tanggal: '29 Sep 2026',
-    Jam: '07:15:30 WIB',
-    DateTime: new Date(Date.now() - 5 * 3600000).toISOString(),
-    Coordinates: '-8.85,115.22',
-    Lintang: '8.85 LS',
-    Bujur: '115.22 BT',
-    Magnitude: '5.2',
-    Kedalaman: '25 km',
-    Wilayah: 'Pusat gempa berada di laut 42 km Selatan Kuta Selatan, Bali',
-    Dirasakan: 'III Denpasar, III Kuta, II Mataram'
-  }
-];
-
 function parsePolygonCentroid(polygonStr: string): { latitude: number; longitude: number } | null {
   if (!polygonStr) return null;
   const pairs = polygonStr.trim().split(/\s+/);
@@ -71,6 +45,18 @@ function parsePolygonCentroid(polygonStr: string): { latitude: number; longitude
   }
   if (count === 0) return null;
   return { latitude: totalLat / count, longitude: totalLon / count };
+}
+
+function parseBmkgDate(value: string): Date | null {
+  const months: Record<string, string> = {
+    januari: 'January', februari: 'February', maret: 'March', april: 'April', mei: 'May',
+    juni: 'June', juli: 'July', agustus: 'August', september: 'September', oktober: 'October',
+    november: 'November', desember: 'December', jan: 'Jan', feb: 'Feb', mar: 'Mar', apr: 'Apr',
+    jun: 'Jun', jul: 'Jul', agu: 'Aug', agt: 'Aug', sep: 'Sep', okt: 'Oct', nov: 'Nov', des: 'Dec',
+  };
+  const normalized = value.replace(/\b[A-Za-z]+\b/g, (month) => months[month.toLowerCase()] ?? month);
+  const parsed = new Date(normalized);
+  return Number.isFinite(parsed.getTime()) ? parsed : null;
 }
 
 // Removed local fetchWithProxy in favor of fetchHtmlWithCorsProxy from proxy.ts
@@ -115,7 +101,7 @@ export async function fetchLatestEarthquakes(): Promise<DisasterAlert[]> {
       })
     ]);
 
-    let rawGempaList: BmkgEarthquake[] = [];
+    const rawGempaList: BmkgEarthquake[] = [];
 
     if (dirasakanData && (dirasakanData as BmkgResponse).Infogempa?.gempa) {
       const gempa = (dirasakanData as BmkgResponse).Infogempa!.gempa!;
@@ -135,10 +121,6 @@ export async function fetchLatestEarthquakes(): Promise<DisasterAlert[]> {
       }
     }
 
-    if (rawGempaList.length === 0) {
-      rawGempaList = [...FALLBACK_EARTHQUAKES];
-    }
-
     const uniqueGempaMap = new Map<string, BmkgEarthquake>();
     for (const gempa of rawGempaList) {
       if (gempa && (gempa.DateTime || gempa.Tanggal)) {
@@ -147,13 +129,15 @@ export async function fetchLatestEarthquakes(): Promise<DisasterAlert[]> {
     }
     const uniqueGempaList = Array.from(uniqueGempaMap.values());
 
+    const now = Date.now();
     const alerts = uniqueGempaList
       .filter((gempa) => {
         const magnitude = parseFloat(gempa.Magnitude);
-        return !isNaN(magnitude) && magnitude >= 2.0;
+        const observedAt = Date.parse(gempa.DateTime || '');
+        return !isNaN(magnitude) && magnitude >= 2.0 && Number.isFinite(observedAt) && observedAt <= now && now - observedAt <= 24 * 60 * 60 * 1000;
       })
       .map((gempa, index) => {
-        const [latStr, lonStr] = gempa.Coordinates.split(',');
+        const [latStr, lonStr] = (gempa.Coordinates || '').split(',');
         const latitude = parseFloat(latStr);
         const longitude = parseFloat(lonStr);
         const magnitude = parseFloat(gempa.Magnitude);
@@ -161,18 +145,18 @@ export async function fetchLatestEarthquakes(): Promise<DisasterAlert[]> {
 
         const severity = getEarthquakeSeverity(gempa.Dirasakan, magnitude);
 
-        const nearestOffice = findNearestKpwOffice(latitude, longitude);
+        const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+        const nearestOffice = hasCoordinates ? findNearestKpwOffice(latitude, longitude) : null;
 
         return {
           id: `bmkg-eq-${gempa.DateTime.replace(/[^a-zA-Z0-9]/g, '') || index}`,
           type: 'earthquake' as const,
           severity,
-          provinceId: nearestOffice.provinceId,
+          provinceId: nearestOffice?.provinceId ?? mapTextToProvinceId(gempa.Wilayah || ''),
           title: `M ${gempa.Magnitude} Earthquake Warning`,
           description: `${gempa.Wilayah}. Dirasakan di: ${gempa.Dirasakan || '-'}.`,
           timestamp: gempa.DateTime,
-          latitude,
-          longitude,
+          ...(hasCoordinates ? { latitude, longitude } : {}),
           magnitude,
           depth,
           affectedArea: gempa.Dirasakan || '-',
@@ -182,7 +166,7 @@ export async function fetchLatestEarthquakes(): Promise<DisasterAlert[]> {
     return [...alerts];
   } catch (error) {
     console.error('Failed to fetch BMKG earthquake data:', error);
-    return [];
+    throw error;
   }
 }
 
@@ -196,10 +180,12 @@ export async function fetchExtremeWeather(): Promise<DisasterAlert[]> {
     const items = rawItems.slice(0, 15);
 
     const alertsPromises = items.map(async (item: { guid: string; link: string; title: string; description: string; pubDate: string }, index: number) => {
-      let latitude = -6.2088;
-      let longitude = 106.8456;
-      let severity: AlertSeverity = 1;
-      let hasExactCoords = false;
+      let latitude: number | undefined;
+      let longitude: number | undefined;
+      let severity: AlertSeverity | null = null;
+      let validFrom: string | undefined;
+      let validUntil: string | undefined;
+      let sourceGeometry: unknown;
 
       try {
         const xmlText = await fetchHtmlWithCorsProxy(item.link);
@@ -210,7 +196,11 @@ export async function fetchExtremeWeather(): Promise<DisasterAlert[]> {
           const capSeverity = xmlDoc.querySelector('severity')?.textContent?.toLowerCase();
           if (capSeverity === 'extreme' || capSeverity === 'severe') severity = 3;
           else if (capSeverity === 'moderate') severity = 2;
-          else severity = 1;
+          else if (capSeverity === 'minor') severity = 1;
+          validFrom = xmlDoc.querySelector('onset')?.textContent || xmlDoc.querySelector('effective')?.textContent || undefined;
+          validUntil = xmlDoc.querySelector('expires')?.textContent || undefined;
+          if (!validUntil || !Number.isFinite(Date.parse(validUntil)) || Date.parse(validUntil) < Date.now()) return null;
+          if (validFrom && (!Number.isFinite(Date.parse(validFrom)) || Date.parse(validFrom) > Date.now())) return null;
 
           const polygonNode = xmlDoc.querySelector('polygon');
           if (polygonNode && polygonNode.textContent) {
@@ -218,24 +208,18 @@ export async function fetchExtremeWeather(): Promise<DisasterAlert[]> {
             if (centroid) {
               latitude = centroid.latitude;
               longitude = centroid.longitude;
-              hasExactCoords = true;
+              sourceGeometry = { type: 'Polygon', coordinates: polygonNode.textContent };
             }
           }
         }
       } catch (e) {
-        console.warn(`Failed to fetch CAP XML for ${item.link}, falling back to province mapping.`, e);
+        console.warn(`Failed to fetch CAP XML for ${item.link}.`, e);
       }
 
-      let provinceId = 'ID-JK';
-      if (!hasExactCoords) {
-        provinceId = mapTextToProvinceId(item.title);
-        const office = KPWBI_OFFICES.find((o) => o.provinceId === provinceId) || KPWBI_OFFICES[0];
-        latitude = office.latitude;
-        longitude = office.longitude;
-      } else {
-        const nearestOffice = findNearestKpwOffice(latitude, longitude);
-        provinceId = nearestOffice.provinceId;
-      }
+      if (severity === null || !validUntil || !Number.isFinite(Date.parse(item.pubDate)) || Date.parse(item.pubDate) > Date.now()) return null;
+      const provinceId = latitude !== undefined && longitude !== undefined
+        ? findNearestKpwOffice(latitude, longitude).provinceId
+        : mapTextToProvinceId(item.title);
 
       const id = `bmkg-wx-${item.guid.replace(/[^a-zA-Z0-9]/g, '') || index}`;
 
@@ -247,76 +231,23 @@ export async function fetchExtremeWeather(): Promise<DisasterAlert[]> {
         title: item.title,
         description: item.description,
         timestamp: item.pubDate,
-        latitude,
-        longitude,
+        ...(latitude !== undefined && longitude !== undefined ? { latitude, longitude } : {}),
         affectedArea: item.title,
+        validFrom,
+        validUntil,
+        sourceGeometry,
       };
     });
 
     const results = await Promise.allSettled(alertsPromises);
     const parsedAlerts = results
-      .filter((r): r is PromiseFulfilledResult<DisasterAlert> => r.status === 'fulfilled')
-      .map((r) => r.value);
-
-    // const mockSulawesiSelatanAlert: DisasterAlert = {
-    //   id: 'mock-sulawesi-selatan-weather-today',
-    //   type: 'extreme_weather',
-    //   severity: 3,
-    //   provinceId: 'ID-SN',
-    //   title: 'Hujan Lebat disertai Petir di Sulawesi Selatan',
-    //   description: 'Hujan lebat disertai petir akan terjadi pada 01 July 2026, 08:30 WIB di sebagian wilayah Sulawesi Selatan, khususnya di Makassar, Gowa, Maros, Pangkep.\n Kondisi ini berpotensi menimbulkan dampak berupa jarak pandang berkurang, angin kencang, dan banjir lokal.\n Masyarakat dihimbau untuk tetap waspada, mengurangi aktivitas di luar ruangan, serta mengambil langkah-langkah pencegahan yang diperlukan guna menjaga keselamatan.\n Kondisi diperkirakan dapat berlangsung hingga 01 July 2026, 11:30 WIB.',
-    //   timestamp: '2026-07-01T08:30:00+07:00',
-    //   latitude: -5.1384,
-    //   longitude: 119.4109,
-    //   affectedArea: 'Sulawesi Selatan',
-    // };
-
-    // return [...parsedAlerts, mockSulawesiSelatanAlert]; // change to simulate danger toast
-    if (parsedAlerts.length === 0) {
-      return [
-        {
-          id: 'bmkg-wx-fallback-jabar',
-          type: 'extreme_weather',
-          severity: 2,
-          provinceId: 'ID-JB',
-          title: 'Peringatan Dini Cuaca Jawa Barat',
-          description: 'Berpotensi terjadi hujan dengan intensitas sedang hingga lebat yang dapat disertai kilat/petir dan angin kencang di sebagian wilayah Jawa Barat (Bogor, Sukabumi, Cianjur, Bandung Raya).',
-          timestamp: new Date().toISOString(),
-          latitude: -6.9175,
-          longitude: 107.6191,
-          affectedArea: 'Jawa Barat',
-        },
-        {
-          id: 'bmkg-wx-fallback-sulsel',
-          type: 'extreme_weather',
-          severity: 2,
-          provinceId: 'ID-SN',
-          title: 'Peringatan Dini Cuaca Sulawesi Selatan',
-          description: 'Waspada potensi hujan intensitas sedang hingga lebat disertai kilat/petir dan angin kencang di wilayah Makassar, Gowa, Maros, Pangkep.',
-          timestamp: new Date().toISOString(),
-          latitude: -5.1477,
-          longitude: 119.4327,
-          affectedArea: 'Sulawesi Selatan',
-        }
-      ];
-    }
+      .filter((r): r is PromiseFulfilledResult<DisasterAlert | null> => r.status === 'fulfilled')
+      .map((r) => r.value)
+      .filter((alert): alert is DisasterAlert => alert !== null);
     return [...parsedAlerts];
   } catch (error) {
     console.error('Failed to fetch BMKG extreme weather data:', error);
-    return [
-      {
-        id: 'bmkg-wx-fallback-jabar',
-        type: 'extreme_weather',
-        severity: 2,
-        provinceId: 'ID-JB',
-        title: 'Peringatan Dini Cuaca Jawa Barat',
-        description: 'Berpotensi terjadi hujan dengan intensitas sedang hingga lebat yang dapat disertai kilat/petir dan angin kencang di sebagian wilayah Jawa Barat (Bogor, Sukabumi, Cianjur, Bandung Raya).',
-        timestamp: new Date().toISOString(),
-        latitude: -6.9175,
-        longitude: 107.6191,
-        affectedArea: 'Jawa Barat',
-      }
-    ];
+    throw error;
   }
 }
 
@@ -335,9 +266,9 @@ export async function fetchThreeDayForecast(): Promise<DisasterAlert[]> {
       }
     }
 
-    const day1Date = headers[2] || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-    const day2Date = headers[3] || new Date(Date.now() + 86400000).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-    const day3Date = headers[4] || new Date(Date.now() + 172800000).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    const day1Date = headers[2];
+    const day2Date = headers[3];
+    const day3Date = headers[4];
 
     const tbodyMatch = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
     if (!tbodyMatch) return [];
@@ -360,13 +291,15 @@ export async function fetchThreeDayForecast(): Promise<DisasterAlert[]> {
         const provinceName = cells[1];
         const dayStatuses = [cells[2], cells[3], cells[4]];
         const provinceId = mapTextToProvinceId(provinceName);
-        const office = KPWBI_OFFICES.find((o) => o.provinceId === provinceId) || KPWBI_OFFICES[0];
+        const office = KPWBI_OFFICES.find((o) => o.provinceId === provinceId);
 
         dayStatuses.forEach((statusText, idx) => {
           if (!statusText || statusText === '—' || statusText.trim() === '') return;
 
           const dayNum = idx + 1;
           const dateStr = dayNum === 1 ? day1Date : dayNum === 2 ? day2Date : day3Date;
+          const forecastTime = dateStr ? parseBmkgDate(dateStr) : null;
+          if (!forecastTime || forecastTime.getTime() + 86400000 <= Date.now()) return;
 
           let severity: AlertSeverity = 1;
           const lowerStatus = statusText.toLowerCase();
@@ -380,9 +313,10 @@ export async function fetchThreeDayForecast(): Promise<DisasterAlert[]> {
             provinceId,
             title: `${statusText} (${dateStr})`,
             description: `Potensi Cuaca Buruk di Provinsi ${provinceName}: ${statusText}. Rencana perkiraan untuk tanggal ${dateStr}.`,
-            timestamp: new Date(Date.now() + idx * 86400000).toISOString(),
-            latitude: office.latitude,
-            longitude: office.longitude,
+            timestamp: forecastTime.toISOString(),
+            validFrom: forecastTime.toISOString(),
+            validUntil: new Date(forecastTime.getTime() + 86400000).toISOString(),
+            ...(office ? { latitude: office.latitude, longitude: office.longitude } : {}),
             affectedArea: provinceName,
             isForecast: true,
             forecastDay: dayNum,
@@ -395,11 +329,11 @@ export async function fetchThreeDayForecast(): Promise<DisasterAlert[]> {
     return alerts;
   } catch (error) {
     console.error('Failed to fetch/parse 3-day BMKG weather forecast:', error);
-    return [];
+    throw error;
   }
 }
 
-function parseWaktuMulai(waktu: string): string {
+function parseWaktuMulai(waktu: string): string | null {
   try {
     const clean = waktu.replace('•', ' ').trim();
     const parts = clean.split(/\s+/);
@@ -413,8 +347,10 @@ function parseWaktuMulai(waktu: string): string {
       const d = new Date(dateStr);
       if (!isNaN(d.getTime())) return d.toISOString();
     }
-  } catch (e) {}
-  return new Date().toISOString();
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 export async function fetchEarlyWarning(): Promise<DisasterAlert[]> {
@@ -445,9 +381,12 @@ export async function fetchEarlyWarning(): Promise<DisasterAlert[]> {
         const waktuBerakhir = cells[3];
 
         const provinceId = mapTextToProvinceId(provinceName);
-        const office = KPWBI_OFFICES.find((o) => o.provinceId === provinceId) || KPWBI_OFFICES[0];
+        const office = KPWBI_OFFICES.find((o) => o.provinceId === provinceId);
+        const timestamp = parseWaktuMulai(waktuMulai);
+        const validUntil = parseWaktuMulai(waktuBerakhir);
+        if (!timestamp || !validUntil || Date.parse(timestamp) > Date.now() || Date.parse(validUntil) < Date.now()) continue;
 
-        let severity: AlertSeverity = 1;
+        const severity: AlertSeverity = 1;
 
         alerts.push({
           id: `bmkg-early-warning-${provinceId}`,
@@ -456,9 +395,10 @@ export async function fetchEarlyWarning(): Promise<DisasterAlert[]> {
           provinceId,
           title: `Peringatan Dini Cuaca`,
           description: `Peringatan dini hujan sedang hingga lebat yang dapat disertai petir dan angin kencang di wilayah Indonesia. Waktu: ${waktuMulai} - ${waktuBerakhir}`,
-          timestamp: parseWaktuMulai(waktuMulai),
-          latitude: office.latitude,
-          longitude: office.longitude,
+          timestamp,
+          validFrom: timestamp,
+          validUntil,
+          ...(office ? { latitude: office.latitude, longitude: office.longitude } : {}),
           affectedArea: provinceName,
           isForecast: false,
         });
@@ -468,11 +408,18 @@ export async function fetchEarlyWarning(): Promise<DisasterAlert[]> {
     return alerts;
   } catch (error) {
     console.error('Failed to fetch/parse BMKG early warning data:', error);
-    return [];
+    throw error;
   }
 }
 
-export async function fetchProvinceWeatherForecast(provinceId: string): Promise<any> {
+interface BmkgWeatherResponse {
+  statusCode?: number;
+  message?: string;
+  lokasi?: WeatherData['lokasi'];
+  data?: Array<Partial<WeatherData>>;
+}
+
+export async function fetchProvinceWeatherForecast(provinceId: string): Promise<WeatherData> {
   const mapping = PROVINCIAL_CAPITALS_ADM4[provinceId];
   if (!mapping) {
     throw new Error(`No ADM4 mapping found for province ID: ${provinceId}`);
@@ -482,15 +429,17 @@ export async function fetchProvinceWeatherForecast(provinceId: string): Promise<
   try {
     const jsonText = await fetchHtmlWithCorsProxy(url);
     if (!jsonText) throw new Error('No weather data returned');
-    const response = JSON.parse(jsonText);
+    const response = JSON.parse(jsonText) as BmkgWeatherResponse;
     
     if (response.statusCode === 404 || !response.data || response.data.length === 0) {
       throw new Error(response.message || 'Data not found');
     }
 
     const dataObj = response.data[0];
+    const lokasi = response.lokasi || dataObj.lokasi;
+    if (!lokasi) throw new Error('Weather location not found');
     return {
-      lokasi: response.lokasi || dataObj.lokasi,
+      lokasi,
       cuaca: dataObj.cuaca || []
     };
   } catch (error) {
@@ -503,60 +452,12 @@ export async function fetchHighRainfallWarning(): Promise<DisasterAlert[]> {
   try {
     const html = await fetchHtmlWithCorsProxy('https://www.bmkg.go.id/iklim/peringatan-dini-hujan-tinggi');
     if (!html) throw new Error('No HTML content returned');
-
-    const tbodyMatch = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
-    if (!tbodyMatch) return [];
-
-    const tbody = tbodyMatch[1];
-    const alerts: DisasterAlert[] = [];
-    const rxTr = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-    let mTr;
-
-    while ((mTr = rxTr.exec(tbody)) !== null) {
-      const trContent = mTr[1];
-      const rxTd = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-      let mTd;
-      const cells: string[] = [];
-      while ((mTd = rxTd.exec(trContent)) !== null) {
-        cells.push(mTd[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
-      }
-
-      if (cells.length >= 5) {
-        const provinceName = cells[1];
-        const provinceId = mapTextToProvinceId(provinceName);
-        const office = KPWBI_OFFICES.find((o) => o.provinceId === provinceId) || KPWBI_OFFICES[0];
-
-        const levels: Array<{ text: string; severity: AlertSeverity; label: string }> = [
-          { text: cells[2], severity: 1, label: 'Waspada' },
-          { text: cells[3], severity: 2, label: 'Siaga' },
-          { text: cells[4], severity: 3, label: 'Awas' },
-        ];
-
-        levels.forEach(({ text, severity, label }) => {
-          if (!text || text === '-' || text.trim() === '') return;
-
-          alerts.push({
-            id: `bmkg-rainfall-${provinceId}-${label.toLowerCase()}`,
-            type: 'flood',
-            severity,
-            provinceId,
-            title: `Curah Hujan Tinggi - ${label} (${provinceName})`,
-            description: `Peringatan dini curah hujan tinggi di Provinsi ${provinceName}: ${label}. ${text}`,
-            timestamp: new Date().toISOString(),
-            latitude: office.latitude,
-            longitude: office.longitude,
-            affectedArea: provinceName,
-            isForecast: true,
-            forecastDay: 0,
-          });
-        });
-      }
-    }
-
-    return alerts;
+    // This table does not expose a verifiable validity period, so it cannot
+    // create an operational alert until its source dates can be parsed.
+    return [];
   } catch (error) {
     console.error('Failed to fetch/parse high rainfall warning data:', error);
-    return [];
+    throw error;
   }
 }
 

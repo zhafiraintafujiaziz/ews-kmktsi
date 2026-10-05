@@ -1,265 +1,132 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { DisasterAlert, AlertSeverity } from '../types';
-import { fetchLatestEarthquakes, fetchExtremeWeather, fetchThreeDayForecast, fetchHighRainfallWarning, fetchEarlyWarning } from '../services/bmkgService';
+import { isCurrentlyUsable } from '../domain/freshness';
+import { normalizeAdapterAlert, toLegacyDisasterAlert, type DisasterRecord } from '../domain/disasterRecord';
+import {
+  fetchLatestEarthquakes,
+  fetchExtremeWeather,
+  fetchThreeDayForecast,
+  fetchHighRainfallWarning,
+  fetchEarlyWarning,
+} from '../services/bmkgService';
 import { MagmaService } from '../services/magmaService';
 import { SipongiService } from '../services/sipongiService';
 import { InaSiamService } from '../services/inaSiamService';
 import { IspuService } from '../services/ispuService';
+import { BnpbInariskService } from '../services/bnpbInariskService';
+import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
 
-// InaRisk / BNPB data is shown in the Kerentanan screen, not as live alerts.
-// This hook only aggregates real-time BMKG alert streams.
-
-// Global cache variables to persist data across component mounts
-const ALERTS_STORAGE_KEY = 'ews_cached_alerts';
-
-const MONTH_MAP: Record<string, string> = {
-  jan: 'Jan',
-  feb: 'Feb',
-  mar: 'Mar',
-  apr: 'Apr',
-  mei: 'May',
-  jun: 'Jun',
-  jul: 'Jul',
-  agt: 'Aug',
-  sep: 'Sep',
-  okt: 'Oct',
-  nov: 'Nov',
-  des: 'Dec',
+type Feed = {
+  id: string;
+  name: string;
+  fetch: () => Promise<DisasterAlert[]>;
 };
 
-function getWaktuBerakhir(description: string): Date | null {
-  try {
-    if (!description.includes('Waktu:')) return null;
-    const timePart = description.split('Waktu:')[1];
-    const parts = timePart.split('-').map((p) => p.trim());
-    if (parts.length < 2) return null;
+export type FeedHealth = Record<string, { status: 'available' | 'unavailable'; checkedAt: string }>;
 
-    const waktuBerakhirStr = parts[1];
-    const clean = waktuBerakhirStr.replace('•', ' ').trim();
-    const subParts = clean.split(/\s+/);
-    if (subParts.length >= 5) {
-      let tzOffset = '+0700'; // WIB
-      const tz = subParts[4].toUpperCase();
-      if (tz === 'WITA') tzOffset = '+0800';
-      if (tz === 'WIT') tzOffset = '+0900';
+const feeds: Feed[] = [
+  { id: 'earthquakes', name: 'Gempa BMKG', fetch: fetchLatestEarthquakes },
+  { id: 'extreme-weather', name: 'Cuaca Buruk BMKG', fetch: fetchExtremeWeather },
+  { id: 'early-warning', name: 'Peringatan Dini Cuaca BMKG', fetch: fetchEarlyWarning },
+  { id: 'forecast', name: 'Prakiraan 3 Hari BMKG', fetch: fetchThreeDayForecast },
+  { id: 'rainfall', name: 'Curah Hujan Tinggi BMKG', fetch: fetchHighRainfallWarning },
+  { id: 'magma', name: 'Live Gunung Api Magma', fetch: () => MagmaService.fetchLiveAlerts() },
+  { id: 'sipongi', name: 'Sipongi Karhutla', fetch: () => SipongiService.fetchKarhutlaAlerts() },
+  { id: 'inasiam', name: 'Abu Vulkanik INA-SIAM', fetch: () => InaSiamService.fetchLiveAlerts() },
+  { id: 'ispu', name: 'ISPU Kualitas Udara', fetch: () => IspuService.fetchAirQualityAlerts() },
+  { id: 'inarisk', name: 'InaRisk assessments', fetch: async () => {
+    await BnpbInariskService.refreshAssessment(KPWBI_OFFICES);
+    return [];
+  } },
+];
 
-      const indMonth = subParts[1].toLowerCase();
-      const engMonth = MONTH_MAP[indMonth] || subParts[1];
-
-      const dateStr = `${subParts[0]} ${engMonth} ${subParts[2]} ${subParts[3].replace('.', ':')}:00 ${tzOffset}`;
-      const d = new Date(dateStr);
-      if (!isNaN(d.getTime())) return d;
-    }
-  } catch (e) {
-    console.error('Error parsing waktuBerakhir:', e);
-  }
-  return null;
-}
-
+const REQUEST_DEADLINE_MS = 15_000;
+const POLL_INTERVAL_MS = 60_000;
+const recordsByFeed = new Map<string, DisasterRecord[]>();
 let cachedAlerts: DisasterAlert[] = [];
-try {
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem(ALERTS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored) as DisasterAlert[];
-      const now = new Date();
-      cachedAlerts = parsed.filter((a) => {
-        if (a.title === 'Peringatan Dini Cuaca') {
-          const end = getWaktuBerakhir(a.description);
-          if (end && now > end) return false;
-        }
-        return true;
-      }).map((a) => {
-        if ((a.type === 'volcanic' || a.type === 'volcanic_ash') && (!a.pentagonCoords || a.pentagonCoords.length === 0)) {
-          const sig = InaSiamService.getSigmetForVolcano(a.title || a.affectedArea || '');
-          if (sig) {
-            return {
-              ...a,
-              pentagonCoords: sig.coordinates,
-              ashHeight: a.ashHeight || sig.flightLevel,
-              movementDirection: a.movementDirection || sig.directionText,
-              windBearing: a.windBearing ?? sig.bearing,
-            };
-          }
-        }
-        return a;
-      });
-      if (cachedAlerts.length !== parsed.length) {
-        localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(cachedAlerts));
-      }
-    }
-  }
-} catch (e) {
-  console.error('Failed to parse cached alerts from localStorage', e);
-}
-
-let cachedIsLoading = cachedAlerts.length === 0;
+let cachedIsLoading = true;
 let isFetching = false;
 let lastCheckedTime: Date | null = null;
-let pollingIntervalId: any = null;
+let pollingIntervalId: ReturnType<typeof setInterval> | null = null;
 let cachedLoadingSources: string[] = [];
+let cachedFeedHealth: FeedHealth = {};
 const listeners = new Set<() => void>();
 
-const notifyListeners = () => {
-  listeners.forEach((listener) => listener());
-};
+const notifyListeners = () => listeners.forEach((listener) => listener());
 
-const mergeAlerts = (existing: DisasterAlert[], incoming: DisasterAlert[]) => {
-  const map = new Map(existing.map((a) => [a.id, a]));
-  let hasChanges = false;
-  
-  incoming.forEach((a) => {
-    let alertToAdd = a;
-    if ((alertToAdd.type === 'volcanic' || alertToAdd.type === 'volcanic_ash') && (!alertToAdd.pentagonCoords || alertToAdd.pentagonCoords.length === 0)) {
-      const sig = InaSiamService.getSigmetForVolcano(alertToAdd.title || alertToAdd.affectedArea || '');
-      if (sig) {
-        alertToAdd = {
-          ...alertToAdd,
-          pentagonCoords: sig.coordinates,
-          ashHeight: alertToAdd.ashHeight || sig.flightLevel,
-          movementDirection: alertToAdd.movementDirection || sig.directionText,
-          windBearing: alertToAdd.windBearing ?? sig.bearing,
-        };
-      }
-    }
-
-    if (!map.has(alertToAdd.id)) {
-      map.set(alertToAdd.id, alertToAdd);
-      hasChanges = true;
-    } else {
-      const existingAlert = map.get(alertToAdd.id)!;
-      if (!existingAlert.pentagonCoords && alertToAdd.pentagonCoords) {
-        map.set(alertToAdd.id, { ...existingAlert, ...alertToAdd });
-        hasChanges = true;
-      }
-    }
-  });
-  
-  const merged = Array.from(map.values());
-  const now = new Date();
-  const filtered = merged.filter((a) => {
-    if (a.title === 'Peringatan Dini Cuaca') {
-      const end = getWaktuBerakhir(a.description);
-      if (end && now > end) {
-        hasChanges = true;
-        return false;
-      }
-    }
-    return true;
-  });
-  
-  if (hasChanges || existing.length === 0) {
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(filtered));
-      }
-    } catch (e) {
-      console.error('Failed to save alerts to localStorage', e);
+function publish(now = Date.now()) {
+  const current = new Map<string, DisasterAlert>();
+  for (const records of recordsByFeed.values()) {
+    for (const record of records) {
+      const alert = toLegacyDisasterAlert(record);
+      if (isCurrentlyUsable(alert, now)) current.set(alert.id, alert);
     }
   }
-  
-  return filtered;
-};
+  cachedAlerts = Array.from(current.values());
+  notifyListeners();
+}
 
-const fetchAllSources = async () => {
+function withDeadline<T>(promise: Promise<T>, name: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(`${name} request timed out`)), REQUEST_DEADLINE_MS);
+    promise.then(resolve, reject).finally(() => clearTimeout(timeout));
+  });
+}
+
+async function fetchAllSources() {
   if (isFetching) return;
   isFetching = true;
-
-  // Cleanup expired alerts from the in-memory cache and localStorage
-  const now = new Date();
-  const activeAlerts = cachedAlerts.filter((a) => {
-    if (a.title === 'Peringatan Dini Cuaca') {
-      const end = getWaktuBerakhir(a.description);
-      if (end && now > end) return false;
-    }
-    return true;
-  });
-
-  if (activeAlerts.length !== cachedAlerts.length) {
-    cachedAlerts = activeAlerts;
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(cachedAlerts));
-      }
-    } catch (e) {
-      console.error('Failed to save alerts to localStorage', e);
-    }
-  }
-
-  cachedLoadingSources = ['Gempa BMKG', 'Cuaca Buruk BMKG', 'Peringatan Dini Cuaca BMKG', 'Prakiraan 3 Hari BMKG', 'Curah Hujan Tinggi BMKG', 'Live Gunung Api Magma', 'Sipongi Karhutla', 'Abu Vulkanik INA-SIAM', 'ISPU Kualitas Udara'];
+  cachedLoadingSources = feeds.map((feed) => feed.name);
   notifyListeners();
 
-  const apis = [
-    { call: fetchLatestEarthquakes, name: 'Gempa BMKG' },
-    { call: fetchExtremeWeather, name: 'Cuaca Buruk BMKG' },
-    { call: fetchEarlyWarning, name: 'Peringatan Dini Cuaca BMKG' },
-    { call: fetchThreeDayForecast, name: 'Prakiraan 3 Hari BMKG' },
-    { call: fetchHighRainfallWarning, name: 'Curah Hujan Tinggi BMKG' },
-    { call: () => MagmaService.fetchLiveAlerts(false), name: 'Live Gunung Api Magma' },
-    { call: () => SipongiService.fetchKarhutlaAlerts(true), name: 'Sipongi Karhutla' },
-    { call: () => InaSiamService.fetchLiveAlerts(), name: 'Abu Vulkanik INA-SIAM' },
-    { call: () => IspuService.fetchAirQualityAlerts(), name: 'ISPU Kualitas Udara' }
-  ];
+  const checkedAt = new Date().toISOString();
+  const results = await Promise.allSettled(
+    feeds.map((feed) => withDeadline(feed.fetch(), feed.name))
+  );
 
-  let pending = apis.length;
-
-  apis.forEach(({ call, name }) => {
-    call()
-      .then((data) => {
-        if (data && data.length > 0) {
-          cachedAlerts = mergeAlerts(cachedAlerts, data);
-          notifyListeners();
+  results.forEach((result, index) => {
+    const feed = feeds[index];
+    if (!feed) return;
+    if (result.status === 'fulfilled') {
+      // A successful empty response clears this feed. Invalid or expired records
+      // never enter the current-record repository.
+      const accepted: DisasterRecord[] = [];
+      for (const record of result.value) {
+        try {
+          const normalized = normalizeAdapterAlert(record, feed.id, checkedAt);
+          if (isCurrentlyUsable(toLegacyDisasterAlert(normalized))) accepted.push(normalized);
+        } catch (error) {
+          console.warn(`Rejected invalid record from ${feed.name}:`, error);
         }
-      })
-      .catch((e) => {
-        console.error(`Failed to fetch ${name}:`, e);
-        if (name === 'Live Gunung Api Magma') {
-          MagmaService.fetchLiveAlerts(true)
-            .then((data) => {
-              if (data && data.length > 0) {
-                cachedAlerts = mergeAlerts(cachedAlerts, data);
-                notifyListeners();
-              }
-            })
-            .catch((err) => console.error('Fallback fetch for Magma failed:', err));
-        }
-        if (name === 'Sipongi Karhutla') {
-          SipongiService.fetchKarhutlaAlerts(false)
-            .then((data) => {
-              if (data && data.length > 0) {
-                cachedAlerts = mergeAlerts(cachedAlerts, data);
-                notifyListeners();
-              }
-            })
-            .catch((err) => console.error('Fallback fetch for Sipongi Karhutla failed:', err));
-        }
-      })
-      .finally(() => {
-        cachedLoadingSources = cachedLoadingSources.filter((s) => s !== name);
-        pending--;
-        if (pending === 0) {
-          cachedIsLoading = false;
-          isFetching = false;
-          lastCheckedTime = new Date();
-          notifyListeners();
-        }
-      });
+      }
+      recordsByFeed.set(feed.id, accepted);
+      cachedFeedHealth = { ...cachedFeedHealth, [feed.id]: { status: 'available', checkedAt } };
+    } else {
+      console.error(`Failed to fetch ${feed.name}:`, result.reason);
+      const retained = (recordsByFeed.get(feed.id) || []).filter((record) => isCurrentlyUsable(toLegacyDisasterAlert(record)));
+      recordsByFeed.set(feed.id, retained);
+      cachedFeedHealth = { ...cachedFeedHealth, [feed.id]: { status: 'unavailable', checkedAt } };
+    }
+    publish();
   });
-};
+
+  cachedLoadingSources = [];
+  cachedIsLoading = false;
+  isFetching = false;
+  lastCheckedTime = new Date();
+  publish();
+}
 
 const startGlobalPolling = () => {
   if (pollingIntervalId) return;
-  fetchAllSources();
-  pollingIntervalId = setInterval(() => {
-    fetchAllSources();
-  }, 60000); // Poll every 60 seconds
+  void fetchAllSources();
+  pollingIntervalId = setInterval(() => void fetchAllSources(), POLL_INTERVAL_MS);
 };
 
 const stopGlobalPolling = () => {
-  if (pollingIntervalId) {
-    clearInterval(pollingIntervalId);
-    pollingIntervalId = null;
-  }
+  if (!pollingIntervalId) return;
+  clearInterval(pollingIntervalId);
+  pollingIntervalId = null;
 };
 
 export const useAlerts = () => {
@@ -268,6 +135,7 @@ export const useAlerts = () => {
   const [fetching, setFetching] = useState(isFetching);
   const [lastChecked, setLastChecked] = useState<Date | null>(lastCheckedTime);
   const [loadingSources, setLoadingSources] = useState<string[]>(cachedLoadingSources);
+  const [feedHealth, setFeedHealth] = useState<FeedHealth>(cachedFeedHealth);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -276,28 +144,22 @@ export const useAlerts = () => {
       setFetching(isFetching);
       setLastChecked(lastCheckedTime);
       setLoadingSources(cachedLoadingSources);
+      setFeedHealth(cachedFeedHealth);
     };
-
     listeners.add(handleUpdate);
-
-    if (listeners.size === 1) {
-      startGlobalPolling();
-    }
-
+    handleUpdate();
+    if (listeners.size === 1) startGlobalPolling();
     return () => {
       listeners.delete(handleUpdate);
-      if (listeners.size === 0) {
-        stopGlobalPolling();
-      }
+      if (listeners.size === 0) stopGlobalPolling();
     };
   }, []);
 
   const stats = useMemo(
-    () =>
-      alerts.reduce(
-        (acc, alert) => { acc[alert.severity]++; acc.total++; return acc; },
-        { 3: 0, 2: 0, 1: 0, total: 0 } as Record<AlertSeverity | 'total', number>
-      ),
+    () => alerts.reduce(
+      (acc, alert) => { acc[alert.severity]++; acc.total++; return acc; },
+      { 3: 0, 2: 0, 1: 0, total: 0 } as Record<AlertSeverity | 'total', number>
+    ),
     [alerts]
   );
 
@@ -307,6 +169,7 @@ export const useAlerts = () => {
     isLoading,
     isFetching: fetching,
     loadingSources,
+    feedHealth,
     lastCheckedTime: lastChecked,
     criticalAlerts: useMemo(() => alerts.filter((a) => a.severity === 3), [alerts]),
     warningAlerts: useMemo(() => alerts.filter((a) => a.severity === 2), [alerts]),
@@ -314,8 +177,8 @@ export const useAlerts = () => {
     getAlertsByProvince: (provinceId: string) => alerts.filter((a) => a.provinceId === provinceId),
     getActiveAlertForProvince: (provinceId: string): DisasterAlert | undefined => {
       const list = alerts.filter((a) => a.provinceId === provinceId);
-      if (list.length === 0) return undefined;
-      return list.reduce((h, c) => (c.severity || 0) > (h.severity || 0) ? c : h);
+      return list.reduce<DisasterAlert | undefined>((highest, current) =>
+        !highest || current.severity > highest.severity ? current : highest, undefined);
     },
   };
 };

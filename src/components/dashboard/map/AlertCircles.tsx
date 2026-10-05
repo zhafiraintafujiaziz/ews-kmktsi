@@ -3,11 +3,11 @@ import { Circle, Tooltip, Marker, Popup, Polygon, Polyline } from 'react-leaflet
 import L from 'leaflet';
 import type { DisasterAlert, AlertSeverity } from '../../../types';
 import { severityToCssClass } from '../../../types';
-import { KPWBI_OFFICES } from '../../../constants/kpwbiOffices';
 import { PROVINCES } from '../../../constants/provinces';
 import { isValidCoord } from '../../../utils/geo';
 import { getDisasterIconHtml, renderDisasterIcon } from '../../../utils/alertUtils';
-import { computeTrajectoryArrow, computeDispersionPentagon, InaSiamService } from '../../../services/inaSiamService';
+import { computeTrajectoryArrow, InaSiamService } from '../../../services/inaSiamService';
+import { getIspuStyle } from '../../../constants/ispuCategories';
 
 interface AlertCirclesProps {
   alerts: DisasterAlert[];
@@ -56,17 +56,10 @@ function getCircleRadius(alert: DisasterAlert): number {
   }
 }
 
-/** Dotted air-quality area: green (watch), yellow (warning), red (critical). */
-function getAirQualityAreaColor(severity: AlertSeverity): string {
-  if (severity >= 3) return '#dc2626';
-  if (severity === 2) return '#eab308';
-  return '#16a34a';
-}
-
 function getCircleConfig(alert: DisasterAlert): CircleConfig {
   let color = SEV_COLORS[alert.severity] || 'var(--alert-critical)';
   if (alert.type === 'air_quality') {
-    color = getAirQualityAreaColor(alert.severity);
+    color = getIspuStyle(alert.ispuCategory || 'BAIK', alert.ispuValue).color;
   }
   const radius = getCircleRadius(alert);
 
@@ -83,10 +76,10 @@ function getCircleConfig(alert: DisasterAlert): CircleConfig {
   };
 }
 
-function getBottomRightCoords(centerLat: number, centerLng: number, radiusMeters: number): [number, number] {
+function getDestinationCoords(centerLat: number, centerLng: number, radiusMeters: number, bearingDegrees = 135): [number, number] {
   const earthRadius = 6378137;
   const d = radiusMeters;
-  const bearingRad = (135 * Math.PI) / 180;
+  const bearingRad = (bearingDegrees * Math.PI) / 180;
 
   const latRad = (centerLat * Math.PI) / 180;
   const lngRad = (centerLng * Math.PI) / 180;
@@ -172,9 +165,6 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
 
         if (isValidCoord(alert.latitude, alert.longitude)) {
           center = [Number(alert.latitude), Number(alert.longitude)];
-        } else {
-          const office = KPWBI_OFFICES.find((o) => o.provinceId === alert.provinceId);
-          if (office) center = [office.latitude, office.longitude];
         }
 
         if (!center) return null;
@@ -191,19 +181,16 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
           if (!polygonCoords && sigmetInfo && sigmetInfo.coordinates.length >= 3) {
             polygonCoords = sigmetInfo.coordinates;
             windBearing = sigmetInfo.bearing;
-          } else if (!polygonCoords && center) {
-            windBearing = windBearing ?? 240;
-            polygonCoords = computeDispersionPentagon(center[0], center[1], windBearing, 95);
           }
         }
 
         const hasPolygon = isVolcano && polygonCoords && polygonCoords.length >= 3;
-        const arrowData = isVolcano && center
-          ? computeTrajectoryArrow(center[0], center[1], windBearing ?? 240, 65)
+        const arrowData = isVolcano && center && windBearing !== undefined
+          ? computeTrajectoryArrow(center[0], center[1], windBearing, 65)
           : null;
 
         const { radius, pathOptions } = getCircleConfig(alert);
-        const iconCoords = getBottomRightCoords(center[0], center[1], radius);
+        const iconCoords = getDestinationCoords(center[0], center[1], radius);
         
         // Icon type: jika memiliki sebaran abu vulkanik aktif / SIGMET, tampilkan gunung berawan
         const iconType = (alert.type === 'volcanic_ash' || (alert.type === 'volcanic' && sigmetInfo))
@@ -214,7 +201,9 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
           ? { title: 'badai' }
           : { id: alert.id, title: alert.title, description: alert.description };
         const iconHtml = getDisasterIconHtml(iconType, isVolcano ? '#ea580c' : pathOptions.color, iconSource);
-        const sevColor = SEV_COLORS[alert.severity] || 'var(--alert-critical)';
+        const ispuStyle = alert.type === 'air_quality'
+          ? getIspuStyle(alert.ispuCategory || 'BAIK', alert.ispuValue) : undefined;
+        const sevColor = ispuStyle?.color ?? SEV_COLORS[alert.severity] ?? 'var(--alert-critical)';
 
         const customIcon = L.divIcon({
           className: 'custom-disaster-radius-icon',
@@ -234,7 +223,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
         });
 
         const renderSevBoxes = () => (
-          <span className="ews-popup-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 4px', ...sevTagStyle(alert.severity) }}>
+          <span className="ews-popup-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 4px', ...sevTagStyle(alert.severity), ...(ispuStyle ? { borderColor: ispuStyle.color, backgroundColor: `${ispuStyle.color}18` } : {}) }}>
             {[1, 2, 3].map((i) => (
               <span key={i} style={{ width: '12px', height: '4px', borderRadius: '1px', backgroundColor: i <= alert.severity ? sevColor : 'var(--border-default)', display: 'inline-block' }} />
             ))}
@@ -249,7 +238,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
 
         const popupContent = (
           <div className="ews-popup-content" style={{ maxWidth: '330px' }}>
-            <div className={`ews-popup-header ${severityToCssClass(alert.severity)}`}>
+            <div className={`ews-popup-header ${severityToCssClass(alert.severity)}`} style={ispuStyle ? { color: ispuStyle.textColor, backgroundColor: ispuStyle.color } : undefined}>
               <span style={{ display: 'inline-flex', alignItems: 'center' }}>
                 {renderDisasterIcon(iconType, undefined, { color: 'inherit' }, iconSource)}
               </span>
@@ -261,8 +250,8 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
             </div>
 
             {alert.type === 'air_quality' && (
-              <div style={{ margin: '6px 0', padding: '6px 8px', background: 'rgba(2, 132, 199, 0.06)', border: '1px solid rgba(2, 132, 199, 0.25)', borderRadius: '4px' }}>
-                <div style={{ color: '#0369a1', fontWeight: 700, fontSize: '11px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <div style={{ margin: '6px 0', padding: '6px 8px', background: `${sevColor}18`, border: `1px solid ${sevColor}`, borderRadius: '4px' }}>
+                <div style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '11px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <span>🍃</span>
                   <span>PEMANTAUAN KUALITAS UDARA (ISPU KEMENLH)</span>
                 </div>
@@ -363,7 +352,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
               ) : isProvinceAlert ? (
                 <span>Provinsi terdampak Cuaca Buruk</span>
               ) : (
-                <span>Radius: {(radius / 1000).toFixed(0)} km</span>
+                <span>{alert.type === 'air_quality' ? `Area segitiga: jangkauan ${(radius / 1000).toFixed(0)} km` : `Radius: ${(radius / 1000).toFixed(0)} km`}</span>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Severity:</span>
@@ -475,11 +464,10 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
               </Circle>
             )}
 
-            {/* 2b. Air Quality Hazard: circular impact range */}
+            {/* 2b. Air Quality Hazard: triangular impact area */}
             {alert.type === 'air_quality' && center && (
-              <Circle
-                center={center}
-                radius={radius}
+              <Polygon
+                positions={[0, 120, 240].map((bearing) => getDestinationCoords(center[0], center[1], radius, bearing))}
                 pathOptions={{
                   color: pathOptions.color,
                   fillColor: pathOptions.color,
@@ -498,9 +486,9 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
                   <div>
                     <strong>{alert.title}</strong><br />
                     <span style={{ color: pathOptions.color, fontWeight: 700 }}>
-                      Radius Kualitas Udara (SPKU KemenLH)
+                      Area Segitiga Kualitas Udara (SPKU KemenLH)
                     </span><br />
-                    Radius Dampak: {(radius / 1000).toFixed(0)} km<br />
+                    Jangkauan Area: {(radius / 1000).toFixed(0)} km<br />
                     Nilai ISPU: <strong>{alert.ispuValue}</strong> ({alert.ispuCategory})<br />
                     Parameter Kritis: {alert.ispuParam || 'PM2.5'}<br />
                     Stasiun: {alert.stationName}<br />
@@ -516,7 +504,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
                   </div>
                 </Tooltip>
                 <Popup>{popupContent}</Popup>
-              </Circle>
+              </Polygon>
             )}
 
             {/* 3. Hazard Marker Icon */}

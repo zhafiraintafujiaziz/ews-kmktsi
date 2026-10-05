@@ -11,8 +11,6 @@ export interface VolcanoPoint {
   lat: number;
   lng: number;
   provinceId: string;
-  level: 'III' | 'II' | 'I'; // based on MAGMA active status
-  impactRadiusKm: number;
 }
 
 // Major volcanic arc segments in Indonesia
@@ -76,20 +74,20 @@ export const RING_OF_FIRE_ARCS: RingOfFireArc[] = [
   },
 ];
 
-// Key active/watched volcano points (seeded from MOCK_VOLCANO_REPORTS + magmaService coords)
+// Reference volcano identities and coordinates.
 export const VOLCANO_POINTS: VolcanoPoint[] = [
-  { name: 'Awu',              lat: 3.682,  lng: 125.446, provinceId: 'ID-SA', level: 'III', impactRadiusKm: 150 },
-  { name: 'Lewotobi Laki-laki', lat: -8.542, lng: 122.775, provinceId: 'ID-NT', level: 'III', impactRadiusKm: 150 },
-  { name: 'Merapi',           lat: -7.540, lng: 110.446, provinceId: 'ID-YO', level: 'III', impactRadiusKm: 150 },
-  { name: 'Semeru',           lat: -8.108, lng: 112.922, provinceId: 'ID-JI', level: 'III', impactRadiusKm: 150 },
-  { name: 'Anak Krakatau',    lat: -6.102, lng: 105.423, provinceId: 'ID-LA', level: 'II',  impactRadiusKm: 100 },
-  { name: 'Bromo',            lat: -7.942, lng: 112.953, provinceId: 'ID-JI', level: 'II',  impactRadiusKm: 100 },
-  { name: 'Dukono',           lat: 1.693,  lng: 127.894, provinceId: 'ID-MU', level: 'II',  impactRadiusKm: 100 },
-  { name: 'Gamalama',         lat: 0.80,   lng: 127.325, provinceId: 'ID-MU', level: 'II',  impactRadiusKm: 100 },
-  { name: 'Ili Lewotolok',    lat: -8.272, lng: 123.505, provinceId: 'ID-NT', level: 'II',  impactRadiusKm: 100 },
-  { name: 'Kerinci',          lat: -1.697, lng: 101.264, provinceId: 'ID-JA', level: 'II',  impactRadiusKm: 100 },
-  { name: 'Marapi',           lat: -0.381, lng: 100.473, provinceId: 'ID-SB', level: 'II',  impactRadiusKm: 100 },
-  { name: 'Sinabung',         lat: 3.170,  lng: 98.392,  provinceId: 'ID-SU', level: 'II',  impactRadiusKm: 100 },
-  { name: 'Agung',            lat: -8.343, lng: 115.508, provinceId: 'ID-BA', level: 'II',  impactRadiusKm: 100 },
-  { name: 'Rinjani',          lat: -8.412, lng: 116.467, provinceId: 'ID-NB', level: 'II',  impactRadiusKm: 100 },
+  { name: 'Awu', lat: 3.682, lng: 125.446, provinceId: 'ID-SA' },
+  { name: 'Lewotobi Laki-laki', lat: -8.542, lng: 122.775, provinceId: 'ID-NT' },
+  { name: 'Merapi', lat: -7.540, lng: 110.446, provinceId: 'ID-YO' },
+  { name: 'Semeru', lat: -8.108, lng: 112.922, provinceId: 'ID-JI' },
+  { name: 'Anak Krakatau', lat: -6.102, lng: 105.423, provinceId: 'ID-LA' },
+  { name: 'Bromo', lat: -7.942, lng: 112.953, provinceId: 'ID-JI' },
+  { name: 'Dukono', lat: 1.693, lng: 127.894, provinceId: 'ID-MU' },
+  { name: 'Gamalama', lat: 0.80, lng: 127.325, provinceId: 'ID-MU' },
+  { name: 'Ili Lewotolok', lat: -8.272, lng: 123.505, provinceId: 'ID-NT' },
+  { name: 'Kerinci', lat: -1.697, lng: 101.264, provinceId: 'ID-JA' },
+  { name: 'Marapi', lat: -0.381, lng: 100.473, provinceId: 'ID-SB' },
+  { name: 'Sinabung', lat: 3.170, lng: 98.392, provinceId: 'ID-SU' },
+  { name: 'Agung', lat: -8.343, lng: 115.508, provinceId: 'ID-BA' },
+  { name: 'Rinjani', lat: -8.412, lng: 116.467, provinceId: 'ID-NB' },
 ];

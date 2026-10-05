@@ -34,5 +34,5 @@ export function mapTextToProvinceId(text: string): string {
   if (t.includes('maluku')) return 'ID-MA';
   if (t.includes('papua barat') || t.includes('irian jaya barat')) return 'ID-PB';
   if (t.includes('papua') || t.includes('irian jaya')) return 'ID-PA';
-  return 'ID-JK';
+  return 'unknown';
 }

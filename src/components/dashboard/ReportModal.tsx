@@ -12,9 +12,9 @@ import {
   mapDisasterTypeToInariskHazard,
   vulnerabilityToScore,
   getRiskLevel,
+  scoreAlertForOffice,
 } from '../../utils/riskCalculator';
 import * as XLSX from 'xlsx';
-import './ReportModal.css';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -89,25 +89,31 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, alert
               : null;
           
           let riskLevelStr = '-';
-          let vulIndex = 0;
-          let rScoreVal = 0;
+          let vulIndex: number | undefined;
+          let rScoreVal: number | undefined;
           const event = mapAlertToDisasterEvent(alert);
           if (event) {
+            if (event.type === 'air_quality') {
+              const { totalScore } = scoreAlertForOffice(office.id, alert);
+              if (totalScore !== null) {
+                rScoreVal = totalScore;
+                riskLevelStr = getRiskLevel(totalScore);
+              }
+            }
             const kerentananDisasters = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash'];
             const isKerentananSupported = kerentananDisasters.includes(event.type);
-            let vulScore = 1;
-            if (!isKerentananSupported) {
-              vulScore = 3;
-            } else {
+            if (isKerentananSupported) {
               const hazard = mapDisasterTypeToInariskHazard(event.type);
               const index = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
-              const vulLevel = mapInariskToVulnerability(index);
-              vulScore = vulnerabilityToScore(vulLevel);
+              if (index !== null) {
+                const vulLevel = mapInariskToVulnerability(index);
+                const vulScore = vulnerabilityToScore(vulLevel);
+                vulIndex = index;
+                const rScore = event.disasterScore * vulScore;
+                rScoreVal = rScore;
+                riskLevelStr = getRiskLevel(rScore);
+              }
             }
-            vulIndex = vulScore;
-            const rScore = event.disasterScore * vulScore;
-            rScoreVal = rScore;
-            riskLevelStr = getRiskLevel(rScore);
           }
 
           impactedOffices.push({
@@ -197,8 +203,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, alert
       alert.title,
       alert.type,
       SEVERITY_NUM[alert.severity] || alert.severity,
-      vulnerabilityIndex !== undefined ? vulnerabilityIndex : 0,
-      riskScore !== undefined ? Math.round(riskScore) : 0,
+      vulnerabilityIndex !== undefined ? vulnerabilityIndex : '-',
+      riskScore !== undefined ? Math.round(riskScore) : '-',
       riskLevel,
       distanceKm !== null ? Number(distanceKm.toFixed(1)) : '-',
       new Date(alert.timestamp).toLocaleString('id-ID')

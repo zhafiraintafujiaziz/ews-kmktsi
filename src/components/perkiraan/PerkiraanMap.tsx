@@ -9,20 +9,15 @@ import { mapTextToProvinceId } from '../../utils/provinceMap';
 import { MEGATHRUST_ZONES } from '../../constants/megathrustZones';
 import { getPolylineBufferSegments } from '../../utils/geo';
 import { RING_OF_FIRE_ARCS, VOLCANO_POINTS } from '../../constants/ringOfFire';
-import { getEnsoElevatedProvinces } from '../../constants/ensoData';
-
-import type { EnsoPhase } from '../../constants/ensoData';
 import type { DisasterAlert, AlertSeverity } from '../../types';
 import MapController from '../dashboard/map/MapController';
 import MapEventsHandler from '../dashboard/map/MapEventsHandler';
-import 'leaflet/dist/leaflet.css';
 
 export type PerkiraanMapMode = 'mingguan' | 'iklim' | 'gempa';
 
 interface PerkiraanMapProps {
   mode: PerkiraanMapMode;
   forecastAlerts?: DisasterAlert[];
-  ensoPhase?: EnsoPhase;
   selectedProvinceId?: string | null;
   selectedOfficeId?: string | null;
   onProvinceSelect?: (id: string) => void;
@@ -35,11 +30,11 @@ interface PerkiraanMapProps {
 
 const INDONESIA_CENTER: [number, number] = [-2.5489, 118.0149];
 
-function getProvinceFloodRisk(provinceId: string): number {
-  return KPWBI_OFFICES.filter((o) => o.provinceId === provinceId).reduce((max, o) => {
-    const v = BnpbInariskService.getLocalHazardIndex(o.id, 'flood');
-    return v > max ? v : max;
-  }, 0);
+function getProvinceFloodRisk(provinceId: string): number | null {
+  const values = KPWBI_OFFICES.filter((office) => office.provinceId === provinceId)
+    .map((office) => BnpbInariskService.getLocalHazardIndex(office.id, 'flood'))
+    .filter((value): value is number => value !== null);
+  return values.length > 0 ? Math.max(...values) : null;
 }
 
 function getForecastSeverityForProvince(provinceId: string, alerts: DisasterAlert[]): AlertSeverity | null {
@@ -53,7 +48,6 @@ function getForecastSeverityForProvince(provinceId: string, alerts: DisasterAler
 const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
   mode,
   forecastAlerts = [],
-  ensoPhase = 'netral',
   selectedProvinceId = null,
   selectedOfficeId = null,
   onProvinceSelect,
@@ -79,7 +73,7 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
     if (mode === 'mingguan') {
       const forecastSev = getForecastSeverityForProvince(provinceId, forecastAlerts);
       const floodRisk = getProvinceFloodRisk(provinceId);
-      const isHighFlood = floodRisk > 0.5;
+      const isHighFlood = floodRisk !== null && floodRisk > 0.5;
 
       if (forecastSev === 3) {
         return { fillColor: '#dc2626', fillOpacity: 0.35, color: '#b91c1c', weight: 2.5 };
@@ -96,24 +90,6 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
       return { fillColor: 'transparent', fillOpacity: 0, color: 'rgba(0,0,0,0.08)', weight: 0.5 };
     }
 
-    if (mode === 'iklim') {
-      const { flood: floodProvinces, drought: droughtProvinces } = getEnsoElevatedProvinces(ensoPhase);
-      const baseFloodRisk = getProvinceFloodRisk(provinceId);
-      const isDroughtElevated = droughtProvinces.includes(provinceId);
-      const isFloodElevated = floodProvinces.includes(provinceId);
-
-      if (isDroughtElevated) {
-        return { fillColor: '#f97316', fillOpacity: 0.35, color: '#ea580c', weight: 2 };
-      }
-      if (isFloodElevated) {
-        return { fillColor: '#3b82f6', fillOpacity: 0.35, color: '#2563eb', weight: 2 };
-      }
-      if (baseFloodRisk > 0.5) {
-        return { fillColor: '#60a5fa', fillOpacity: 0.2, color: '#3b82f6', weight: 1.5 };
-      }
-      return { fillColor: 'transparent', fillOpacity: 0, color: 'rgba(0,0,0,0.08)', weight: 0.5 };
-    }
-
     // gempa: no fill
     return { fillColor: 'transparent', fillOpacity: 0, color: 'rgba(255,255,255,0.15)', weight: 0.5 };
   };
@@ -125,31 +101,20 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
     if (mode === 'mingguan') {
       const floodRisk = getProvinceFloodRisk(provinceId);
       const forecastSev = getForecastSeverityForProvince(provinceId, forecastAlerts);
-      if (!forecastSev && floodRisk <= 0) return;
+      if (!forecastSev && floodRisk === null) {
+        layer.bindTooltip(`<div style="font-size:12px;padding:4px"><strong>${propName}</strong><br/>Current data unavailable</div>`, { sticky: true });
+        return;
+      }
       layer.bindTooltip(
         `<div style="font-size:12px;padding:4px">
           <strong>${propName}</strong><br/>
           ${forecastSev ? `Prakiraan: <strong>${forecastSev === 3 ? 'Siaga' : forecastSev === 2 ? 'Waspada' : 'Potensi'}</strong><br/>` : ''}
-          Kerentanan Banjir: <strong>${(floodRisk * 100).toFixed(0)}</strong>/100
+          Kerentanan Banjir: <strong>${floodRisk === null ? 'Current data unavailable' : `${(floodRisk * 100).toFixed(0)}/100`}</strong>
         </div>`,
         { sticky: true }
       );
     }
 
-    if (mode === 'iklim') {
-      const { flood: floodP, drought: droughtP } = getEnsoElevatedProvinces(ensoPhase);
-      const isFlood = floodP.includes(provinceId);
-      const isDrought = droughtP.includes(provinceId);
-      if (!isFlood && !isDrought) return;
-      layer.bindTooltip(
-        `<div style="font-size:12px;padding:4px">
-          <strong>${propName}</strong><br/>
-          ${isDrought ? '<span style="color:#f97316; font-weight: 600;">Risiko Kekeringan Meningkat</span>' : ''}
-          ${isFlood ? '<span style="color:#3b82f6; font-weight: 600;">Risiko Banjir Meningkat</span>' : ''}
-        </div>`,
-        { sticky: true }
-      );
-    }
   };
 
   // Province centroid severity icons for mingguan & iklim
@@ -169,18 +134,9 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
       } else if (sev === 1) {
         color = '#0ea5e9';
         iconHtml = `<svg viewBox="0 0 24 24" width="20" height="20" fill="#0ea5e9" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6))"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
-      } else if (floodRisk > 0.5) {
+      } else if (floodRisk !== null && floodRisk > 0.5) {
         color = '#6366f1';
         iconHtml = `<svg viewBox="0 0 24 24" width="20" height="20" fill="#6366f1" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6))"><path d="M12 22a7 7 0 0 0 7-7c0-4.3-7-11-7-11S5 10.7 5 15a7 7 0 0 0 7 7z"/></svg>`;
-      }
-    } else if (mode === 'iklim') {
-      const { flood: fp, drought: dp } = getEnsoElevatedProvinces(ensoPhase);
-      if (dp.includes(prov.id)) {
-        color = '#f97316';
-        iconHtml = `<svg viewBox="0 0 24 24" width="20" height="20" fill="#f97316" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6))"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
-      } else if (fp.includes(prov.id)) {
-        color = '#3b82f6';
-        iconHtml = `<svg viewBox="0 0 24 24" width="20" height="20" fill="#3b82f6" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6))"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>`;
       }
     }
 
@@ -226,12 +182,12 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         {geoJsonData && (
           <GeoJSON
-            key={`perkiraan-geojson-${mode}-${ensoPhase}`}
+            key={`perkiraan-geojson-${mode}`}
             data={geoJsonData}
             style={getGeoJsonStyle}
             onEachFeature={onEachFeature}
@@ -286,7 +242,6 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
 
         {/* Volcano points */}
         {mode === 'gempa' && showRingOfFire && VOLCANO_POINTS.map((v) => {
-          const levelColor = v.level === 'III' ? '#dc2626' : v.level === 'II' ? '#d97706' : '#6b7280';
           const icon = L.divIcon({
             className: '',
             html: `<div style="display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; font-size: 18px; line-height: 1;">🌋</div>`,
@@ -297,7 +252,7 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
             <Marker key={`vol-${v.name}`} position={[v.lat, v.lng]} icon={icon}>
               <Tooltip direction="top" offset={[0, -8]}>
                 <strong>G. {v.name}</strong><br/>
-                <span style={{ color: levelColor }}>Level {v.level}</span>
+                {v.lat.toFixed(4)}, {v.lng.toFixed(4)}
               </Tooltip>
             </Marker>
           );

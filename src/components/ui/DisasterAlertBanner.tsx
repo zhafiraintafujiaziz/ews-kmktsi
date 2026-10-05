@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import type { RiskCalcResult } from '../../types';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import { haversineDistance } from '../../utils/geo';
-import './DisasterAlertBanner.css';
 
 interface DisasterAlertBannerProps {
   activeAlerts: RiskCalcResult[];
@@ -84,7 +83,7 @@ export const DisasterAlertBanner: React.FC<DisasterAlertBannerProps> = ({ active
             {isExpanded && (
               <div className="banner-details" onClick={(e) => e.stopPropagation()}>
                 <div className="banner-divider" />
-                <h5 className="details-header">Daftar Lokasi Terimbas & Skor Kerentanan</h5>
+                <h5 className="details-header">{alert.event.type === 'air_quality' ? 'Daftar Lokasi Terimbas' : 'Daftar Lokasi Terimbas & Skor Kerentanan'}</h5>
                 <div className="details-grid">
                   {alert.affectedLocations.map((loc) => {
                     const dist = haversineDistance(
@@ -105,12 +104,14 @@ export const DisasterAlertBanner: React.FC<DisasterAlertBannerProps> = ({ active
                             <span className="detail-label">Jarak Pusat Bencana:</span>
                             <span className="detail-value">{dist.toFixed(1)} km</span>
                           </div>
-                          <div className="detail-item">
-                            <span className="detail-label">Status Kerentanan:</span>
-                            <span className={`detail-value vul-${alert.vulnerabilityLevel.toLowerCase()}`}>
-                              {alert.vulnerabilityLevel} (Skor: {alert.vulnerabilityScore})
-                            </span>
-                          </div>
+                          {alert.vulnerabilityLevel !== null && (
+                            <div className="detail-item">
+                              <span className="detail-label">Status Kerentanan:</span>
+                              <span className={`detail-value vul-${alert.vulnerabilityLevel.toLowerCase()}`}>
+                                {alert.vulnerabilityLevel} (Skor: {alert.vulnerabilityScore})
+                              </span>
+                            </div>
+                          )}
                           <div className="detail-item">
                             <span className="detail-label">Radius Dampak:</span>
                             <span className="detail-value">{alert.event.radiusKm} km</span>

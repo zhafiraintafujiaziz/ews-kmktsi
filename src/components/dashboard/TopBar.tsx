@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import Popper from '@mui/material/Popper';
+import PublicIcon from '@mui/icons-material/Public';
 import type { DisasterAlert, DisasterType, RiskCalcResult } from '../../types';
 import { severityToCssClass } from '../../types';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
-import { renderDisasterIcon, getDisasterTypeStatus } from '../../utils/alertUtils';
-import { Public as PublicIcon } from '@mui/icons-material';
+import { renderDisasterIcon } from '../../utils/alertUtils';
 import { useAlerts } from '../../hooks/useAlerts';
 import { buildOfficeRiskMap } from '../../utils/riskCalculator';
-import ScreenshotPreviewModal from '../ui/ScreenshotPreviewModal';
+import FullPageCaptureButton from '../ui/FullPageCaptureButton';
 import { playAlertSound } from '../../utils/alertSound';
-import './TopBar.css';
 
 interface TopBarProps {
   criticalCount: number;
@@ -34,6 +36,28 @@ const FILTER_OPTIONS: Array<{ value: DisasterType | 'all'; label: string }> = [
   { value: 'air_quality', label: 'Kualitas Udara' },
 ];
 
+function DisasterSelectChevron(props: React.ComponentProps<'svg'>) {
+  return (
+    <svg
+      {...props}
+      viewBox="0 0 24 24" width="12" height="12" fill="none"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+function renderFilterIcon(type: DisasterType | 'all'): React.ReactNode {
+  if (type === 'all') return <PublicIcon sx={{ fontSize: 16 }} />;
+  return renderDisasterIcon(
+    type,
+    undefined,
+    { width: '16px', height: '16px' },
+    type === 'extreme_weather' ? { title: 'badai' } : undefined,
+  );
+}
 function sortNotificationAlerts(alerts: DisasterAlert[]): DisasterAlert[] {
   return [...alerts].sort((a, b) => {
     const sevDiff = (b.severity || 0) - (a.severity || 0);
@@ -113,26 +137,25 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
   const [timeStr, setTimeStr] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
+  const dropdownPanelRef = useRef<HTMLDivElement>(null);
   const [notiOpen, setNotiOpen] = useState(false);
   const notiRef = useRef<HTMLDivElement>(null);
-  const [showToast, setShowToast] = useState(false);
+  const notiPanelRef = useRef<HTMLDivElement>(null);
+  const [toastDisabled, setToastDisabled] = useState(
+    () => localStorage.getItem('bima_toast_disabled') === 'true',
+  );
+  const [dismissedToastAlert, setDismissedToastAlert] = useState<DisasterAlert | null>(null);
   const [demoAlert, setDemoAlert] = useState<DisasterAlert | null>(null);
-  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const playedToastId = useRef<string | null>(null);
 
   const sortedNotiAlerts = useMemo(() => sortNotificationAlerts(allAlerts ?? []), [allAlerts]);
 
   const latestAlert = sortedNotiAlerts[0] ?? null;
+  const notificationStatusClass = latestAlert?.severity === 3
+    ? 'critical'
+    : latestAlert?.severity === 2 ? 'warning' : 'monitoring';
 
-  useEffect(() => {
-    const isToastDisabled = localStorage.getItem('bima_toast_disabled') === 'true';
-    if (latestAlert && !isToastDisabled) {
-      setShowToast(true);
-    } else {
-      setShowToast(false);
-    }
-  }, [latestAlert]);
+  const showToast = latestAlert !== null && !toastDisabled && latestAlert !== dismissedToastAlert;
 
   useEffect(() => {
     if (!showToast || !latestAlert) return;
@@ -146,7 +169,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
       setDemoAlert(null);
       return;
     }
-    setShowToast(false);
+    setToastDisabled(true);
     localStorage.setItem('bima_toast_disabled', 'true');
   };
 
@@ -161,7 +184,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
   useEffect(() => {
     if (!notiOpen) return;
     const handler = (e: MouseEvent) => {
-      if (notiRef.current && !notiRef.current.contains(e.target as Node)) {
+      if (notiRef.current && !notiRef.current.contains(e.target as Node) && !notiPanelRef.current?.contains(e.target as Node)) {
         setNotiOpen(false);
       }
     };
@@ -185,13 +208,25 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
   useEffect(() => {
     if (!dropdownOpen) return;
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) && !dropdownPanelRef.current?.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [dropdownOpen]);
+
+  useEffect(() => {
+    if (!dropdownOpen && !notiOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setDropdownOpen(false);
+        setNotiOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [dropdownOpen, notiOpen]);
 
   const officeRiskLevels = useMemo(
     () => buildOfficeRiskMap(KPWBI_OFFICES, riskAlerts),
@@ -223,13 +258,13 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     ? `${riskStats[3]} KPwBI Berisiko Tinggi`
     : totalAffectedOffices > 0
     ? `${totalAffectedOffices} KPwBI Dipantau`
-    : 'Sistem Normal';
+    : 'Risiko Rendah';
 
   const toastAlert = demoAlert ?? (showToast ? latestAlert : null);
   const toastClass = demoAlert ? 'critical' : toastAlert ? severityToCssClass(toastAlert.severity) : 'watch';
 
   return (
-    <header className="topbar-container">
+    <header className="topbar-container dashboard-topbar">
       <div className="topbar-first-row">
         <div className="topbar-brand">
           <div className="topbar-logo" style={{ overflow: 'hidden', padding: 0 }}>
@@ -244,6 +279,91 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
           </div>
         </div>
 
+        <div className="topbar-center">
+          <div className="dashboard-disaster-select">
+            <Select
+              value={selectedType}
+              onChange={(event) => onTypeChange(event.target.value as typeof selectedType)}
+              inputProps={{ 'aria-label': 'Jenis bencana' }}
+              IconComponent={DisasterSelectChevron}
+              renderValue={(value) => (
+                <span className="dashboard-disaster-option" title={FILTER_OPTIONS.find((option) => option.value === value)?.label}>
+                  <span className="dashboard-disaster-option-icon" aria-hidden="true">{renderFilterIcon(value)}</span>
+                  <span className="dashboard-disaster-option-label">{FILTER_OPTIONS.find((option) => option.value === value)?.label}</span>
+                </span>
+              )}
+              sx={{
+                width: 120,
+                height: 34,
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--accent-light)',
+                color: 'var(--accent-primary)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: 13,
+                fontWeight: 600,
+                boxShadow: 'var(--shadow-sm)',
+                '& .MuiSelect-select': { padding: '0 32px 0 10px', display: 'flex', alignItems: 'center' },
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--border-default)' },
+                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--accent-primary)' },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--accent-primary)' },
+                '& .MuiSelect-icon': {
+                  color: 'var(--accent-primary)',
+                  fontSize: 12,
+                  right: 12,
+                  transition: 'transform 0.18s ease',
+                },
+              }}
+              MenuProps={{
+                slotProps: {
+                  paper: {
+                    sx: {
+                      marginTop: '4px',
+                      border: '1px solid var(--border-default)',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: 'var(--bg-surface)',
+                      boxShadow: 'var(--shadow-lg)',
+                    },
+                  },
+                },
+              }}
+            >
+              {FILTER_OPTIONS.map((option) => (
+                <MenuItem
+                  key={option.value}
+                  value={option.value}
+                  sx={{
+                    gap: 1,
+                    minHeight: 38,
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: 13,
+                    color: 'var(--text-primary)',
+                    '&.Mui-selected, &.Mui-selected:hover': { backgroundColor: 'var(--accent-light)', color: 'var(--accent-primary)' },
+                  }}
+                >
+                  <span className="dashboard-disaster-option-icon" aria-hidden="true">{renderFilterIcon(option.value)}</span>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </div>
+          <div className="topbar-divider-v" />
+          <button className="topbar-nav-btn" onClick={onSwitchToKerentanan}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            Kerentanan
+          </button>
+          <button className="topbar-nav-btn" onClick={onSwitchToPerkiraan}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Perkiraan
+          </button>
+        </div>
+
         <div className="topbar-right">
           <div className="topbar-sync-status" title={lastCheckedTime ? `Terakhir sinkronisasi: ${lastCheckedTime.toLocaleTimeString('id-ID')} WIB` : 'Sinkronisasi berjalan...'}>
             <span className={`sync-dot ${isFetching ? 'syncing' : 'active'}`} />
@@ -252,30 +372,13 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
 
           <span className="topbar-clock">{timeStr || '—'}</span>
 
-          <button className="topbar-report-btn" onClick={async () => {
-            try {
-              const mapElement = document.querySelector('.map-wrapper');
-              if (!mapElement) return;
-              const domtoimage = (await import('dom-to-image-more')).default;
-              const dataUrl = await domtoimage.toPng(mapElement as HTMLElement);
-              setScreenshotUrl(dataUrl);
-            } catch (error) {
-              console.error('Gagal mengambil screenshot', error);
-            }
-          }}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-              <circle cx="12" cy="13" r="4"></circle>
-            </svg>
-            Screenshot
-          </button>
+          <FullPageCaptureButton filename="Dashboard_EWS" />
 
-          <button className="topbar-report-btn" type="button" onClick={handleTestAlert}>
+          <button className="topbar-report-btn" type="button" onClick={handleTestAlert} aria-label="Uji notifikasi" title="Uji notifikasi">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            Alert
           </button>
 
           <div className="topbar-status-wrapper" ref={dropdownRef}>
@@ -304,6 +407,14 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
             )}
 
             {dropdownOpen && (
+              <Popper
+                open
+                anchorEl={dropdownRef.current}
+                ref={dropdownPanelRef}
+                placement="bottom-end"
+                className="topbar-menu-popper"
+                modifiers={[{ name: 'offset', options: { offset: [0, 8] } }, { name: 'preventOverflow', options: { padding: 8 } }]}
+              >
               <div className={`topbar-dropdown topbar-dropdown--${statusClass}`} role="listbox">
                 <div className="topbar-dropdown-header">
                   <span className="topbar-dropdown-title">
@@ -348,7 +459,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                           return (
                             <div
                               key={office.id}
-                              className="topbar-dropdown-item"
+                              className={`topbar-dropdown-item dropdown-risk-item--${levelClass}`}
                               style={{ cursor: 'default', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
                             >
                               <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', flex: 1 }}>
@@ -399,7 +510,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                                     <polyline points="22,6 12,13 2,6" />
                                   </svg>
-                                  Notifikasi
+                                  Kirim
                                 </a>
                               </div>
                             </div>
@@ -410,6 +521,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                   })}
                 </div>
               </div>
+              </Popper>
             )}
           </div>
 
@@ -418,6 +530,8 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
               className={`topbar-noti-btn${notiOpen ? ' open' : ''}`}
               onClick={() => setNotiOpen((o) => !o)}
               title="Notifikasi Kebencanaan"
+              aria-label="Notifikasi Kebencanaan"
+              aria-expanded={notiOpen}
             >
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -429,10 +543,18 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
             </button>
 
             {notiOpen && (
-              <div className="topbar-dropdown noti-dropdown" role="listbox">
+              <Popper
+                open
+                anchorEl={notiRef.current}
+                ref={notiPanelRef}
+                placement="bottom-end"
+                className="topbar-menu-popper"
+                modifiers={[{ name: 'offset', options: { offset: [0, 8] } }, { name: 'preventOverflow', options: { padding: 8 } }]}
+              >
+              <div className={`topbar-dropdown noti-dropdown topbar-dropdown--${notificationStatusClass}`} role="listbox">
                 <div className="topbar-dropdown-header">
                   <span className="topbar-dropdown-title">
-                    Peringatan Bencana (BMKG & MAGMA)
+                    Peringatan Bencana
                     <span className="topbar-dropdown-count">{allAlerts.length}</span>
                   </span>
                   <button
@@ -453,23 +575,33 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                       <p>Tidak ada peringatan bencana aktif saat ini.</p>
                     </div>
                   ) : (
-                    sortedNotiAlerts
-                      .map((alert) => {
+                    ([3, 2, 1] as const).map((severity) => {
+                      const alerts = sortedNotiAlerts.filter((alert) => alert.severity === severity);
+                      if (alerts.length === 0) return null;
+                      const groupClass = severityToCssClass(severity);
+                      const groupLabel = { 3: 'Tinggi', 2: 'Sedang', 1: 'Rendah' }[severity];
+                      return (
+                        <div key={severity}>
+                          <div className={`dropdown-risk-group-header dropdown-risk-group-header--${groupClass}`}>
+                            <span className="dropdown-risk-group-dot" />
+                            {groupLabel}
+                            <span className="dropdown-risk-group-count">{alerts.length}</span>
+                          </div>
+                          {alerts.map((alert) => {
                         const levelClass = severityToCssClass(alert.severity);
                         const sourceName = alert.type === 'volcanic' ? 'MAGMA' : alert.type === 'volcanic_ash' ? 'INA-SIAM' : alert.type === 'karhutla' ? 'SIPONGI' : 'BMKG';
                         
                         return (
                           <div
                             key={alert.id}
-                            className="topbar-dropdown-item noti-item"
+                            className={`topbar-dropdown-item noti-item dropdown-risk-item--${levelClass}`}
                             onClick={() => {
                               onAlertSelect(alert.id);
                               setNotiOpen(false);
                             }}
                           >
-                            <div className={`noti-severity-indicator noti-severity-indicator--${levelClass}`} />
                             <div className="dropdown-item-emoji">
-                              {renderDisasterIcon(alert.type, undefined, { width: '18px', height: '18px' }, alert)}
+                              {renderDisasterIcon(alert.type, undefined, { width: '16px', height: '16px' }, alert)}
                             </div>
                             <div className="dropdown-item-info">
                               <span className="dropdown-item-type">
@@ -492,57 +624,18 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                             </div>
                           </div>
                         );
-                      })
+                          })}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>
+              </Popper>
             )}
           </div>
         </div>
       </div>
-
-      <div className="topbar-center">
-        <div className="topbar-filter-group">
-          {FILTER_OPTIONS.map((opt) => {
-            const status = getDisasterTypeStatus(opt.value, allAlerts);
-            return (
-              <button
-                key={opt.value}
-                className={`topbar-filter-pill${selectedType === opt.value ? ' active' : ''}`}
-                onClick={() => onTypeChange(opt.value)}
-                title={`Filter: ${opt.label} • Status: ${status.label}`}
-              >
-                <span>
-                  {opt.value === 'all' ? (
-                    <PublicIcon style={{ width: '14px', height: '14px', display: 'inline-block', verticalAlign: 'middle' }} />
-                  ) : (
-                    renderDisasterIcon(opt.value, undefined, { width: '14px', height: '14px' })
-                  )}
-                </span>
-                <span>{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="topbar-divider-v" />
-        <button className="topbar-nav-btn" onClick={onSwitchToKerentanan}>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-          Kerentanan
-        </button>
-        <button className="topbar-nav-btn" onClick={onSwitchToPerkiraan}>
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-          </svg>
-          Perkiraan
-        </button>
-      </div>
-
-
 
       {/* Toast Notification */}
       {toastAlert && (
@@ -574,7 +667,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
             onClick={() => {
               onAlertSelect(toastAlert.id);
               if (demoAlert) setDemoAlert(null);
-              else setShowToast(false);
+              else setDismissedToastAlert(latestAlert);
             }}
           >
             <span className="bima-toast-alert-title">{toastAlert.title}</span>
@@ -583,11 +676,6 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
         </div>
       )}
 
-      <ScreenshotPreviewModal
-        isOpen={!!screenshotUrl}
-        imageDataUrl={screenshotUrl}
-        onClose={() => setScreenshotUrl(null)}
-      />
     </header>
   );
 };

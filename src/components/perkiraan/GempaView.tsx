@@ -1,14 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { MEGATHRUST_ZONES } from '../../constants/megathrustZones';
 import { RING_OF_FIRE_ARCS, VOLCANO_POINTS } from '../../constants/ringOfFire';
-import {
-  FlashOn as FlashOnIcon,
-  Business as BusinessIcon
-} from '@mui/icons-material';
+import { FlashOn as FlashOnIcon, Business as BusinessIcon } from '@mui/icons-material';
 import GempaMapLegend from './map/GempaMapLegend';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { PROVINCES } from '../../constants/provinces';
-import { distanceToPolyline, haversineDistance } from '../../utils/geo';
+import { distanceToPolyline } from '../../utils/geo';
 import PerkiraanMap from './PerkiraanMap';
 import MobileSplitter from '../ui/MobileSplitter';
 
@@ -27,13 +24,6 @@ function getMwLabel(mw: number): string {
 function getMwBarPct(mw: number): number {
   return Math.min(100, Math.max(0, ((mw - 7.0) / 2.5) * 100));
 }
-function getLevelColor(level: 'III' | 'II' | 'I'): string {
-  return level === 'III' ? '#dc2626' : level === 'II' ? '#d97706' : '#6b7280';
-}
-function getLevelLabel(level: 'III' | 'II' | 'I'): string {
-  return level === 'III' ? 'Siaga' : level === 'II' ? 'Waspada' : 'Normal';
-}
-
 const GempaView: React.FC = () => {
   const [selectedZoneId, setSelectedZoneId]       = useState<string | null>(null);
   const [selectedArcId, setSelectedArcId]         = useState<string | null>(null);
@@ -60,15 +50,6 @@ const GempaView: React.FC = () => {
       arc.id,
       KPWBI_OFFICES.filter((o) =>
         distanceToPolyline(o.latitude, o.longitude, arc.path) <= arc.impactRadiusKm
-      ),
-    ])), []);
-
-  // Volcanoes: pre-compute all
-  const volcanoOfficesAtRisk = useMemo(() =>
-    new Map(VOLCANO_POINTS.map((v) => [
-      v.name,
-      KPWBI_OFFICES.filter((o) =>
-        haversineDistance(o.latitude, o.longitude, v.lat, v.lng) <= v.impactRadiusKm
       ),
     ])), []);
 
@@ -252,8 +233,7 @@ const GempaView: React.FC = () => {
 
             {VOLCANO_POINTS.map((v) => {
               const isSelected = selectedVolcanoName === v.name;
-              const color = getLevelColor(v.level);
-              const offices = volcanoOfficesAtRisk.get(v.name) ?? [];
+              const color = '#7c3aed';
               return (
                 <div key={v.name} className={`mt-zone-card${isSelected ? ' selected' : ''}`}>
                   <button className="mt-zone-card-btn" onClick={() => handleVolcanoSelect(v.name)} aria-expanded={isSelected}>
@@ -263,14 +243,11 @@ const GempaView: React.FC = () => {
                         <span className="mt-zone-name" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           <span style={{ fontSize: 14 }}>🌋</span> G. {v.name}
                         </span>
-                        <span className="mt-zone-mw-badge" style={{ color, borderColor: `${color}40`, background: `${color}15` }}>
-                          {getLevelLabel(v.level)}
-                        </span>
                       </div>
                       <div className="mt-mw-bar-label" style={{ marginTop: 2 }}>
                         <span style={{ color }}>{provincesMap.get(v.provinceId)?.name ?? v.provinceId}</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                          <FlashOnIcon style={{ fontSize: 12 }} /> Radius {v.impactRadiusKm} km · <BusinessIcon style={{ fontSize: 12 }} /> {offices.length} KPw
+                        <span>
+                          {v.lat.toFixed(4)}, {v.lng.toFixed(4)}
                         </span>
                       </div>
                     </div>
@@ -279,31 +256,6 @@ const GempaView: React.FC = () => {
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
                   </button>
-                  {isSelected && (
-                    <div className="mt-kpw-panel">
-                      <div className="mt-kpw-panel-header">
-                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-                        </svg>
-                        KPw dalam radius {v.impactRadiusKm} km dari G. {v.name}
-                      </div>
-                      {offices.length === 0 ? (
-                        <p className="mt-kpw-empty">Tidak ada KPw dalam radius ini.</p>
-                      ) : (
-                        <div className="mt-kpw-list">
-                          {offices.map((o) => (
-                            <div key={o.id} className="mt-kpw-item">
-                              <span className="mt-kpw-dot" style={{ background: color }} />
-                              <div>
-                                <span className="mt-kpw-name">{o.name}</span>
-                                <span className="mt-kpw-province">{provincesMap.get(o.provinceId)?.name}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               );
             })}

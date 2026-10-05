@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import './MobileSplitter.css';
 
 export const MobileSplitter: React.FC = () => {
   const isDragging = useRef(false);
@@ -19,7 +18,11 @@ export const MobileSplitter: React.FC = () => {
       // Clamp between 25% and 75% (maximum of 25% split for either side)
       ratio = Math.max(25, Math.min(75, ratio));
       
-      document.documentElement.style.setProperty('--map-ratio-mobile', `${ratio}vh`);
+      if (topbar?.classList.contains('dashboard-topbar')) {
+        document.documentElement.style.setProperty('--dashboard-map-ratio-mobile', `${ratio}%`);
+      } else {
+        document.documentElement.style.setProperty('--map-ratio-mobile', `${ratio}vh`);
+      }
     };
 
     const onMouseMove = (e: MouseEvent) => {

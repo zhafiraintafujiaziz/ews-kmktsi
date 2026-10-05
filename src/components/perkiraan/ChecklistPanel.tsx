@@ -10,51 +10,30 @@ import {
 import { PROVINCES } from '../../constants/provinces';
 import { CHECKLIST_ITEMS } from '../../constants/preparednessChecklist';
 import { usePreparednessChecklist } from '../../hooks/usePreparednessChecklist';
-import { ENSO_CURRENT, getEnsoElevatedProvinces } from '../../constants/ensoData';
-import { MEGATHRUST_ZONES } from '../../constants/megathrustZones';
-import { RING_OF_FIRE_ARCS, VOLCANO_POINTS } from '../../constants/ringOfFire';
-import { distanceToPolyline, haversineDistance } from '../../utils/geo';
 import { BnpbInariskService } from '../../services/bnpbInariskService';
+import { useAlerts } from '../../hooks/useAlerts';
+import { isOfficeAffectedByAlert } from '../../utils/disasterImpact';
 
 const ChecklistPanel: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const { getStatus, toggleItem, getCompletionCount } = usePreparednessChecklist();
+  const { alerts } = useAlerts();
 
   const provincesMap = useMemo(() => new Map(PROVINCES.map((p) => [p.id, p])), []);
 
   const atRiskOffices = useMemo(() => {
-    const { flood: ensoFlood, drought: ensoDrought } = getEnsoElevatedProvinces(ENSO_CURRENT.phase);
-
-    return KPWBI_OFFICES.filter((o) => {
-      // Iklim: ENSO elevated flood or drought province
-      if (ensoFlood.includes(o.provinceId) || ensoDrought.includes(o.provinceId)) return true;
-
-      // Gempa: within any megathrust zone radius
-      if (MEGATHRUST_ZONES.some((zone) =>
-        distanceToPolyline(o.latitude, o.longitude, zone.path) <= zone.impactRadiusKm
-      )) return true;
-
-      // Gempa: within any Ring of Fire arc radius
-      if (RING_OF_FIRE_ARCS.some((arc) =>
-        distanceToPolyline(o.latitude, o.longitude, arc.path) <= arc.impactRadiusKm
-      )) return true;
-
-      // Gempa: within any active volcano radius
-      if (VOLCANO_POINTS.some((v) =>
-        haversineDistance(o.latitude, o.longitude, v.lat, v.lng) <= v.impactRadiusKm
-      )) return true;
-
-      return false;
-    });
-  }, []);
+    return KPWBI_OFFICES.filter((office) => alerts.some((alert) => isOfficeAffectedByAlert(office, alert)));
+  }, [alerts]);
 
   const clampedIndex = Math.min(selectedIndex, Math.max(0, atRiskOffices.length - 1));
   const selectedOffice = atRiskOffices[clampedIndex];
 
-  const floodScore = selectedOffice ? BnpbInariskService.getLocalHazardIndex(selectedOffice.id, 'flood') : 0;
-  const gempaScore = selectedOffice ? BnpbInariskService.getLocalPotensiIndex(selectedOffice.id, 'gempa') : 0;
-  const isHighFlood = floodScore > 0.4;
-  const isHighGempa = gempaScore > 0.4;
+  const floodScore = selectedOffice ? BnpbInariskService.getLocalHazardIndex(selectedOffice.id, 'flood') : null;
+  const isHighGempa = Boolean(selectedOffice && alerts.some((alert) =>
+    (alert.type === 'earthquake' || alert.type === 'tsunami')
+      && isOfficeAffectedByAlert(selectedOffice, alert) && alert.severity === 3
+  ));
+  const isHighFlood = floodScore !== null && floodScore > 0.4;
 
   const visibleItems = CHECKLIST_ITEMS.filter(
     (item) => (!item.floodOnly || isHighFlood) && (!item.gempaOnly || isHighGempa)
@@ -108,12 +87,12 @@ const ChecklistPanel: React.FC = () => {
           <span>{selectedOffice.region}</span>
           {isHighFlood && (
             <span className="flood-risk-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <WaterDropIcon style={{ fontSize: 12 }} /> Banjir Tinggi ({Math.round(floodScore * 100)}/100)
+              <WaterDropIcon style={{ fontSize: 12 }} /> Banjir Tinggi ({Math.round(floodScore! * 100)}/100)
             </span>
           )}
           {isHighGempa && (
             <span className="gempa-risk-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <MonitorHeartIcon style={{ fontSize: 12 }} /> Gempa Tinggi ({Math.round(gempaScore * 100)}/100)
+              <MonitorHeartIcon style={{ fontSize: 12 }} /> Peringatan gempa aktif
             </span>
           )}
         </div>

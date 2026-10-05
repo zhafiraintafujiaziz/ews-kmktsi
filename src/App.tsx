@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import './App.css';
 import DisasterDashboard from './components/dashboard/DisasterDashboard';
 import KerentananScreen from './components/kerentanan/KerentananScreen';
 import PerkiraanScreen from './components/perkiraan/PerkiraanScreen';

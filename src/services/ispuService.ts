@@ -1,11 +1,22 @@
-import type { DisasterAlert, AlertSeverity, IspuStationInfo, IspuCategory } from '../types';
-import { ISPU_STATIONS_SNAPSHOT } from '../constants/ispuData';
+import type { DisasterAlert, IspuStationInfo, IspuCategory } from '../types';
 import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
 import { haversineDistance } from '../utils/geo';
 import { mapTextToProvinceId } from '../utils/provinceMap';
 import { fetchWithCorsProxy } from './proxy';
+import { getIspuAlertSeverity, getIspuCategory, getIspuStyle } from '../constants/ispuCategories';
 
 const ISPU_API_URL = 'https://ispu.kemenlh.go.id/apimobile/v1/getStations';
+
+function parseObservationTime(value: string): Date | null {
+  const months: Record<string, string> = {
+    januari: 'January', februari: 'February', maret: 'March', april: 'April', mei: 'May',
+    juni: 'June', juli: 'July', agustus: 'August', september: 'September', oktober: 'October',
+    november: 'November', desember: 'December',
+  };
+  const normalized = value.replace(/\b([A-Za-z]+)\b/g, (part) => months[part.toLowerCase()] ?? part);
+  const parsed = new Date(normalized);
+  return Number.isFinite(parsed.getTime()) ? parsed : null;
+}
 
 export interface OfficeIspuAssessment {
   officeId: string;
@@ -21,12 +32,12 @@ export interface OfficeIspuAssessment {
 }
 
 export class IspuService {
-  private static cachedStations: IspuStationInfo[] = ISPU_STATIONS_SNAPSHOT;
+  private static cachedStations: IspuStationInfo[] = [];
   private static lastFetchTime: number = 0;
   private static readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache
 
   /**
-   * Fetch live stations from KemenLH ISPU API, falling back to cached snapshot.
+   * Fetch current stations from KemenLH. Stale or undated readings are ignored.
    */
   static async fetchIspuStations(): Promise<IspuStationInfo[]> {
     const now = Date.now();
@@ -35,65 +46,62 @@ export class IspuService {
     }
 
     try {
-      const data = await fetchWithCorsProxy(ISPU_API_URL) as { rows?: any[] };
+      const data = await fetchWithCorsProxy(ISPU_API_URL) as { rows?: Record<string, unknown>[] };
       const rows = data?.rows;
+      if (!Array.isArray(rows)) throw new Error('ISPU response does not contain station rows');
 
-      if (Array.isArray(rows) && rows.length > 0) {
+      {
         const parsed: IspuStationInfo[] = rows.map((r) => {
-          let val = 0;
-          try {
-            val = Math.round(parseFloat(r.val || '0'));
-          } catch {
-            val = 0;
-          }
+          const text = (value: unknown): string => typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+          const categoryInfo = r.kategori && typeof r.kategori === 'object' ? r.kategori as Record<string, unknown> : {};
+          const val = Number(r.val);
+          const waktuText = text(r.waktu_text || r.waktu) || 'Terkini';
+          const observedAt = parseObservationTime(waktuText);
 
-          const rawParam = r.param || '';
+          const rawParam = text(r.param);
           const cleanParam = rawParam.replace(/<sub>|<\/sub>/gi, '');
 
-          let cat: IspuCategory = 'BAIK';
-          const rawCat = (r.cat || '').toUpperCase();
-          if (rawCat.includes('BERBAHAYA') || val > 300) cat = 'BERBAHAYA';
-          else if (rawCat.includes('SANGAT TIDAK SEHAT') || val > 200) cat = 'SANGAT TIDAK SEHAT';
-          else if (rawCat.includes('TIDAK SEHAT') || val > 100) cat = 'TIDAK SEHAT';
-          else if (rawCat.includes('SEDANG') || val > 50) cat = 'SEDANG';
-          else cat = 'BAIK';
+          const cat = getIspuCategory(val);
 
           return {
-            idStasiun: r.id_stasiun || '',
-            nama: r.nama || '',
-            kota: r.kota || '',
-            provinsi: r.provinsi || '',
-            latitude: parseFloat(r.lat || '0'),
-            longitude: parseFloat(r.lon || '0'),
+            idStasiun: text(r.id_stasiun),
+            nama: text(r.nama),
+            kota: text(r.kota),
+            provinsi: text(r.provinsi),
+            latitude: parseFloat(text(r.lat) || '0'),
+            longitude: parseFloat(text(r.lon) || '0'),
             ispuValue: val,
             category: cat,
-            dominantParam: cleanParam || 'PM2.5',
-            waktuText: r.waktu_text || r.waktu || 'Terkini',
-            keterangan: r.kategori?.keterangan || '',
-            color: r.kategori?.color || '#0ea5e9',
+            dominantParam: cleanParam,
+            waktuText,
+            observedAt: observedAt?.toISOString(),
+            keterangan: text(categoryInfo.keterangan),
+            color: this.getCategoryColor(cat),
           };
-        }).filter((s) => !isNaN(s.latitude) && !isNaN(s.longitude) && s.latitude !== 0 && s.longitude !== 0);
-
-        if (parsed.length > 0) {
-          this.cachedStations = parsed;
-          this.lastFetchTime = now;
-          return this.cachedStations;
-        }
+        }).filter((s) => Number.isFinite(s.ispuValue) && s.ispuValue >= 0
+          && Number.isFinite(s.latitude) && Number.isFinite(s.longitude)
+          && s.latitude !== 0 && s.longitude !== 0
+          && Boolean(s.observedAt) && now - Date.parse(s.observedAt!) <= 24 * 60 * 60 * 1000
+          && Date.parse(s.observedAt!) <= now);
+        this.cachedStations = parsed;
+        this.lastFetchTime = now;
+        return parsed;
       }
     } catch (err) {
-      console.warn('IspuService: Live fetch failed, using official snapshot.', err);
+      console.warn('IspuService: Live fetch failed.', err);
+      this.cachedStations = this.cachedStations.filter((station) => station.observedAt
+        && now - Date.parse(station.observedAt) <= 24 * 60 * 60 * 1000);
+      throw err;
     }
-
-    return this.cachedStations;
   }
 
   /**
    * Return cached stations immediately (sync).
    */
   static getStations(): IspuStationInfo[] {
-    return this.cachedStations && this.cachedStations.length > 0
-      ? this.cachedStations
-      : ISPU_STATIONS_SNAPSHOT;
+    this.cachedStations = this.cachedStations.filter((station) => station.observedAt
+      && Date.now() - Date.parse(station.observedAt) <= 24 * 60 * 60 * 1000);
+    return this.cachedStations;
   }
 
   /**
@@ -156,37 +164,15 @@ export class IspuService {
   static getOfficeIspuAssessment(
     officeId: string,
     stations?: IspuStationInfo[]
-  ): OfficeIspuAssessment {
+  ): OfficeIspuAssessment | null {
     const office = KPWBI_OFFICES.find((o) => o.id === officeId);
     if (!office) {
-      return {
-        officeId,
-        ispuValue: 50,
-        category: 'SEDANG',
-        dominantParam: 'PM2.5',
-        stationName: 'Stasiun Regional',
-        stationCity: 'Indonesia',
-        stationProvince: '',
-        distanceKm: 0,
-        score: 0.35,
-        waktuText: 'Hari ini',
-      };
+      return null;
     }
 
     const nearestResult = this.getNearestStation(office.latitude, office.longitude, stations);
     if (!nearestResult) {
-      return {
-        officeId,
-        ispuValue: 50,
-        category: 'SEDANG',
-        dominantParam: 'PM2.5',
-        stationName: 'SPKU Estimasi',
-        stationCity: office.city,
-        stationProvince: office.region,
-        distanceKm: 0,
-        score: 0.35,
-        waktuText: 'Estimasi Regional',
-      };
+      return null;
     }
 
     const { station, distanceKm } = nearestResult;
@@ -214,64 +200,26 @@ export class IspuService {
   }
 
   /**
-   * Return category styling & badge details based on Permen LHK No. 14/2020.
+   * Return category styling and badge details from the source legend.
    */
-  static getCategoryBadge(category: IspuCategory, _ispuVal?: number): {
+  static getCategoryBadge(category: IspuCategory, ispuVal?: number): {
     label: string;
     cls: 'risk-critical' | 'risk-high' | 'risk-medium' | 'risk-low';
     color: string;
     bg: string;
   } {
-    switch (category) {
-      case 'BERBAHAYA':
-        return {
-          label: 'BERBAHAYA',
-          cls: 'risk-critical',
-          color: '#ffffff',
-          bg: '#18181b', // Pure dark / black
-        };
-      case 'SANGAT TIDAK SEHAT':
-        return {
-          label: 'SANGAT TIDAK SEHAT',
-          cls: 'risk-high',
-          color: '#ef4444',
-          bg: 'rgba(239, 68, 68, 0.15)',
-        };
-      case 'TIDAK SEHAT':
-        return {
-          label: 'TIDAK SEHAT',
-          cls: 'risk-high',
-          color: '#f59e0b',
-          bg: 'rgba(245, 158, 11, 0.15)',
-        };
-      case 'SEDANG':
-        return {
-          label: 'SEDANG',
-          cls: 'risk-medium',
-          color: '#0284c7',
-          bg: 'rgba(2, 132, 199, 0.15)',
-        };
-      case 'BAIK':
-      default:
-        return {
-          label: 'BAIK',
-          cls: 'risk-low',
-          color: '#10b981',
-          bg: 'rgba(16, 185, 129, 0.15)',
-        };
-    }
+    const style = getIspuStyle(category, ispuVal);
+    const cls = style.category === 'BERBAHAYA' ? 'risk-critical'
+      : style.category === 'SANGAT TIDAK SEHAT' || style.category === 'TIDAK SEHAT' ? 'risk-high'
+      : style.category === 'SEDANG' ? 'risk-medium' : 'risk-low';
+    return { label: style.category, cls, color: style.textColor, bg: style.color };
   }
 
   /**
-   * Return the official ISPU dot color for a category (Permen LHK No. 14/2020).
+   * Return the ISPU category color from the source legend.
    */
-  static getCategoryColor(category: IspuCategory | string): string {
-    const cat = (category || '').toUpperCase();
-    if (cat.includes('BERBAHAYA')) return '#0f172a'; // Hitam (Pekat)
-    if (cat.includes('SANGAT TIDAK SEHAT')) return '#ef4444'; // Merah
-    if (cat.includes('TIDAK SEHAT')) return '#eab308'; // Kuning / Amber
-    if (cat.includes('SEDANG')) return '#0284c7'; // Biru
-    return '#10b981'; // Hijau (Baik)
+  static getCategoryColor(category: IspuCategory | string, ispuVal?: number): string {
+    return getIspuStyle(category, ispuVal).color;
   }
 
   /**
@@ -295,21 +243,8 @@ export class IspuService {
         }
       }
 
-      const cat = (station.category || '').toUpperCase();
-      // Filter ketat: HANYA tampilkan level Tidak Sehat, Sangat Tidak Sehat, dan Berbahaya (ISPU > 100)
-      const isCriticalLevel =
-        station.ispuValue > 100 ||
-        cat.includes('TIDAK SEHAT') ||
-        cat.includes('BERBAHAYA');
-
-      if (!isCriticalLevel || cat === 'SEDANG' || cat === 'BAIK') return;
-
-      let severity: AlertSeverity = 2;
-      if (station.ispuValue > 200 || cat.includes('BERBAHAYA') || cat.includes('SANGAT TIDAK SEHAT')) {
-        severity = 3;
-      } else {
-        severity = 2;
-      }
+      const severity = getIspuAlertSeverity(station.category);
+      if (severity === null) return;
 
       const distText = nearestOffice ? ` (±${Math.round(nearestOfficeDist)} km dari ${nearestOffice.name})` : '';
 
@@ -337,7 +272,7 @@ Sumber Data: Stasiun Pemantau Kualitas Udara (SPKU) KemenLH / KLHK (Permen LHK N
         provinceId: mapTextToProvinceId(station.provinsi),
         title: `Kualitas Udara ${station.category} (ISPU ${station.ispuValue}) - ${station.kota}`,
         description,
-        timestamp: new Date().toISOString(),
+        timestamp: station.observedAt!,
         latitude: station.latitude,
         longitude: station.longitude,
         affectedArea: `${station.kota} (${station.nama})`,
