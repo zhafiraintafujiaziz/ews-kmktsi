@@ -48,9 +48,9 @@ test('ISPU stations generate severity 1, 2 and 3; Baik and Sedang generate no al
   ]);
 });
 
-test('ISPU contributes low, medium and high KPw risk without querying Kerentanan', (t) => {
+test('ISPU contributes low, medium and high KPw risk without querying InaRISK', (t) => {
   const inarisk = t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => {
-    throw new Error('ISPU must not query Kerentanan');
+    throw new Error('ISPU must not query InaRISK');
   });
   const cases = [
     ['TIDAK SEHAT', 1, 3, 'Rendah'],
@@ -62,8 +62,8 @@ test('ISPU contributes low, medium and high KPw risk without querying Kerentanan
     const risk = scoreAlertForOffice(office.id, alert);
     assert.equal(risk.totalScore, score);
     assert.equal(getRiskLevel(risk.totalScore!), level);
-    assert.equal(risk.vulScore, null);
-    assert.equal(risk.isKerentananSupported, false);
+    assert.equal(risk.assessmentScore, null);
+    assert.equal(risk.isInaRiskSupported, false);
     assert.equal(buildOfficeRiskMap([office], [alert]).get(office.id)?.riskLevel, level);
   }
   assert.equal(inarisk.mock.callCount(), 0);
@@ -79,17 +79,15 @@ test('KPw uses the highest ISPU risk and excludes offices outside the impact are
   assert.equal(risks.get(office.id)?.alerts.length, 3);
 });
 
-test('other hazards retain their existing vulnerability scoring and missing-data behavior', (t) => {
+test('mapped disasters use hazard scoring and preserve missing-data behavior', (t) => {
   const inarisk = t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => 0.6);
-  const flood: DisasterAlert = { ...airAlert('BERBAHAYA', 3), type: 'flood' };
-  const scored = scoreAlertForOffice(office.id, flood);
-  assert.equal(scored.vulScore, 2);
+  const earthquake: DisasterAlert = { ...airAlert('BERBAHAYA', 3), type: 'earthquake' };
+  const scored = scoreAlertForOffice(office.id, earthquake);
+  assert.equal(scored.assessmentScore, 2);
   assert.equal(scored.totalScore, 6);
   assert.equal(getRiskLevel(scored.totalScore!), 'Sedang');
   assert.equal(inarisk.mock.callCount(), 1);
 
-  const earthquake = { ...flood, type: 'earthquake' as const };
-  assert.equal(scoreAlertForOffice(office.id, earthquake).totalScore, null);
   inarisk.mock.mockImplementation(() => null);
-  assert.equal(scoreAlertForOffice(office.id, flood).totalScore, null);
+  assert.equal(scoreAlertForOffice(office.id, earthquake).totalScore, null);
 });

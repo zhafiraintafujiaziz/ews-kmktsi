@@ -129,7 +129,7 @@ export type { ChecklistItemDef, ChecklistStatus } from '../constants/preparednes
 
 // === Disaster Risk Calculator Types ===
 
-export type VulnerabilityLevel = 'Tinggi' | 'Sedang' | 'Rendah';
+export type AssessmentLevel = 'Tinggi' | 'Sedang' | 'Rendah';
 
 export type RiskLevel = 'Tinggi' | 'Sedang' | 'Rendah';
 
@@ -152,9 +152,9 @@ export interface MarkedLocation {
 
 export interface RiskCalcResult {
   event: DisasterEvent;
-  vulnerabilityLevel: VulnerabilityLevel | null; // null untuk risiko ISPU berbasis keparahan
-  vulnerabilityScore: number | null; // 1, 2, atau 3; null jika kerentanan tidak digunakan
-  riskScore: number;          // disasterScore × vulnerabilityScore (1–9)
+  assessmentLevel: AssessmentLevel | null; // null untuk risiko ISPU berbasis keparahan
+  assessmentScore: number | null; // 1, 2, atau 3; null jika penilaian bahaya tidak digunakan
+  riskScore: number;          // disasterScore × assessmentScore (1–9)
   riskLevel: RiskLevel;       // mapping dari riskScore
   affectedLocations: MarkedLocation[]; // lokasi terdampak dalam radius
   shouldAlert: boolean;       // true jika riskLevel "Tinggi" DAN ada lokasi terdampak

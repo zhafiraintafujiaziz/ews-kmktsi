@@ -1,20 +1,20 @@
-import type { DisasterAlert, DisasterEvent, VulnerabilityLevel, RiskLevel, MarkedLocation, RiskCalcResult, KpwbiOffice } from '../types';
+import type { DisasterAlert, DisasterEvent, AssessmentLevel, RiskLevel, MarkedLocation, RiskCalcResult, KpwbiOffice } from '../types';
 import { haversineDistance } from './geo';
 import { getAlertImpactRadiusKm, isOfficeAffectedByAlert } from './disasterImpact';
-import { BnpbInariskService } from '../services/bnpbInariskService';
+import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
+import { resolveOfficeAssessment, type OfficeHazardAssessment } from './officeHazardAssessment';
+import { isInaRiskHazardType, getHazardLevel } from '../constants/kerentananCategories';
 
-/** Tipe bencana yang skornya memakai indeks kerentanan InaRisk. ISPU memakai keparahan langsung. */
-export const KERENTANAN_SUPPORTED_TYPES = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash'] as const;
-
-export function isKerentananSupportedType(type: string): boolean {
-  return (KERENTANAN_SUPPORTED_TYPES as readonly string[]).includes(type);
-}
+/** Assessment availability and scoring support are separate from their source. */
+export const isRiskScoredType = isInaRiskHazardType;
+export const isInaRiskSupportedType = (type: string) => type === 'earthquake' || type === 'karhutla' || type === 'extreme_weather';
 
 export interface OfficeAlertRisk {
   alert: DisasterAlert;
-  vulScore: number | null;
+  assessmentScore: number | null;
   totalScore: number | null;
-  isKerentananSupported: boolean;
+  isInaRiskSupported: boolean;
+  assessment?: OfficeHazardAssessment;
 }
 
 export interface OfficeRiskEntry {
@@ -24,24 +24,17 @@ export interface OfficeRiskEntry {
 }
 
 /** Skor satu alert terhadap satu kantor, sama dengan kartu Tingkat Risiko. */
-export function scoreAlertForOffice(officeId: string, alert: DisasterAlert): OfficeAlertRisk {
+export function scoreAlertForOffice(officeId: string, alert: DisasterAlert, office = KPWBI_OFFICES.find(o => o.id === officeId)): OfficeAlertRisk {
   if (alert.type === 'air_quality') {
-    // Normalize severity 1/2/3 to the shared 1-9 risk scale, without a vulnerability assessment.
-    return { alert, vulScore: null, totalScore: alert.severity * 3, isKerentananSupported: false };
+    // Normalize severity 1/2/3 to the shared 1-9 risk scale, without an InaRISK assessment.
+    return { alert, assessmentScore: null, totalScore: alert.severity * 3, isInaRiskSupported: false };
   }
-  const isKerentananSupported = isKerentananSupportedType(alert.type);
-  let vulScore: number | null = null;
-  if (isKerentananSupported) {
-    const hazard = mapDisasterTypeToInariskHazard(alert.type);
-    const index = BnpbInariskService.getLocalHazardIndex(officeId, hazard);
-    if (index !== null) vulScore = vulnerabilityToScore(mapInariskToVulnerability(index));
-  }
-  return {
-    alert,
-    vulScore,
-    totalScore: vulScore === null ? null : alert.severity * vulScore,
-    isKerentananSupported,
-  };
+  const supported = isRiskScoredType(alert.type);
+  const assessment = supported && office ? resolveOfficeAssessment(office, alert.type as import('../constants/kerentananCategories').InaRiskHazardType) : undefined;
+  const assessmentScore = assessment?.factor ?? null;
+  const totalScore = assessmentScore === null ? null : alert.severity * assessmentScore;
+  return { alert, assessmentScore, totalScore, assessment, isInaRiskSupported: assessment?.source === 'InaRISK' };
+
 }
 
 /**
@@ -60,7 +53,7 @@ export function buildOfficeRiskMap(
 
     let maxRiskScore = 0;
     officeAlerts.forEach((alert) => {
-      const { totalScore } = scoreAlertForOffice(office.id, alert);
+      const { totalScore } = scoreAlertForOffice(office.id, alert, office);
       if (totalScore !== null && totalScore > maxRiskScore) maxRiskScore = totalScore;
     });
 
@@ -77,12 +70,12 @@ export function buildOfficeRiskMap(
 }
 
 /**
- * Mengonversi enum string tingkat kerentanan ke skor angka.
+ * Mengonversi enum string tingkat bahaya ke skor angka.
  * "Tinggi" = 3
  * "Sedang" = 2
  * "Rendah" = 1
  */
-export function vulnerabilityToScore(level: VulnerabilityLevel): number {
+export function assessmentToScore(level: AssessmentLevel): number {
   switch (level) {
     case 'Tinggi':
       return 3;
@@ -96,7 +89,7 @@ export function vulnerabilityToScore(level: VulnerabilityLevel): number {
 }
 
 /**
- * Menentukan tingkat risiko berdasarkan total skor risiko (disasterScore * vulnerabilityScore).
+ * Menentukan tingkat risiko berdasarkan total skor risiko (disasterScore * assessmentScore).
  * 1 - 3: Rendah
  * 4 - 6: Sedang
  * 7 - 9: Tinggi
@@ -141,11 +134,11 @@ export function findAffectedLocations(
  */
 export function calculateRisk(
   event: DisasterEvent,
-  vulnerabilityLevel: VulnerabilityLevel,
+  assessmentLevel: AssessmentLevel,
   locations: MarkedLocation[]
 ): RiskCalcResult {
-  const vulnerabilityScore = vulnerabilityToScore(vulnerabilityLevel);
-  const riskScore = event.disasterScore * vulnerabilityScore;
+  const assessmentScore = assessmentToScore(assessmentLevel);
+  const riskScore = event.disasterScore * assessmentScore;
   const level = getRiskLevel(riskScore);
   const affectedLocations = findAffectedLocations(event, locations);
 
@@ -156,8 +149,8 @@ export function calculateRisk(
 
   return {
     event,
-    vulnerabilityLevel,
-    vulnerabilityScore,
+    assessmentLevel,
+    assessmentScore,
     riskScore,
     riskLevel: level,
     affectedLocations,
@@ -194,37 +187,26 @@ export function mapAlertToDisasterEvent(alert: DisasterAlert): DisasterEvent | n
 }
 
 /**
- * Mengonversi indeks kerentanan dari InaRisk (0 - 1) ke enum VulnerabilityLevel.
+ * Mengonversi indeks bahaya dari InaRisk (0 - 1) ke enum AssessmentLevel.
  */
-export function mapInariskToVulnerability(score: number): VulnerabilityLevel {
-  const val = Math.round(score * 100);
-  if (val >= 61) return 'Tinggi';
-  if (val >= 31) return 'Sedang';
-  return 'Rendah';
+export function mapInariskToHazard(score: number): AssessmentLevel {
+  return getHazardLevel(score);
 }
 
-/**
- * Memetakan tipe bencana umum ke salah satu dari 4 parameter bahaya InaRisk.
- */
-export function mapDisasterTypeToInariskHazard(
-  type: string
-): 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' {
-  switch (type) {
-    case 'flood':
-    case 'landslide':
-    case 'extreme_weather':
-      return 'flood';
-    case 'tsunami':
-    case 'earthquake':
-      return 'tsunami';
-    case 'volcanic':
-    case 'volcanic_ash':
-      return 'volcanic';
-    case 'kekeringan':
-    case 'karhutla':
-      return 'kekeringan';
-    default:
-      return 'flood';
-  }
-}
 
+export function buildAlertRiskResult(alert: DisasterAlert, offices: KpwbiOffice[]): RiskCalcResult | null {
+  if (alert.isForecast) return null;
+  const affected = offices.filter(office => isOfficeAffectedByAlert(office, alert));
+  // Province warnings can have no source centroid. Use an affected office only
+  // as the calculator's map anchor, leaving the source alert coordinates intact.
+  const anchor = alert.type === 'extreme_weather' ? affected[0] : undefined;
+  const event = mapAlertToDisasterEvent(alert) ?? (anchor ? mapAlertToDisasterEvent({ ...alert, latitude: anchor.latitude, longitude: anchor.longitude }) : null);
+  if (!event) return null;
+  const scored = affected.map(office => ({ office, risk: scoreAlertForOffice(office.id, alert, office) })).filter(item => item.risk.totalScore !== null && item.risk.totalScore > 0);
+  if (!scored.length) return null;
+  const worst = scored.reduce((a, b) => b.risk.totalScore! > a.risk.totalScore! ? b : a);
+  const riskScore = worst.risk.totalScore!, riskLevel = getRiskLevel(riskScore);
+  return { event, assessmentLevel: worst.risk.assessment?.level ?? null, assessmentScore: worst.risk.assessmentScore,
+    riskScore, riskLevel, affectedLocations: scored.map(({ office }) => ({ id: office.id, name: office.name, latitude: office.latitude, longitude: office.longitude })),
+    shouldAlert: riskLevel === 'Tinggi' };
+}

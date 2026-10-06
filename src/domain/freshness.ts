@@ -7,8 +7,9 @@ export function isCurrentlyUsable(alert: DisasterAlert, now = Date.now()): boole
   if (!Number.isFinite(issuedAt)) return false;
 
   if (alert.isForecast) {
-    const forecastAt = Date.parse(alert.forecastDateStr || alert.timestamp);
-    return Number.isFinite(forecastAt) && forecastAt >= now;
+    const start = Date.parse(alert.validFrom || alert.timestamp);
+    const end = Date.parse(alert.validUntil || '');
+    return Number.isFinite(start) && Number.isFinite(end) && start < end && end > now;
   }
   if (issuedAt > now) return false;
 

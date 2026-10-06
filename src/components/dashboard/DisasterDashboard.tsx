@@ -4,6 +4,7 @@ import { useDisasterAlert } from '../../hooks/useDisasterAlert';
 import type { AlertSeverity, DisasterType } from '../../types';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { haversineDistance } from '../../utils/geo';
+import { isRiskScoredType } from '../../utils/riskCalculator';
 import TopBar from './TopBar';
 import Sidebar from './Sidebar';
 import EwsMap from './EwsMap';
@@ -107,7 +108,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
       if (typeFilter !== 'all' && a.type !== typeFilter) return false;
       const riskRes = riskResults.find((r) => r.event.id === a.id);
       if (riskRes) return riskRes.riskLevel === 'Tinggi';
-      return a.severity === 3;
+      return !isRiskScoredType(a.type) && a.severity === 3;
     });
   }, [recentAlerts, riskResults, typeFilter]);
 
@@ -116,7 +117,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
       const riskRes = riskResults.find((r) => r.event.id === a.id);
       const effectiveRiskLevel = riskRes 
         ? riskRes.riskLevel 
-        : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
+        : isRiskScoredType(a.type) ? null : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
 
       if (severityFilter !== 'all') {
         const mappedRiskLevel = { 3: 'Tinggi', 2: 'Sedang', 1: 'Rendah' }[severityFilter];
@@ -137,7 +138,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
       const riskRes = riskResults.find((r) => r.event.id === a.id);
       const effectiveRiskLevel = riskRes 
         ? riskRes.riskLevel 
-        : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
+        : isRiskScoredType(a.type) ? null : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
 
       if (effectiveRiskLevel === 'Tinggi') stats[3]++;
       else if (effectiveRiskLevel === 'Sedang') stats[2]++;

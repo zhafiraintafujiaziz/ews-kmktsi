@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { DisasterAlert, AlertSeverity } from '../types';
+import { failForecastSnapshot } from '../services/weatherForecastAssessment';
 import { isCurrentlyUsable } from '../domain/freshness';
 import { normalizeAdapterAlert, toLegacyDisasterAlert, type DisasterRecord } from '../domain/disasterRecord';
 import {
@@ -14,6 +15,7 @@ import { SipongiService } from '../services/sipongiService';
 import { InaSiamService } from '../services/inaSiamService';
 import { IspuService } from '../services/ispuService';
 import { BnpbInariskService } from '../services/bnpbInariskService';
+import { KarhutlaRegionalService } from '../services/karhutlaRegionalService';
 import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
 
 type Feed = {
@@ -33,9 +35,9 @@ const feeds: Feed[] = [
   { id: 'magma', name: 'Live Gunung Api Magma', fetch: () => MagmaService.fetchLiveAlerts() },
   { id: 'sipongi', name: 'Sipongi Karhutla', fetch: () => SipongiService.fetchKarhutlaAlerts() },
   { id: 'inasiam', name: 'Abu Vulkanik INA-SIAM', fetch: () => InaSiamService.fetchLiveAlerts() },
-  { id: 'ispu', name: 'ISPU Kualitas Udara', fetch: () => IspuService.fetchAirQualityAlerts() },
-  { id: 'inarisk', name: 'InaRisk assessments', fetch: async () => {
-    await BnpbInariskService.refreshAssessment(KPWBI_OFFICES);
+  { id: 'ispu', name: 'Kualitas Udara ISPU', fetch: () => IspuService.fetchAirQualityAlerts() },
+  { id: 'inarisk', name: 'Analisis Bahaya InaRISK', fetch: async () => {
+    await BnpbInariskService.refreshAssessment(KPWBI_OFFICES, ['earthquake', 'extreme_weather']);
     return [];
   } },
 ];
@@ -76,6 +78,9 @@ function withDeadline<T>(promise: Promise<T>, name: string): Promise<T> {
 async function fetchAllSources() {
   if (isFetching) return;
   isFetching = true;
+  // Regional raster statistics publish independently, so live feeds need not wait
+  // for 48 area calculations. Successful areas are cached for six hours.
+  void KarhutlaRegionalService.refresh(KPWBI_OFFICES).catch(error => console.error('Statistik Karhutla gagal:', error));
   cachedLoadingSources = feeds.map((feed) => feed.name);
   notifyListeners();
 
@@ -102,6 +107,7 @@ async function fetchAllSources() {
       recordsByFeed.set(feed.id, accepted);
       cachedFeedHealth = { ...cachedFeedHealth, [feed.id]: { status: 'available', checkedAt } };
     } else {
+      if (feed.id === 'forecast') failForecastSnapshot();
       console.error(`Failed to fetch ${feed.name}:`, result.reason);
       const retained = (recordsByFeed.get(feed.id) || []).filter((record) => isCurrentlyUsable(toLegacyDisasterAlert(record)));
       recordsByFeed.set(feed.id, retained);

@@ -1,74 +1,19 @@
 import { useMemo } from 'react';
 import { useAlerts } from './useAlerts';
 import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
-import { BnpbInariskService } from '../services/bnpbInariskService';
 import type { MarkedLocation, RiskCalcResult } from '../types';
-import {
-  mapAlertToDisasterEvent,
-  mapInariskToVulnerability,
-  mapDisasterTypeToInariskHazard,
-  findAffectedLocations,
-  vulnerabilityToScore,
-  getRiskLevel,
-  isKerentananSupportedType,
-  scoreAlertForOffice,
-} from '../utils/riskCalculator';
-
+import { buildAlertRiskResult } from '../utils/riskCalculator';
+import { useInariskRevision } from './useInariskRevision';
 export const useDisasterAlert = () => {
   const { alerts, isLoading } = useAlerts();
-  const markedLocations = useMemo<MarkedLocation[]>(() => KPWBI_OFFICES.map((office) => ({
-    id: office.id,
-    name: office.name,
-    latitude: office.latitude,
-    longitude: office.longitude,
-  })), []);
-
+  const assessmentRevision = useInariskRevision();
+  const markedLocations = useMemo<MarkedLocation[]>(() => KPWBI_OFFICES.map(office => ({ id: office.id, name: office.name, latitude: office.latitude, longitude: office.longitude })), []);
   const riskResults = useMemo<RiskCalcResult[]>(() => {
     if (isLoading) return [];
-    return alerts.flatMap<RiskCalcResult>((alert) => {
-      if (alert.isForecast || (alert.type !== 'air_quality' && !isKerentananSupportedType(alert.type))) return [];
-      const event = mapAlertToDisasterEvent(alert);
-      if (!event) return [];
-      const affectedLocations = findAffectedLocations(event, markedLocations);
-      if (affectedLocations.length === 0) return [];
-
-      if (alert.type === 'air_quality') {
-        const { totalScore } = scoreAlertForOffice(affectedLocations[0].id, alert);
-        if (totalScore === null) return [];
-        const riskLevel = getRiskLevel(totalScore);
-        return [{
-          event,
-          vulnerabilityLevel: null,
-          vulnerabilityScore: null,
-          riskScore: totalScore,
-          riskLevel,
-          affectedLocations,
-          shouldAlert: riskLevel === 'Tinggi',
-        }];
-      }
-
-      const hazard = mapDisasterTypeToInariskHazard(event.type);
-      const indices = affectedLocations
-        .map((location) => BnpbInariskService.getLocalHazardIndex(location.id, hazard))
-        .filter((index): index is number => index !== null);
-      if (indices.length === 0) return [];
-
-      const vulnerabilityLevel = mapInariskToVulnerability(Math.max(...indices));
-      const vulnerabilityScore = vulnerabilityToScore(vulnerabilityLevel);
-      const riskScore = event.disasterScore * vulnerabilityScore;
-      const riskLevel = getRiskLevel(riskScore);
-      return [{
-        event,
-        vulnerabilityLevel,
-        vulnerabilityScore,
-        riskScore,
-        riskLevel,
-        affectedLocations,
-        shouldAlert: riskLevel === 'Tinggi',
-      }];
-    });
-  }, [alerts, isLoading, markedLocations]);
-
-  const activeAlerts = useMemo(() => riskResults.filter((result) => result.shouldAlert), [riskResults]);
+    return alerts.flatMap(alert => { const result = buildAlertRiskResult(alert, KPWBI_OFFICES); return result ? [result] : []; });
+    // The external assessment caches publish independently of alerts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alerts, isLoading, assessmentRevision]);
+  const activeAlerts = useMemo(() => riskResults.filter(result => result.shouldAlert), [riskResults]);
   return { riskResults, activeAlerts, hasActiveAlert: activeAlerts.length > 0, markedLocations };
 };

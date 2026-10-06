@@ -5,6 +5,7 @@ import { PROVINCES } from '../../constants/provinces';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import { buildOfficeRiskMap } from '../../utils/riskCalculator';
+import { useInariskRevision } from '../../hooks/useInariskRevision';
 import AlertCard from './AlertCard';
 
 const SEV_LABEL: Record<AlertSeverity, string> = {
@@ -72,9 +73,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     'Sulawesi, Maluku, & Papua': true,
   });
 
+  const assessmentRevision = useInariskRevision();
   const officeRiskLevels = useMemo(
     () => buildOfficeRiskMap(KPWBI_OFFICES, filteredAlerts),
-    [filteredAlerts],
+    // The external InaRISK cache can change without a new alert array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filteredAlerts, assessmentRevision],
   );
 
   // Counts of offices per risk level
@@ -165,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <section className="sidebar-stats-container" aria-label="Tingkat risiko kantor">
         <div className="sidebar-stats-title-row">
           <span className="sidebar-stats-title">Tingkat Risiko Lokasi Kerja</span>
-          <span className="sidebar-info-tooltip-container" title="Risiko Bencana: Tingkat Keparahan x Indeks Kerentanan. Skor 1-3: Rendah; 4-6: Sedang; 7-9: Tinggi." aria-label="Risiko dihitung dari tingkat keparahan dan indeks kerentanan">
+          <span className="sidebar-info-tooltip-container" title="Risiko Bencana: Keparahan x Kelas Bahaya. Skor 1-3: Rendah; 4-6: Sedang; 7-9: Tinggi." aria-label="Risiko dihitung dari keparahan dan kelas bahaya">
             <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7v1" />
             </svg>

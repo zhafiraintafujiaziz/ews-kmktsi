@@ -40,18 +40,17 @@ test('a warning issued yesterday remains eligible until its source validity ends
   assert.equal(isCurrentlyUsable(record({ type: 'extreme_weather' }), now), false);
 });
 
-test('forecasts require a source period at or after the current time', () => {
+test('forecasts retain today until source expiry and accept future source periods', () => {
   const now = Date.UTC(2026, 9, 4, 3);
-  assert.equal(isCurrentlyUsable(record({
-    type: 'extreme_weather', isForecast: true,
-    timestamp: new Date(now + 60 * 60 * 1000).toISOString(),
-    forecastDateStr: new Date(now + 60 * 60 * 1000).toISOString(),
-  }), now), true);
-  assert.equal(isCurrentlyUsable(record({
-    type: 'extreme_weather', isForecast: true,
-    timestamp: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
-    forecastDateStr: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
-  }), now), false);
+  const from = Date.UTC(2026, 9, 3, 17), until = from + 86400000;
+  const forecast = record({ type: 'extreme_weather', isForecast: true, timestamp: new Date(from).toISOString(),
+    validFrom: new Date(from).toISOString(), validUntil: new Date(until).toISOString(), forecastDateStr: '4 Oct 2026' });
+  assert.equal(isCurrentlyUsable(forecast, now), true);
+  assert.equal(isCurrentlyUsable(forecast, until - 1), true);
+  assert.equal(isCurrentlyUsable(forecast, until), false);
+  assert.equal(isCurrentlyUsable({ ...forecast, validFrom: new Date(until).toISOString(), validUntil: new Date(until + 86400000).toISOString() }, now), true);
+  assert.equal(isCurrentlyUsable({ ...forecast, validUntil: undefined }, now), false);
+  assert.equal(isCurrentlyUsable({ ...forecast, validFrom: new Date(until + 1).toISOString() }, now), false);
 });
 
 test('SIPONGI records preserve and enforce their trailing request period', () => {

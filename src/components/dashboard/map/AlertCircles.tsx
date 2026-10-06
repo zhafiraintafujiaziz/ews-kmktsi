@@ -7,6 +7,7 @@ import { PROVINCES } from '../../../constants/provinces';
 import { isValidCoord } from '../../../utils/geo';
 import { getDisasterIconHtml, renderDisasterIcon } from '../../../utils/alertUtils';
 import { computeTrajectoryArrow, InaSiamService } from '../../../services/inaSiamService';
+import { polygonLatLngs } from '../../../utils/polygonExposure';
 import { getIspuStyle } from '../../../constants/ispuCategories';
 
 interface AlertCirclesProps {
@@ -146,7 +147,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
     for (const alert of sorted) {
       const vKey = getVolcanoDeduplicationKey(alert);
       if (vKey) {
-        if (volcanoSeen.has(vKey)) {
+        if (alert.type !== 'volcanic_ash' && volcanoSeen.has(vKey)) {
           // Already rendered polygon & marker for this volcano, skip duplicate to prevent double polygons
           continue;
         }
@@ -184,7 +185,8 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
           }
         }
 
-        const hasPolygon = isVolcano && polygonCoords && polygonCoords.length >= 3;
+        const sourcePolygons = polygonLatLngs(alert.sourceGeometry);
+        const hasPolygon = isVolcano && (sourcePolygons || (polygonCoords && polygonCoords.length >= 3));
         const arrowData = isVolcano && center && windBearing !== undefined
           ? computeTrajectoryArrow(center[0], center[1], windBearing, 65)
           : null;
@@ -369,10 +371,10 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
         return (
           <React.Fragment key={`alert-group-${alert.id}`}>
             {/* 1. Volcanic Hazard: Real-Time Dynamic SIGMET Polygon & Trajectory Direction Arrow */}
-            {hasPolygon && polygonCoords && (
+            {hasPolygon && (
               <>
                 <Polygon
-                  positions={polygonCoords}
+                  positions={sourcePolygons ?? polygonCoords!}
                   pathOptions={{
                     color: '#facc15',
                     fillColor: '#dc2626',

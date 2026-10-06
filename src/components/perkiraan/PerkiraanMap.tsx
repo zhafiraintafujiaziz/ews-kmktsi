@@ -10,6 +10,8 @@ import { MEGATHRUST_ZONES } from '../../constants/megathrustZones';
 import { getPolylineBufferSegments } from '../../utils/geo';
 import { RING_OF_FIRE_ARCS, VOLCANO_POINTS } from '../../constants/ringOfFire';
 import type { DisasterAlert, AlertSeverity } from '../../types';
+import { getProvinceForecast } from '../../services/weatherForecastAssessment';
+import { useInariskRevision } from '../../hooks/useInariskRevision';
 import MapController from '../dashboard/map/MapController';
 import MapEventsHandler from '../dashboard/map/MapEventsHandler';
 
@@ -37,17 +39,12 @@ function getProvinceFloodRisk(provinceId: string): number | null {
   return values.length > 0 ? Math.max(...values) : null;
 }
 
-function getForecastSeverityForProvince(provinceId: string, alerts: DisasterAlert[]): AlertSeverity | null {
-  const matching = alerts.filter((a) => a.provinceId === provinceId && a.isForecast);
-  if (matching.length === 0) return null;
-  if (matching.some((a) => a.severity === 3)) return 3;
-  if (matching.some((a) => a.severity === 2)) return 2;
-  return 1;
+function getForecastSeverityForProvince(provinceId: string): AlertSeverity | null {
+  return getProvinceForecast(provinceId).severity || null;
 }
 
 const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
   mode,
-  forecastAlerts = [],
   selectedProvinceId = null,
   selectedOfficeId = null,
   onProvinceSelect,
@@ -57,6 +54,7 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
   showMegathrust = true,
   showRingOfFire = true,
 }) => {
+  const assessmentRevision = useInariskRevision();
   const [geoJsonData, setGeoJsonData] = useState<GeoJsonObject | null>(null);
 
   useEffect(() => {
@@ -71,7 +69,7 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
     const provinceId = mapTextToProvinceId((feature.properties?.['Propinsi'] as string) || '');
 
     if (mode === 'mingguan') {
-      const forecastSev = getForecastSeverityForProvince(provinceId, forecastAlerts);
+      const forecastSev = getForecastSeverityForProvince(provinceId);
       const floodRisk = getProvinceFloodRisk(provinceId);
       const isHighFlood = floodRisk !== null && floodRisk > 0.5;
 
@@ -100,7 +98,7 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
 
     if (mode === 'mingguan') {
       const floodRisk = getProvinceFloodRisk(provinceId);
-      const forecastSev = getForecastSeverityForProvince(provinceId, forecastAlerts);
+      const forecastSev = getForecastSeverityForProvince(provinceId);
       if (!forecastSev && floodRisk === null) {
         layer.bindTooltip(`<div style="font-size:12px;padding:4px"><strong>${propName}</strong><br/>Current data unavailable</div>`, { sticky: true });
         return;
@@ -109,7 +107,7 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
         `<div style="font-size:12px;padding:4px">
           <strong>${propName}</strong><br/>
           ${forecastSev ? `Prakiraan: <strong>${forecastSev === 3 ? 'Siaga' : forecastSev === 2 ? 'Waspada' : 'Potensi'}</strong><br/>` : ''}
-          Kerentanan Banjir: <strong>${floodRisk === null ? 'Current data unavailable' : `${(floodRisk * 100).toFixed(0)}/100`}</strong>
+          Bahaya Banjir: <strong>${floodRisk === null ? 'Current data unavailable' : `${(floodRisk * 100).toFixed(0)}/100`}</strong>
         </div>`,
         { sticky: true }
       );
@@ -123,7 +121,7 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
     let color = '';
 
     if (mode === 'mingguan') {
-      const sev = getForecastSeverityForProvince(prov.id, forecastAlerts);
+      const sev = getForecastSeverityForProvince(prov.id);
       const floodRisk = getProvinceFloodRisk(prov.id);
       if (sev === 3) {
         color = '#dc2626';
@@ -187,7 +185,7 @@ const PerkiraanMap: React.FC<PerkiraanMapProps> = ({
 
         {geoJsonData && (
           <GeoJSON
-            key={`perkiraan-geojson-${mode}`}
+            key={`perkiraan-geojson-${mode}-${assessmentRevision}`}
             data={geoJsonData}
             style={getGeoJsonStyle}
             onEachFeature={onEachFeature}

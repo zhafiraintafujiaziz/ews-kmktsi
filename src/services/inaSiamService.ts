@@ -4,6 +4,7 @@ import { findNearestKpwOffice } from '../utils/geo';
 import { getProvinceIdForVolcano } from './magmaService';
 
 export interface LiveSigmetPolygon {
+  id: string;
   volcanoKey: string;
   volcanoName: string;
   rawSigmet: string;
@@ -103,7 +104,13 @@ export const InaSiamService = {
           if (coordinates.length < 4) continue;
           const direction = String(properties.dir || '').toUpperCase();
           const bearing = DIR_TO_BEARING[direction];
-          current[keyword.toLowerCase()] = {
+          // Keep alert identity stable if the provider changes feature ordering.
+          const signature = JSON.stringify([properties.firId, validTimeFrom, validTimeTo, rawSigmet, feature.geometry]);
+          let hash = 2166136261;
+          for (const character of signature) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0;
+          const id = keyword.toLowerCase() + '-' + hash.toString(16);
+          current[id] = {
+            id,
             volcanoKey: keyword.toLowerCase(),
             volcanoName: keyword.split(' ').map((part) => `${part[0]}${part.slice(1).toLowerCase()}`).join(' '),
             rawSigmet,
@@ -128,7 +135,7 @@ export const InaSiamService = {
   getSigmetForVolcano(volcanoName: string): LiveSigmetPolygon | null {
     const name = volcanoName.toLowerCase();
     return Object.values(currentSigmets).find((sigmet) =>
-      name.includes(sigmet.volcanoKey) || sigmet.volcanoKey.includes(name)
+      isActivePeriod(sigmet.validTimeFrom, sigmet.validTimeTo) && (name.includes(sigmet.volcanoKey) || sigmet.volcanoKey.includes(name))
     ) || null;
   },
 
@@ -158,7 +165,7 @@ export const InaSiamService = {
       if (!center) return [];
       const nearestOffice = findNearestKpwOffice(center[0], center[1]);
       const alert: DisasterAlert = {
-        id: `inasiam-va-${sigmet.volcanoKey}-${sigmet.validTimeFrom}`,
+        id: `inasiam-va-${sigmet.id}-${sigmet.validTimeFrom}`,
         type: 'volcanic_ash',
         severity: 2 as AlertSeverity,
         provinceId: nearestOffice.provinceId || getProvinceIdForVolcano(sigmet.volcanoName),
