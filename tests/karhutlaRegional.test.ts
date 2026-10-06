@@ -64,9 +64,11 @@ test('regional mean drives shared scoring even when the exact office point is No
   assert.match(assessment.explanation, /100.000 sel valid/);
   for (const severity of [1, 2, 3] as const) {
     const alert: DisasterAlert = { id: 'regional-live', type: 'karhutla', severity, provinceId: office.provinceId, title: 'Fixture', description: 'Fixture', timestamp: new Date().toISOString(), latitude: office.latitude, longitude: office.longitude };
-    assert.equal(scoreAlertForOffice(office.id, alert, office).totalScore, severity * 3);
-    assert.equal(buildOfficeRiskMap([office], [alert]).get(office.id)?.riskScore, severity * 3);
-    assert.equal(buildAlertRiskResult(alert, [office])?.riskScore, severity * 3);
+    assert.equal(scoreAlertForOffice(office.id, alert, office).totalScore, [3, 6, 9][severity - 1]);
+    assert.equal(buildOfficeRiskMap([office], [alert]).get(office.id)?.riskScore, [3, 6, 9][severity - 1]);
+    assert.equal(buildOfficeRiskMap([office], [alert]).get(office.id)?.riskLevel, ['Sedang', 'Tinggi', 'Tinggi'][severity - 1]);
+    assert.equal(buildAlertRiskResult(alert, [office])?.riskScore, [3, 6, 9][severity - 1]);
+    assert.equal(buildAlertRiskResult(alert, [office])?.shouldAlert, severity >= 2);
   }
 });
 test('regional requests publish partial progress and never exceed four concurrent calculations', async t => {

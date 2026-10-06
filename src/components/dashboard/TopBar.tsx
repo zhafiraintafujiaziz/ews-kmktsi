@@ -130,7 +130,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     onAlertSelect,
   } = props;
   
-  const { isFetching, lastCheckedTime } = useAlerts();
+  const { isFetching, lastCheckedTime, cachedSnapshotTime, cachedAlertIds } = useAlerts();
   const assessmentRevision = useInariskRevision();
   const [timeStr, setTimeStr] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -151,10 +151,11 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
   const sortedNotiAlerts = useMemo(() => sortNotificationAlerts(allAlerts ?? []), [allAlerts]);
 
   // Automatic notifications use the same assessed risk as the dashboard.
-  const latestAlert = sortedNotiAlerts.find(alert => !alert.isForecast && props.riskResults.some(result => result.event.id === alert.id && result.shouldAlert)) ?? null;
-  const notificationStatusClass = latestAlert?.severity === 3
+  const latestAlert = sortedNotiAlerts.find(alert => !alert.isForecast && !cachedAlertIds.has(alert.id) && props.riskResults.some(result => result.event.id === alert.id && result.shouldAlert)) ?? null;
+  const latestRisk = props.riskResults.find(result => result.event.id === latestAlert?.id);
+  const notificationStatusClass = latestRisk?.riskLevel === 'Tinggi'
     ? 'critical'
-    : latestAlert?.severity === 2 ? 'warning' : 'monitoring';
+    : latestRisk?.riskLevel === 'Sedang' ? 'warning' : 'monitoring';
 
   const showToast = latestAlert !== null && !toastDisabled && latestAlert !== dismissedToastAlert;
 
@@ -368,9 +369,9 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
         </div>
 
         <div className="topbar-right">
-          <div className="topbar-sync-status" title={lastCheckedTime ? `Terakhir sinkronisasi: ${lastCheckedTime.toLocaleTimeString('id-ID')} WIB` : 'Sinkronisasi berjalan...'}>
+          <div className="topbar-sync-status" title={cachedSnapshotTime ? `Data tersimpan: ${cachedSnapshotTime.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB. Menunggu konfirmasi sumber langsung.` : lastCheckedTime ? `Terakhir sinkronisasi: ${lastCheckedTime.toLocaleTimeString('id-ID')} WIB` : 'Sinkronisasi berjalan...'}>
             <span className={`sync-dot ${isFetching ? 'syncing' : 'active'}`} />
-            <span className="sync-text">{isFetching ? 'Sinkronisasi...' : 'Live'}</span>
+            <span className="sync-text">{cachedSnapshotTime ? `Cache ${cachedSnapshotTime.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} WIB${isFetching ? ' · Memperbarui...' : ''}` : isFetching ? 'Sinkronisasi...' : 'Live'}</span>
           </div>
 
           <span className="topbar-clock">{timeStr || '—'}</span>

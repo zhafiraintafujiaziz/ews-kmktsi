@@ -21,6 +21,12 @@ export interface IspuStationInfo {
 
 export type AlertSeverity = 3 | 2 | 1;
 
+export const VOLCANO_SEVERITY_LABELS: Record<AlertSeverity, string> = {
+  1: 'Waspada',
+  2: 'Siaga',
+  3: 'Awas',
+};
+
 export function severityToCssClass(s: AlertSeverity): 'critical' | 'warning' | 'watch' {
   return s === 3 ? 'critical' : s === 2 ? 'warning' : 'watch';
 }
@@ -152,10 +158,10 @@ export interface MarkedLocation {
 
 export interface RiskCalcResult {
   event: DisasterEvent;
-  assessmentLevel: AssessmentLevel | null; // null untuk risiko ISPU berbasis keparahan
-  assessmentScore: number | null; // 1, 2, atau 3; null jika penilaian bahaya tidak digunakan
-  riskScore: number;          // disasterScore × assessmentScore (1–9)
-  riskLevel: RiskLevel;       // mapping dari riskScore
+  assessmentLevel: AssessmentLevel | null; // null untuk ISPU atau penilaian yang belum tersedia
+  assessmentScore: number | null; // 1, 2, atau 3; null jika penilaian tidak digunakan atau belum tersedia
+  riskScore: number;          // 9 jika keparahan 3; selain itu keparahan × kerentanan (1–9)
+  riskLevel: RiskLevel;       // skor 1–2 Rendah, 3–5 Sedang, 6–9 Tinggi
   affectedLocations: MarkedLocation[]; // lokasi terdampak dalam radius
   shouldAlert: boolean;       // true jika riskLevel "Tinggi" DAN ada lokasi terdampak
 }

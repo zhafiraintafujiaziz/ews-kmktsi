@@ -1,6 +1,7 @@
 import React from 'react';
 import { VolcanoWithCloudIcon } from '../components/ui/VolcanoWithCloudIcon';
-import type { DisasterType, DisasterAlert } from '../types';
+import type { DisasterType, DisasterAlert, AlertSeverity } from '../types';
+import { VOLCANO_SEVERITY_LABELS } from '../types';
 import earthquakeIcon from '../assets/earthquake.png';
 import floodIcon from '../assets/flood.png';
 import droughtIcon from '../assets/drought.png';
@@ -225,6 +226,10 @@ export function getDisasterTypeStatus(
     return { color: '#10b981', label: 'Normal (0 Peringatan)', count: 0 };
   }
   const maxSev = Math.max(...typeAlerts.map((a) => a.severity || 1));
+  if (type === 'volcanic') {
+    const color = maxSev === 3 ? '#ef4444' : maxSev === 2 ? '#f59e0b' : '#16a34a';
+    return { color, label: `${VOLCANO_SEVERITY_LABELS[maxSev as AlertSeverity]} (${typeAlerts.length} Aktif)`, count: typeAlerts.length };
+  }
   if (maxSev === 3) return { color: '#ef4444', label: `Tinggi / Kritis (${typeAlerts.length} Aktif)`, count: typeAlerts.length };
   if (maxSev === 2) return { color: '#f59e0b', label: `Sedang / Waspada (${typeAlerts.length} Aktif)`, count: typeAlerts.length };
   return { color: '#16a34a', label: `Rendah / Informasi (${typeAlerts.length} Aktif)`, count: typeAlerts.length };

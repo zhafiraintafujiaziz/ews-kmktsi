@@ -17,6 +17,8 @@ import { IspuService } from '../services/ispuService';
 import { BnpbInariskService } from '../services/bnpbInariskService';
 import { KarhutlaRegionalService } from '../services/karhutlaRegionalService';
 import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
+import { loadAlertSnapshots, persistAlertHistory, persistAlertSnapshot } from '../services/persistenceService';
+import { applyAlertSnapshots } from '../domain/alertCache';
 
 type Feed = {
   id: string;
@@ -45,6 +47,13 @@ const feeds: Feed[] = [
 const REQUEST_DEADLINE_MS = 15_000;
 const POLL_INTERVAL_MS = 60_000;
 const recordsByFeed = new Map<string, DisasterRecord[]>();
+const successfulFeeds = new Set<string>();
+const cachedFeeds = new Map<string, string>();
+const knownFeeds = new Set(feeds.map(feed => feed.id));
+let cachedSnapshotTime: Date | null = null;
+let cachedAlertIds: ReadonlySet<string> = new Set();
+let cacheLoaded = false;
+let cacheController: AbortController | null = null;
 let cachedAlerts: DisasterAlert[] = [];
 let cachedIsLoading = true;
 let isFetching = false;
@@ -53,19 +62,48 @@ let pollingIntervalId: ReturnType<typeof setInterval> | null = null;
 let cachedLoadingSources: string[] = [];
 let cachedFeedHealth: FeedHealth = {};
 const listeners = new Set<() => void>();
+const historyWrites = new Set<AbortController>();
 
 const notifyListeners = () => listeners.forEach((listener) => listener());
 
 function publish(now = Date.now()) {
   const current = new Map<string, DisasterAlert>();
-  for (const records of recordsByFeed.values()) {
+  const cachedIds = new Set<string>();
+  const cacheTimes: string[] = [];
+  for (const [feed, records] of recordsByFeed) {
+    let hasUsable = false;
     for (const record of records) {
       const alert = toLegacyDisasterAlert(record);
-      if (isCurrentlyUsable(alert, now)) current.set(alert.id, alert);
+      if (isCurrentlyUsable(alert, now)) {
+        current.set(alert.id, alert);
+        hasUsable = true;
+        if (cachedFeeds.has(feed)) cachedIds.add(alert.id);
+        else cachedIds.delete(alert.id);
+      }
     }
+    if (hasUsable && cachedFeeds.has(feed)) cacheTimes.push(cachedFeeds.get(feed)!);
   }
+  cachedAlertIds = cachedIds;
+  cachedSnapshotTime = cacheTimes.length ? new Date(cacheTimes.sort()[0]) : null;
   cachedAlerts = Array.from(current.values());
   notifyListeners();
+}
+
+async function hydrateCache(controller: AbortController) {
+  try {
+    const snapshots = await loadAlertSnapshots(controller.signal);
+    if (controller.signal.aborted || !listeners.size) return;
+    cacheLoaded = true;
+    for (const [feed, checkedAt] of applyAlertSnapshots(recordsByFeed, snapshots, successfulFeeds, knownFeeds)) {
+      cachedFeeds.set(feed, checkedAt);
+    }
+    if (cachedFeeds.size) cachedIsLoading = false;
+    publish();
+  } catch {
+    if (!controller.signal.aborted) console.warn('Cache peringatan tidak tersedia; mengambil data langsung.');
+  } finally {
+    if (cacheController === controller) cacheController = null;
+  }
 }
 
 function withDeadline<T>(promise: Promise<T>, name: string): Promise<T> {
@@ -96,15 +134,33 @@ async function fetchAllSources() {
       // A successful empty response clears this feed. Invalid or expired records
       // never enter the current-record repository.
       const accepted: DisasterRecord[] = [];
+      const history: DisasterRecord[] = [];
       for (const record of result.value) {
         try {
           const normalized = normalizeAdapterAlert(record, feed.id, checkedAt);
+          history.push(normalized);
           if (isCurrentlyUsable(toLegacyDisasterAlert(normalized))) accepted.push(normalized);
         } catch (error) {
           console.warn(`Rejected invalid record from ${feed.name}:`, error);
         }
       }
       recordsByFeed.set(feed.id, accepted);
+      successfulFeeds.add(feed.id);
+      cachedFeeds.delete(feed.id);
+      if (listeners.size > 0) {
+        const controller = new AbortController();
+        historyWrites.add(controller);
+        // Wait for both writes so closing the dashboard can cancel either one.
+        void Promise.allSettled([
+          persistAlertHistory(history, controller.signal),
+          persistAlertSnapshot({ feed: feed.id, checkedAt, records: accepted }, controller.signal),
+        ]).then(results => {
+          if (!controller.signal.aborted && results.some(result => result.status === 'rejected')) {
+            console.warn('Riwayat atau cache peringatan gagal disimpan; pemantauan langsung tetap berjalan.');
+          }
+        })
+          .finally(() => historyWrites.delete(controller));
+      }
       cachedFeedHealth = { ...cachedFeedHealth, [feed.id]: { status: 'available', checkedAt } };
     } else {
       if (feed.id === 'forecast') failForecastSnapshot();
@@ -125,11 +181,20 @@ async function fetchAllSources() {
 
 const startGlobalPolling = () => {
   if (pollingIntervalId) return;
+  publish();
+  if (!cacheLoaded && !cacheController) {
+    cacheController = new AbortController();
+    void hydrateCache(cacheController);
+  }
   void fetchAllSources();
   pollingIntervalId = setInterval(() => void fetchAllSources(), POLL_INTERVAL_MS);
 };
 
 const stopGlobalPolling = () => {
+  cacheController?.abort();
+  cacheController = null;
+  historyWrites.forEach(controller => controller.abort());
+  historyWrites.clear();
   if (!pollingIntervalId) return;
   clearInterval(pollingIntervalId);
   pollingIntervalId = null;
@@ -142,6 +207,8 @@ export const useAlerts = () => {
   const [lastChecked, setLastChecked] = useState<Date | null>(lastCheckedTime);
   const [loadingSources, setLoadingSources] = useState<string[]>(cachedLoadingSources);
   const [feedHealth, setFeedHealth] = useState<FeedHealth>(cachedFeedHealth);
+  const [snapshotTime, setSnapshotTime] = useState<Date | null>(cachedSnapshotTime);
+  const [cachedIds, setCachedIds] = useState<ReadonlySet<string>>(cachedAlertIds);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -151,6 +218,8 @@ export const useAlerts = () => {
       setLastChecked(lastCheckedTime);
       setLoadingSources(cachedLoadingSources);
       setFeedHealth(cachedFeedHealth);
+      setSnapshotTime(cachedSnapshotTime);
+      setCachedIds(cachedAlertIds);
     };
     listeners.add(handleUpdate);
     handleUpdate();
@@ -177,6 +246,8 @@ export const useAlerts = () => {
     loadingSources,
     feedHealth,
     lastCheckedTime: lastChecked,
+    cachedSnapshotTime: snapshotTime,
+    cachedAlertIds: cachedIds,
     criticalAlerts: useMemo(() => alerts.filter((a) => a.severity === 3), [alerts]),
     warningAlerts: useMemo(() => alerts.filter((a) => a.severity === 2), [alerts]),
     watchAlerts: useMemo(() => alerts.filter((a) => a.severity === 1), [alerts]),

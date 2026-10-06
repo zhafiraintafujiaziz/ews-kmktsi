@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import type { DisasterAlert, AlertSeverity } from '../../../types';
+import type { DisasterAlert, AlertSeverity, DisasterType } from '../../../types';
+import { VOLCANO_SEVERITY_LABELS } from '../../../types';
 import { renderDisasterIcon, getDisasterTypeStatus } from '../../../utils/alertUtils';
 import { ISPU_CATEGORIES } from '../../../constants/ispuCategories';
 
 interface MapLegendProps {
   isInariskFilter: boolean;
   assessmentCategory?: string;
+  activeTypeFilter?: DisasterType | 'all';
   isAirQualityFilter?: boolean;
   showVolcanoReference?: boolean;
   mapLayers: {
@@ -42,6 +44,7 @@ const DISASTER_TYPES_CONFIG: Array<{ key: 'earthquake' | 'extreme_weather' | 'ka
 const MapLegend: React.FC<MapLegendProps> = ({
   isInariskFilter,
   assessmentCategory,
+  activeTypeFilter = 'all',
   isAirQualityFilter = false,
   showVolcanoReference = false,
   mapLayers,
@@ -101,13 +104,15 @@ const MapLegend: React.FC<MapLegendProps> = ({
           {!isAirQualityFilter && SEV_CONFIG.map(({ key, num, label, color }) => {
             const show = !selectedAlert || selectedSeverity === num;
             if (!show) return null;
+            const isVolcanicSeverity = selectedAlert ? selectedAlert.type === 'volcanic' : activeTypeFilter === 'volcanic';
+            const severityLabel = isVolcanicSeverity ? `${label} · ${VOLCANO_SEVERITY_LABELS[num]}` : label;
             const count = allAlerts.filter((alert) => alert.severity === num).length;
             return (
               <div
                 key={key}
                 className={`legend-item ${(!mapLayers[key] && !isInariskFilter) ? 'disabled' : ''}`}
                 onClick={() => { if (!isInariskFilter) onToggleLayer(key); }}
-                title={isInariskFilter ? label : `Toggle ${label}`}
+                title={isInariskFilter ? label : `Toggle ${severityLabel}`}
                 style={{ cursor: isInariskFilter ? 'default' : 'pointer' }}
               >
                 <span className="legend-shape-icon" style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
@@ -128,7 +133,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
                   if (assessmentCategory === 'karhutla') return { 1: 'Rata-rata 25 km ≤0,3', 2: 'Rata-rata 25 km >0,3–0,6', 3: 'Rata-rata 25 km >0,6' }[num];
                   if (assessmentCategory === 'volcanic' || assessmentCategory === 'volcanic_ash') return { 1: 'Jarak >100 km · 0,20', 2: 'Jarak >30–100 km · 0,50', 3: 'Jarak ≤30 km · 0,80' }[num];
                   return inariskLabels[num];
-                })() : label}
+                })() : severityLabel}
                   {!isInariskFilter && (
                     <span
                       className="legend-count-badge"

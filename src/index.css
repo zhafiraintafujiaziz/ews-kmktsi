@@ -5943,6 +5943,34 @@ body.is-dragging-splitter .mobile-splitter {
   padding: 4px 6px !important;
 }
 
+.leaflet-tooltip.kpw-tooltip {
+  width: max-content;
+  max-width: min(340px, calc(100vw - 40px));
+  white-space: normal;
+  line-height: 1.45;
+  padding: 8px 10px !important;
+}
+
+.kpw-tooltip-section {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-default);
+}
+
+.kpw-tooltip-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.kpw-tooltip-detail {
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
 /* Keep the dashboard controls on one horizontal row at every viewport width. */
 .dashboard-topbar {
   height: var(--topbar-height);

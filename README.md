@@ -1,5 +1,8 @@
 # React + TypeScript + Vite
 
+For local SQLite setup, migrations, browser data import, and the later Turso Cloud
+transition, see [Local database development](docs/local-database.md).
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 It is preconfigured to work with Power Apps Code Apps.

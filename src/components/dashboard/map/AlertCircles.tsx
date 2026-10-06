@@ -2,13 +2,14 @@ import React from 'react';
 import { Circle, Tooltip, Marker, Popup, Polygon, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import type { DisasterAlert, AlertSeverity } from '../../../types';
-import { severityToCssClass } from '../../../types';
+import { severityToCssClass, VOLCANO_SEVERITY_LABELS } from '../../../types';
 import { PROVINCES } from '../../../constants/provinces';
 import { isValidCoord } from '../../../utils/geo';
 import { getDisasterIconHtml, renderDisasterIcon } from '../../../utils/alertUtils';
 import { computeTrajectoryArrow, InaSiamService } from '../../../services/inaSiamService';
 import { polygonLatLngs } from '../../../utils/polygonExposure';
 import { getIspuStyle } from '../../../constants/ispuCategories';
+import { getAlertImpactRadiusKm } from '../../../utils/disasterImpact';
 
 interface AlertCirclesProps {
   alerts: DisasterAlert[];
@@ -38,6 +39,8 @@ function getCircleRadius(alert: DisasterAlert): number {
   switch (alert.type) {
     case 'earthquake':
       return (alert.magnitude || 5) * 35000;
+    case 'volcanic':
+      return getAlertImpactRadiusKm(alert) * 1000;
     case 'tsunami':
       return 150000;
     case 'flood':
@@ -132,7 +135,7 @@ function getVolcanoDeduplicationKey(alert: DisasterAlert): string | null {
 }
 
 const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, provinceCentroids }) => {
-  // Deduplicate volcano alerts so that for each volcano, only ONE canonical SIGMET polygon is rendered
+  // Keep one eruption alert per volcano and every distinct SIGMET ash warning.
   const processedAlerts = React.useMemo(() => {
     const volcanoSeen = new Set<string>();
     const result: DisasterAlert[] = [];
@@ -147,11 +150,11 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
     for (const alert of sorted) {
       const vKey = getVolcanoDeduplicationKey(alert);
       if (vKey) {
-        if (alert.type !== 'volcanic_ash' && volcanoSeen.has(vKey)) {
-          // Already rendered polygon & marker for this volcano, skip duplicate to prevent double polygons
+        if (alert.type === 'volcanic' && volcanoSeen.has(vKey)) {
+          // Skip duplicate eruption alerts without dropping the eruption circle for an ash warning.
           continue;
         }
-        volcanoSeen.add(vKey);
+        if (alert.type === 'volcanic') volcanoSeen.add(vKey);
       }
       result.push(alert);
     }
@@ -186,7 +189,10 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
         }
 
         const sourcePolygons = polygonLatLngs(alert.sourceGeometry);
-        const hasPolygon = isVolcano && (sourcePolygons || (polygonCoords && polygonCoords.length >= 3));
+        const hasAshWarning = alert.type === 'volcanic' && processedAlerts.some((other) =>
+          other.type === 'volcanic_ash' && getVolcanoDeduplicationKey(other) === getVolcanoDeduplicationKey(alert)
+        );
+        const hasPolygon = isVolcano && !hasAshWarning && (sourcePolygons || (polygonCoords && polygonCoords.length >= 3));
         const arrowData = isVolcano && center && windBearing !== undefined
           ? computeTrajectoryArrow(center[0], center[1], windBearing, 65)
           : null;
@@ -238,6 +244,8 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
         const effectiveAshHeight = alert.ashHeight || sigmetInfo?.flightLevel;
         const effectiveDirection = alert.movementDirection || sigmetInfo?.directionText;
 
+        const severityLabel = alert.type === 'volcanic' ? `Keparahan ${alert.severity}/3 · ${VOLCANO_SEVERITY_LABELS[alert.severity]}:` : 'Severity:';
+
         const popupContent = (
           <div className="ews-popup-content" style={{ maxWidth: '330px' }}>
             <div className={`ews-popup-header ${severityToCssClass(alert.severity)}`} style={ispuStyle ? { color: ispuStyle.textColor, backgroundColor: ispuStyle.color } : undefined}>
@@ -265,7 +273,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
               </div>
             )}
 
-            {isVolcano && (
+            {hasPolygon && (
               <div style={{ fontSize: '11px', margin: '4px 0', background: 'rgba(234, 88, 12, 0.08)', padding: '6px 8px', borderRadius: '4px', border: '1px solid rgba(234, 88, 12, 0.25)' }}>
                 <div style={{ color: '#c2410c', fontWeight: 700, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span>📡</span>
@@ -349,7 +357,9 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
             )}
 
             <div className="ews-popup-footer" style={{ marginTop: '6px', paddingTop: '4px', borderTop: '1px solid var(--border-default)' }}>
-              {isVolcano ? (
+              {alert.type === 'volcanic' ? (
+                <span>Estimasi Radius Dampak: {(radius / 1000).toFixed(0)} km</span>
+              ) : alert.type === 'volcanic_ash' ? (
                 <span style={{ fontSize: '10.5px', color: '#ea580c', fontWeight: 600 }}>Poligon SIGMET INA-SIAM</span>
               ) : isProvinceAlert ? (
                 <span>Provinsi terdampak Cuaca Buruk</span>
@@ -357,7 +367,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
                 <span>{alert.type === 'air_quality' ? `Area segitiga: jangkauan ${(radius / 1000).toFixed(0)} km` : `Radius: ${(radius / 1000).toFixed(0)} km`}</span>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Severity:</span>
+                <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>{severityLabel}</span>
                 {renderSevBoxes()}
               </div>
             </div>
@@ -400,7 +410,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
                       )}
                       Area: {alert.affectedArea || 'Koridor Ruang Udara'}<br />
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                        <span>Severity:</span>
+                        <span>{severityLabel}</span>
                         <div style={{ display: 'flex', gap: '3px' }}>
                           {[1, 2, 3].map((i) => (
                             <span key={i} style={{ width: '12px', height: '4px', borderRadius: '1px', backgroundColor: i <= alert.severity ? sevColor : 'rgba(255,255,255,0.2)', display: 'inline-block' }} />
@@ -432,8 +442,8 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
               </>
             )}
 
-            {/* 2. Standard Circle ONLY for non-volcano, non-air-quality, and non-province hazards */}
-            {!isProvinceAlert && !hasPolygon && !isVolcano && alert.type !== 'air_quality' && (
+            {/* 2. Impact circle, including eruptions alongside any SIGMET ash polygon */}
+            {!isProvinceAlert && alert.type !== 'volcanic_ash' && alert.type !== 'air_quality' && (
               <Circle
                 center={center}
                 radius={radius}
@@ -447,13 +457,13 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
                 <Tooltip sticky>
                   <div>
                     <strong>{alert.title}</strong><br />
-                    Radius Dampak: {(radius / 1000).toFixed(0)} km<br />
+                    {alert.type === 'volcanic' ? 'Estimasi Radius Dampak' : 'Radius Dampak'}: {(radius / 1000).toFixed(0)} km<br />
                     {isValidCoord(alert.latitude, alert.longitude) && (
-                      <>Epicenter: {Number(alert.latitude).toFixed(4)}, {Number(alert.longitude).toFixed(4)}<br /></>
+                      <>{alert.type === 'volcanic' ? 'Pusat Gunung Api' : 'Epicenter'}: {Number(alert.latitude).toFixed(4)}, {Number(alert.longitude).toFixed(4)}<br /></>
                     )}
                     Area: {alert.affectedArea || 'Sekitar KPW'}<br />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                      <span>Severity:</span>
+                      <span>{severityLabel}</span>
                       <div style={{ display: 'flex', gap: '3px' }}>
                         {[1, 2, 3].map((i) => (
                           <span key={i} style={{ width: '12px', height: '4px', borderRadius: '1px', backgroundColor: i <= alert.severity ? sevColor : 'rgba(255,255,255,0.2)', display: 'inline-block' }} />
@@ -496,7 +506,7 @@ const AlertCircles: React.FC<AlertCirclesProps> = ({ alerts, onAlertSelect, prov
                     Stasiun: {alert.stationName}<br />
                     Area: {alert.affectedArea || 'Sekitar KPw'}<br />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                      <span>Severity:</span>
+                      <span>{severityLabel}</span>
                       <div style={{ display: 'flex', gap: '3px' }}>
                         {[1, 2, 3].map((i) => (
                           <span key={i} style={{ width: '12px', height: '4px', borderRadius: '1px', backgroundColor: i <= alert.severity ? sevColor : 'rgba(255,255,255,0.2)', display: 'inline-block' }} />

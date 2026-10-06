@@ -21,7 +21,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
   onSwitchToKerentanan,
   onSwitchToPerkiraan
 }) => {
-  const { alerts, isLoading, loadingSources } = useAlerts();
+  const { alerts, isLoading, loadingSources, cachedAlertIds } = useAlerts();
   const { activeAlerts, riskResults } = useDisasterAlert();
 
   const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all');
@@ -65,7 +65,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
   useEffect(() => {
     if (isLoading) return;
     const unseen = todayActiveAlerts.filter(
-      (calc) => !shownAlertIds.current.has(calc.event.id)
+      (calc) => !cachedAlertIds.has(calc.event.id) && !shownAlertIds.current.has(calc.event.id)
     );
     unseen.forEach((calc) => shownAlertIds.current.add(calc.event.id));
     if (unseen.length === 0) return;
@@ -97,7 +97,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
         ]);
       }, i * 350);
     });
-  }, [todayActiveAlerts, alerts, isLoading]);
+  }, [todayActiveAlerts, alerts, isLoading, cachedAlertIds]);
 
   const dismissToast = useCallback((toastId: string) => {
     setToasts((prev) => prev.filter((t) => t.toastId !== toastId));

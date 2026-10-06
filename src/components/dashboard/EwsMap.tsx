@@ -472,6 +472,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
       <MapLegend
         isInariskFilter={isInariskFilter}
         assessmentCategory={isKerentananView ? activeTypeFilter : undefined}
+        activeTypeFilter={activeTypeFilter}
         showVolcanoReference={showVolcanoReference}
         isAirQualityFilter={activeTypeFilter === 'air_quality'}
         mapLayers={mapLayers}

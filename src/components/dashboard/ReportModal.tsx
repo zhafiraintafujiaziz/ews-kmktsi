@@ -5,7 +5,7 @@ import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { isOfficeAffectedByAlert } from '../../utils/disasterImpact';
 import { haversineDistance } from '../../utils/geo';
-import { getRiskLevel, scoreAlertForOffice } from '../../utils/riskCalculator';
+import { scoreAlertForOffice } from '../../utils/riskCalculator';
 import * as XLSX from 'xlsx';
 
 interface ReportModalProps {
@@ -85,7 +85,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, alert
           const risk = scoreAlertForOffice(office.id, alert);
           const rScoreVal = risk.totalScore ?? undefined;
           const assessmentIndex = risk.assessment?.index ?? undefined;
-          const riskLevelStr = risk.totalScore === null ? 'Tidak tersedia' : risk.totalScore === 0 ? 'Tidak ada peringatan prakiraan' : getRiskLevel(risk.totalScore);
+          const riskLevelStr = risk.totalScore === 0 ? 'Tidak ada peringatan prakiraan' : risk.riskLevel ?? 'Tidak tersedia';
 
           impactedOffices.push({
             office,

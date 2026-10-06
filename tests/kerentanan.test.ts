@@ -85,7 +85,7 @@ test('official 0.3 and 0.6 boundaries classify raw indices before rounding', () 
   }
 });
 
-test('earthquake multiplies severity by exact-point assessment; missing data has no score', t => {
+test('earthquake uses the Kerentanan page InaRISK factor with severity-only elevation', t => {
   const lookup = t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => 0);
   for (const type of ['earthquake'] as const) {
     assert.equal(isInaRiskSupportedType(type), true);
@@ -94,12 +94,16 @@ test('earthquake multiplies severity by exact-point assessment; missing data has
       for (const severity of [1, 2, 3] as const) {
         const result = scoreAlertForOffice(office.id, alert(type, severity));
         assert.equal(result.assessmentScore, assessment);
-        assert.equal(result.totalScore, severity * assessment);
+        assert.equal(result.totalScore, [[1, 2, 3], [2, 4, 6], [9, 9, 9]][severity - 1][assessment - 1]);
+        assert.equal(result.riskLevel, [['Rendah', 'Rendah', 'Sedang'], ['Rendah', 'Sedang', 'Tinggi'], ['Tinggi', 'Tinggi', 'Tinggi']][severity - 1][assessment - 1]);
         assert.deepEqual(lookup.mock.calls.at(-1)?.arguments, [office.id, type]);
       }
     }
     lookup.mock.mockImplementation(() => null);
-    assert.equal(scoreAlertForOffice(office.id, alert(type, 3)).totalScore, null);
+    assert.equal(scoreAlertForOffice(office.id, alert(type, 3)).totalScore, 9);
+    for (const severity of [1, 2] as const) {
+      assert.equal(scoreAlertForOffice(office.id, alert(type, severity)).totalScore, null);
+    }
   }
 });
 
@@ -113,7 +117,7 @@ test('unsupported disasters and ISPU never query InaRISK', t => {
   }
   for (const severity of [1, 2, 3] as const) {
     const result = scoreAlertForOffice(office.id, alert('air_quality', severity));
-    assert.equal(result.totalScore, severity * 3);
+    assert.equal(result.totalScore, [1, 4, 9][severity - 1]);
     assert.equal(result.assessmentScore, null);
   }
   assert.equal(lookup.mock.callCount(), 0);

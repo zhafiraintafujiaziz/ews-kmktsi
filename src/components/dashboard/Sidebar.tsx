@@ -169,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <section className="sidebar-stats-container" aria-label="Tingkat risiko kantor">
         <div className="sidebar-stats-title-row">
           <span className="sidebar-stats-title">Tingkat Risiko Lokasi Kerja</span>
-          <span className="sidebar-info-tooltip-container" title="Risiko Bencana: Keparahan x Kelas Bahaya. Skor 1-3: Rendah; 4-6: Sedang; 7-9: Tinggi." aria-label="Risiko dihitung dari keparahan dan kelas bahaya">
+          <span className="sidebar-info-tooltip-container" title="Kategori berdasarkan skor akhir: 1–2 Rendah, 3–5 Sedang, 6–9 Tinggi. Keparahan 3: selalu 9/9 Tinggi. Keparahan 1 atau 2: skor = Keparahan × Kerentanan. Nilai kerentanan mengikuti halaman Kerentanan. ISPU memakai keparahan sebagai kedua faktor: 1/9 Rendah, 4/9 Sedang, 9/9 Tinggi." aria-label="Kategori risiko berdasarkan skor akhir: 1 sampai 2 Rendah, 3 sampai 5 Sedang, 6 sampai 9 Tinggi">
             <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7v1" />
             </svg>

@@ -1,19 +1,11 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import type { KpwbiOffice } from '../../constants/kpwbiOffices';
+import type { ReportFields, Report } from '../../domain/persistence';
+import { initializePersistence, saveReport } from '../../services/persistenceService';
 
-interface LaporanForm {
-  officeId: string;
-  officeName: string;
-  sumberGangguan: string;
-  lokasi: string;
-  penyebab: string;
-  dampak: string;
-  dampakGedung: string;
-  evakuasi: boolean;
-  responCepat: string;
-}
+type LaporanForm = ReportFields;
 
 const EMPTY_FORM: LaporanForm = {
   officeId: '',
@@ -32,14 +24,25 @@ const SUMBER_OPTIONS = [
   'Kebakaran', 'Tsunami', 'Erupsi Gunung Api', 'Cuaca Buruk', 'Lainnya',
 ];
 
-const STORAGE_KEY = 'ews-mktbi:laporan-kpw';
-
 const LaporanSidebar: React.FC = () => {
   const [form, setForm] = useState<LaporanForm>(EMPTY_FORM);
   const [officeQuery, setOfficeQuery] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
+  const [storageError, setStorageError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const pendingReport = useRef<Report | undefined>(undefined);
+  const saving = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    void initializePersistence().catch(() => {
+      if (active) setStorageError('Data lama gagal diimpor. Data browser tetap tersimpan; coba simpan kembali.');
+    }).finally(() => { if (active) setIsLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const filteredOffices = useMemo(() => {
     if (!officeQuery.trim()) return KPWBI_OFFICES.slice(0, 10);
@@ -49,8 +52,11 @@ const LaporanSidebar: React.FC = () => {
     ).slice(0, 10);
   }, [officeQuery]);
 
-  const set = <K extends keyof LaporanForm>(field: K, value: LaporanForm[K]) =>
+  const set = <K extends keyof LaporanForm>(field: K, value: LaporanForm[K]) => {
+    pendingReport.current = undefined;
+    setSavedMsg('');
     setForm((f) => ({ ...f, [field]: value }));
+  };
 
   const handleOfficeSelect = (o: KpwbiOffice) => {
     set('officeId', o.id);
@@ -78,6 +84,8 @@ const LaporanSidebar: React.FC = () => {
           return '';
         };
         const evakVal = get('evakuasi');
+        pendingReport.current = undefined;
+        setSavedMsg('');
         setForm((f) => ({
           ...f,
           sumberGangguan: get('sumber', 'gangguan') || f.sumberGangguan,
@@ -96,12 +104,26 @@ const LaporanSidebar: React.FC = () => {
     e.target.value = '';
   };
 
-  const handleSave = () => {
-    const existing: LaporanForm[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const entry = { ...form, id: `laporan-${Date.now()}`, timestamp: new Date().toISOString() };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...existing]));
-    setSavedMsg('Laporan tersimpan!');
-    setTimeout(() => setSavedMsg(''), 3000);
+  const handleSave = async () => {
+    if (saving.current || isLoading) return;
+    saving.current = true;
+    setIsSaving(true);
+    setStorageError('');
+    setSavedMsg('');
+    const report = pendingReport.current ?? { ...form, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
+    pendingReport.current = report;
+    try {
+      await saveReport(report);
+      if (pendingReport.current === report) {
+        pendingReport.current = undefined;
+        setSavedMsg('Laporan tersimpan!');
+      }
+    } catch {
+      setStorageError('Laporan gagal disimpan. Isian tetap tersedia; silakan coba lagi.');
+    } finally {
+      saving.current = false;
+      setIsSaving(false);
+    }
   };
 
   const handleEmail = () => {
@@ -263,11 +285,11 @@ const LaporanSidebar: React.FC = () => {
 
         {/* Actions */}
         <div className="laporan-actions">
-          <button className="laporan-btn-save" onClick={handleSave} disabled={!canSubmit}>
+          <button className="laporan-btn-save" onClick={() => void handleSave()} disabled={!canSubmit || isLoading || isSaving}>
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
             </svg>
-            Simpan Laporan
+            {isSaving ? 'Menyimpan...' : 'Simpan Laporan'}
           </button>
           <button className="laporan-btn-email" onClick={handleEmail} disabled={!canSubmit}>
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -277,9 +299,9 @@ const LaporanSidebar: React.FC = () => {
           </button>
         </div>
 
-        {savedMsg && (
-          <div className="laporan-saved-toast">{savedMsg}</div>
-        )}
+        {isLoading && <p role="status">Memuat penyimpanan laporan...</p>}
+        {storageError && <p role="alert">{storageError}</p>}
+        {savedMsg && <div className="laporan-saved-toast" role="status">{savedMsg}</div>}
       </div>
     </div>
   );
