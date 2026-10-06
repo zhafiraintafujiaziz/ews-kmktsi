@@ -1763,6 +1763,7 @@ html, body, #root {
 .sidebar-container .rotated { transform: rotate(180deg); }
 .filters-accordion-body { @apply [display:flex]; @apply [flex-direction:column]; @apply [gap:12px]; @apply [padding:12px]; @apply [border-top:1px_solid_var(--border-default)]; }
 .filter-group { @apply [display:flex]; @apply [flex-direction:column]; @apply [gap:6px]; }
+.sidebar-level-filter { flex-shrink: 0; }
 .filter-label { @apply [font-size:11px]; @apply [font-weight:600]; @apply text-ews-text-secondary; }
 .filter-select, .sidebar-search-box {
   @apply [width:100%];
@@ -1776,7 +1777,7 @@ html, body, #root {
   @apply [font-size:12px];
 }
 .sidebar-search-box { @apply [flex-shrink:0]; }
-.severity-pills { @apply [display:flex]; @apply [gap:6px]; @apply [flex-wrap:wrap]; }
+.severity-pills { @apply [display:grid]; @apply [grid-template-columns:repeat(3,_minmax(0,_1fr))]; @apply [gap:6px]; }
 .severity-pill {
   @apply [display:flex];
   @apply [align-items:center];
@@ -1871,6 +1872,72 @@ html, body, #root {
 @media (prefers-reduced-motion: reduce) {
   .sidebar-container, .sidebar-container * { transition: none !important; animation: none !important; }
 }
+
+
+/* Risk-ranked office list */
+.office-risk-overview { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+.office-risk-overview h3 { margin: 0; font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.office-risk-overview p { margin: 0; font-size: 11px; line-height: 1.5; color: var(--text-secondary); }
+.office-risk-filter-note { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); }
+.office-risk-filter-note button { border: 0; background: none; padding: 3px 0; font-size: 11px; color: var(--accent-primary); text-decoration: underline; }
+.office-risk-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+.office-risk-card { --office-risk-color: var(--text-secondary); position: relative; overflow: hidden; border: 1px solid var(--border-default); border-radius: 8px; background: var(--bg-surface); transition: border-color 0.15s ease, background-color 0.15s ease; }
+.office-risk-critical { --office-risk-color: #b91c1c; }
+.office-risk-warning { --office-risk-color: #92400e; }
+.office-risk-watch { --office-risk-color: #15803d; }
+.office-risk-card .alertcard-stripe.unscored { background: var(--border-active); }
+.office-risk-card:hover { border-color: var(--border-active); background: var(--bg-primary); }
+@media (prefers-reduced-motion: reduce) { .office-risk-card { transition: none; } }
+.office-risk-card.selected { border-color: var(--accent-primary); background: var(--accent-light); box-shadow: none; }
+.office-risk-select { display: flex; align-items: flex-start; gap: 8px; width: 100%; border: 0; border-radius: 6px; padding: 12px 10px 12px 16px; text-align: left; background: transparent; }
+.office-risk-select:hover { background: var(--bg-primary); }
+.office-risk-rank { flex-shrink: 0; min-width: 20px; padding-top: 2px; font-size: 11px; font-weight: 600; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.office-risk-identity { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.office-risk-name { font-size: 12px; font-weight: 600; line-height: 1.4; color: var(--text-primary); overflow-wrap: anywhere; }
+.office-risk-location { font-size: 10px; line-height: 1.4; color: var(--text-secondary); }
+.office-risk-category { align-self: flex-start; font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; background: var(--accent-light); color: var(--accent-primary); }
+.office-risk-rating { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; max-width: 85px; color: var(--office-risk-color); }
+.office-risk-score { font-size: 23px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.office-risk-score small { font-size: 11px; font-weight: 500; margin-left: 2px; }
+.office-risk-level { font-size: 10px; font-weight: 600; text-align: right; line-height: 1.4; }
+.office-risk-impact { padding: 0 10px 10px 16px; }
+.office-risk-impact-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; padding: 8px 0 6px; border-top: 1px solid var(--border-default); font-size: 10px; color: var(--text-secondary); }
+.office-risk-impact-heading > span:first-child { font-weight: 600; }
+.office-risk-hazards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.office-risk-hazard { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; line-height: 1.4; }
+.office-risk-hazard-name { display: flex; align-items: center; gap: 5px; min-width: 0; color: var(--text-primary); }
+.office-risk-hazard-name > span { display: flex; flex-shrink: 0; }
+.office-risk-hazard-name small { color: var(--text-secondary); font-size: 10px; }
+.office-risk-hazard-score { flex-shrink: 0; color: var(--office-risk-color); font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.office-risk-note, .office-risk-no-alert { margin: 7px 0 0; font-size: 10px; line-height: 1.5; color: var(--text-secondary); }
+.office-risk-no-alert { padding: 0 10px 10px 16px; margin: 0; }
+.office-risk-details { margin-top: 8px; }
+.office-risk-details > summary { cursor: pointer; list-style: none; }
+.office-risk-details > summary::-webkit-details-marker { display: none; }
+.office-risk-details-chevron { flex-shrink: 0; }
+.office-risk-details[open] .office-risk-details-chevron { transform: rotate(180deg); }
+.office-risk-details > summary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
+.office-risk-details ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.office-risk-alert { padding: 0; border: 0; background: none; color: var(--text-primary); font-size: 11px; line-height: 1.5; font-weight: 600; text-align: left; overflow-wrap: anywhere; }
+.office-risk-alert:hover, .office-risk-alert[aria-pressed="true"] { color: var(--accent-primary); text-decoration: underline; }
+.office-risk-details p { margin: 3px 0 0; font-size: 10px; line-height: 1.5; color: var(--text-secondary); overflow-wrap: anywhere; }
+
+
+.office-risk-insights { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 5px 0; }
+.office-risk-insight { display: flex; flex-direction: column; gap: 4px; padding: 9px 5px; border: 1px solid var(--border-default); border-radius: 7px; background: var(--bg-surface); color: var(--office-insight-color); text-align: center; }
+.office-risk-insight strong { font-size: 18px; line-height: 1.1; color: var(--office-insight-color); font-variant-numeric: tabular-nums; }
+.office-risk-insight span { font-size: 10px; line-height: 1.4; }
+.office-risk-insight-affected { --office-insight-color: #c2410c; }
+.office-risk-insight-multiple { --office-insight-color: #b91c1c; }
+.office-risk-insight-unaffected { --office-insight-color: #0369a1; }
+.office-risk-insight:hover { border-color: var(--border-active); }
+.office-risk-insight.active { border-color: var(--border-active); box-shadow: inset 0 0 0 1px var(--border-active); }
+.office-risk-controls { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+.sidebar-filter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sidebar-filter-result-count { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 5px; font-size: 10px; color: var(--text-secondary); }
+.sidebar-filter-result-count button, .office-risk-reset { border: 0; padding: 3px 0; background: transparent; color: var(--accent-primary); font-size: 10px; text-decoration: underline; }
+.office-risk-driver { margin: 0; padding: 0 10px 8px 16px; color: var(--office-risk-color); font-size: 10px; font-weight: 600; line-height: 1.5; }
+.office-risk-multiple { display: inline-block; margin-left: 5px; padding: 1px 5px; border-radius: 4px; background: var(--accent-light); color: var(--accent-primary); font-size: 9px; }
 
 /* components/dashboard/EwsMap.css */
 .map-wrapper {

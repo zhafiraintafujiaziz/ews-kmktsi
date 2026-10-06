@@ -18,11 +18,13 @@ registerHooks({
 
 const { parseForecastTable, parseForecastDate, mapForecastWarning, publishForecastSnapshot, failForecastSnapshot, getProvinceForecast } = await import('../src/services/weatherForecastAssessment.ts');
 const { resolveOfficeAssessment, distanceFactor } = await import('../src/utils/officeHazardAssessment.ts');
+const { resolveKerentananOfficeAssessment, getKerentananProvinceAssessment } = await import('../src/utils/kerentananAssessment.ts');
 const { BnpbInariskService } = await import('../src/services/bnpbInariskService.ts');
 const { KPWBI_OFFICES } = await import('../src/constants/kpwbiOffices.ts');
 const { scoreAlertForOffice, buildOfficeRiskMap, buildAlertRiskResult, isInaRiskSupportedType, calculateRiskScore, calculateRisk, getRiskLevel, compareOfficeAlertRisk } = await import('../src/utils/riskCalculator.ts');
 const { pointInSourceGeometry, polygonLatLngs } = await import('../src/utils/polygonExposure.ts');
 const { isOfficeAffectedByAlert } = await import('../src/utils/disasterImpact.ts');
+const { buildOfficeRiskSummaries, filterOfficeRiskSummaries } = await import('../src/utils/officeRiskSummary.ts');
 const { KarhutlaRegionalService } = await import('../src/services/karhutlaRegionalService.ts');
 const now = Date.UTC(2026, 9, 6, 5);
 const office = KPWBI_OFFICES.find(o => o.provinceId === 'ID-RI')!;
@@ -97,12 +99,13 @@ test('office markers use each office page assessment and the highest affected di
   assert.equal(buildAlertRiskResult({ ...weather, isForecast: true }, offices), null);
 
   lookup.mock.mockImplementation(() => null);
-  assert.equal(buildOfficeRiskMap(offices, [weather]).size, 0);
+  assert.equal(buildOfficeRiskMap(offices, [weather]).size, 2);
+  assert.equal(buildOfficeRiskMap(offices, [weather]).get(office.id)?.riskScore, 1);
   const severeWeather = { ...weather, severity: 3 as const };
   const missing = scoreAlertForOffice(office.id, severeWeather);
   assert.equal(missing.totalScore, 9);
-  assert.equal(missing.assessmentScore, null);
-  assert.equal(missing.assessment?.index, null);
+  assert.equal(missing.assessmentScore, 1);
+  assert.equal(missing.assessment?.index, 0.1);
   const missingRisks = buildOfficeRiskMap(offices, [severeWeather]);
   assert.equal(missingRisks.size, 2);
   assert.equal(missingRisks.get(office.id)?.riskScore, 9);
@@ -214,8 +217,8 @@ test('weather uses flood indices with alert severity consistently, independent o
     }
   }
   lookup.mock.mockImplementation(() => null);
-  assert.equal(scoreAlertForOffice(office.id, alert('extreme_weather')).totalScore, null);
-  assert.equal(buildOfficeRiskMap([office], [alert('extreme_weather')]).size, 0);
+  assert.equal(scoreAlertForOffice(office.id, alert('extreme_weather')).totalScore, 2);
+  assert.equal(buildOfficeRiskMap([office], [alert('extreme_weather')]).size, 1);
 });
 test('geographic bands use unrounded distances at every boundary', () => {
   for (const [km, factor] of [[0, 3], [10, 3], [10.00001, 3], [30, 3], [30.00001, 2], [100, 2], [100.00001, 1]] as const) {
@@ -335,4 +338,164 @@ test('MAGMA live warnings omit Normal reports and retain all three warning statu
   const results = await MagmaService.fetchLiveAlerts();
   assert.deepEqual(results.map(result => result.severity), [1, 2, 3]);
   assert.ok(results.every(result => !result.title.includes('Normal')));
+});
+
+test('office ranking uses final scores, keeps unscored impacts, and places unaffected offices last', t => {
+  t.mock.method(Date, 'now', () => now);
+  const medium = { ...office, id: 'rank-medium', name: 'Medium office' };
+  const unscored = { ...office, id: 'rank-unscored', name: 'Unscored office' };
+  const remote = { ...office, id: 'rank-remote', name: 'Remote office', latitude: 50, longitude: 150, provinceId: 'unaffected' };
+  t.mock.method(BnpbInariskService, 'getLocalHazardIndex', (id: string) => id === office.id ? 0.8 : id === medium.id ? 0.4 : null);
+  const quake = alert('earthquake', 2);
+  const ranked = buildOfficeRiskSummaries([remote, unscored, medium, office], [quake]);
+  assert.deepEqual(ranked.map(item => [item.office.id, item.totalScore, item.riskLevel, item.alertCount]), [
+    [office.id, 6, 'Tinggi', 1], [medium.id, 4, 'Sedang', 1],
+    [unscored.id, null, null, 1], [remote.id, null, null, 0],
+  ]);
+  const map = buildOfficeRiskMap([office, medium], [quake]);
+  for (const summary of ranked.slice(0, 2)) {
+    assert.equal(summary.totalScore, map.get(summary.office.id)?.riskScore);
+    assert.equal(summary.riskLevel, map.get(summary.office.id)?.riskLevel);
+  }
+});
+
+test('office summaries show every impacted hazard, use maxima, and preserve individual warning scores', t => {
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => 0.8);
+  const weakQuake = { ...alert('earthquake', 1), id: 'weak-quake' };
+  const strongQuake = { ...alert('earthquake', 2), id: 'strong-quake' };
+  const air = { ...alert('air_quality', 1), id: 'air' };
+  const unsupported = { ...alert('tsunami', 3), id: 'unscored-tsunami' };
+  const elsewhere = { ...alert('extreme_weather', 3), id: 'elsewhere-weather', provinceId: 'unaffected' };
+  const input = [weakQuake, unsupported, air, elsewhere, strongQuake];
+  const summary = buildOfficeRiskSummaries([office], input)[0];
+  assert.equal(summary.totalScore, 6);
+  assert.equal(summary.alertCount, 4);
+  assert.deepEqual(summary.hazards.map(hazard => [hazard.type, hazard.totalScore, hazard.risks.length]), [
+    ['earthquake', 6, 2], ['air_quality', 1, 1], ['tsunami', null, 1],
+  ]);
+  assert.deepEqual(summary.hazards[0].risks.map(risk => [risk.alert.id, risk.totalScore]), [
+    ['strong-quake', 6], ['weak-quake', 3],
+  ]);
+  assert.deepEqual(buildOfficeRiskSummaries([office], [...input].reverse()), [summary]);
+  assert.deepEqual(input.map(item => item.id), ['weak-quake', 'unscored-tsunami', 'air', 'elsewhere-weather', 'strong-quake']);
+});
+
+test('equal score ranking is deterministic and assessment updates reorder offices', t => {
+  t.mock.method(Date, 'now', () => now);
+  const alpha = { ...office, id: 'rank-alpha', name: 'Alpha' };
+  const beta = { ...office, id: 'rank-beta', name: 'Beta' };
+  let alphaIndex = 0.4;
+  t.mock.method(BnpbInariskService, 'getLocalHazardIndex', (id: string) => id === alpha.id ? alphaIndex : 0.4);
+  assert.deepEqual(buildOfficeRiskSummaries([beta, alpha], [alert('earthquake', 2)]).map(item => item.office.id), [alpha.id, beta.id]);
+  alphaIndex = 0.2;
+  assert.deepEqual(buildOfficeRiskSummaries([alpha, beta], [alert('earthquake', 2)]).map(item => item.office.id), [beta.id, alpha.id]);
+  const severe = alert('earthquake', 3);
+  t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => null);
+  const ranked = buildOfficeRiskSummaries([beta, alpha], [severe]);
+  assert.deepEqual(ranked.map(item => [item.office.id, item.totalScore, item.riskLevel]), [[alpha.id, 9, 'Tinggi'], [beta.id, 9, 'Tinggi']]);
+});
+
+test('province, search and office risk filters combine without hiding other impacted disasters', t => {
+  t.mock.method(Date, 'now', () => now);
+  const single = { ...office, id: 'filter-single', name: 'Single office', city: 'Single city', provinceId: 'ID-KI', latitude: office.latitude + 8 };
+  const unknown = { ...office, id: 'filter-unknown', provinceId: 'ID-JB', latitude: office.latitude + 16 };
+  const remote = { ...office, id: 'filter-remote', provinceId: 'ID-JT', latitude: office.latitude + 32 };
+  t.mock.method(BnpbInariskService, 'getLocalHazardIndex', (id: string) => id === office.id ? 0.8 : id === single.id ? 0.4 : null);
+  const input = [
+    { ...alert('earthquake', 2), id: 'local-quake' },
+    { ...alert('air_quality', 1), id: 'local-air' },
+    { ...alert('earthquake', 2), id: 'single-quake', latitude: single.latitude },
+    { ...alert('earthquake', 2), id: 'unknown-quake', latitude: unknown.latitude },
+  ];
+  const ranked = buildOfficeRiskSummaries([remote, unknown, single, office], input);
+  const ids = (filters: Parameters<typeof filterOfficeRiskSummaries>[1]) =>
+    filterOfficeRiskSummaries(ranked, filters).map(summary => summary.office.id);
+  assert.deepEqual(ids({}), [office.id, single.id, unknown.id, remote.id]);
+  assert.deepEqual(ids({ provinceId: 'all', risk: 'all', search: '  ' }), ids({}));
+  assert.deepEqual(ids({ provinceId: 'ID-KI', search: '  SINGLE ', risk: 'Sedang' }), [single.id]);
+  assert.deepEqual(ids({ search: 'Kalimantan Timur' }), [single.id]);
+  assert.deepEqual(ids({ provinceId: 'ID-KI', risk: 'Tinggi' }), []);
+  assert.deepEqual(ids({ risk: 'multiple' }), [office.id]);
+  assert.deepEqual(ids({ risk: 'unscored' }), [unknown.id]);
+  assert.deepEqual(ids({ risk: 'unaffected' }), [remote.id]);
+  assert.deepEqual(ids({ risk: 'affected' }), [office.id, single.id, unknown.id]);
+  assert.equal(filterOfficeRiskSummaries(ranked, { risk: 'Tinggi' })[0].hazards.length, 2);
+  assert.equal(ranked.length, 4);
+});
+
+test('equal scores prioritize multiple disaster types across provinces before repeated warnings', t => {
+  t.mock.method(Date, 'now', () => now);
+  const repeated = { ...office, id: 'repeated-office', name: 'Alpha repeated', provinceId: 'ID-KI', latitude: office.latitude + 8 };
+  const multiple = { ...office, name: 'Zulu multiple' };
+  t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => 0.8);
+  const input = [
+    { ...alert('earthquake', 2), id: 'multiple-quake' },
+    { ...alert('air_quality', 1), id: 'multiple-air' },
+    ...[1, 2, 3].map(index => ({ ...alert('earthquake', 2), id: 'repeated-quake-' + index, latitude: repeated.latitude })),
+  ];
+  const ranked = buildOfficeRiskSummaries([repeated, multiple], input);
+  assert.deepEqual(ranked.map(summary => [summary.office.id, summary.totalScore, summary.hazards.length, summary.alertCount]), [
+    [multiple.id, 6, 2, 2], [repeated.id, 6, 1, 3],
+  ]);
+});
+
+
+test('Kerentanan and risk scoring share the low weather assumption without replacing measured indices', t => {
+  let index: number | null = null;
+  t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => index);
+  const assumed = resolveKerentananOfficeAssessment(office, 'extreme_weather');
+  assert.equal(assumed.index, 0.1);
+  assert.equal(assumed.level, 'Rendah');
+  assert.equal(assumed.factor, 1);
+  assert.equal(assumed.source, 'Asumsi');
+  assert.equal(assumed.status, 'assumed');
+  assert.match(assumed.explanation, /diasumsikan/);
+  assert.equal(resolveOfficeAssessment(office, 'extreme_weather').index, null);
+  assert.equal(scoreAlertForOffice(office.id, alert('extreme_weather', 1)).assessmentScore, 1);
+  assert.equal(resolveKerentananOfficeAssessment(office, 'earthquake').index, null);
+  for (const value of [0, 0.05, 0.4, 0.8]) {
+    index = value;
+    assert.deepEqual(resolveKerentananOfficeAssessment(office, 'extreme_weather'), resolveOfficeAssessment(office, 'extreme_weather'));
+  }
+});
+
+test('Kerentanan province weather fallback covers no offices and missing data, preserving measured province maxima', t => {
+  const offices = KPWBI_OFFICES.filter(o => o.provinceId === 'ID-JK');
+  assert.ok(offices.length > 1);
+  let value: number | null = null;
+  t.mock.method(BnpbInariskService, 'getLocalHazardIndex', (id: string) => id === offices[0].id ? value : null);
+  assert.deepEqual(getKerentananProvinceAssessment('ID-JK', 'extreme_weather'), { index: 0.1, assumed: true });
+  assert.deepEqual(getKerentananProvinceAssessment('province-without-office', 'extreme_weather'), { index: 0.1, assumed: true });
+  assert.deepEqual(getKerentananProvinceAssessment('ID-JK', 'earthquake'), { index: null, assumed: false });
+  for (const index of [0, 0.05, 0.4, 0.8]) {
+    value = index;
+    assert.deepEqual(getKerentananProvinceAssessment('ID-JK', 'extreme_weather'), { index, assumed: false });
+  }
+  t.mock.method(BnpbInariskService, 'getLocalHazardIndex', (id: string) => id === offices[0].id ? 0.4 : 0.8);
+  assert.deepEqual(getKerentananProvinceAssessment('ID-JK', 'extreme_weather'), { index: 0.8, assumed: false });
+});
+
+
+test('Lokasi Kerja scores missing weather consistently with Kerentanan, office map and alert results', t => {
+  t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => null);
+  for (const severity of [1, 2, 3] as const) {
+    const input = { ...alert('extreme_weather', severity), latitude: undefined, longitude: undefined };
+    const assessment = resolveKerentananOfficeAssessment(office, 'extreme_weather');
+    const summary = buildOfficeRiskSummaries([office], [input])[0];
+    const expectedScore = severity === 3 ? 9 : severity;
+    const expectedLevel = severity === 3 ? 'Tinggi' : 'Rendah';
+    assert.equal(summary.totalScore, expectedScore);
+    assert.equal(summary.riskLevel, expectedLevel);
+    assert.equal(summary.hazards[0].totalScore, expectedScore);
+    assert.deepEqual(summary.hazards[0].risks[0].assessment, assessment);
+    assert.equal(summary.hazards[0].risks[0].assessmentScore, 1);
+    assert.equal(filterOfficeRiskSummaries([summary], { risk: 'unscored' }).length, 0);
+    assert.equal(filterOfficeRiskSummaries([summary], { risk: expectedLevel }).length, 1);
+    assert.equal(buildOfficeRiskMap([office], [input]).get(office.id)?.riskScore, expectedScore);
+    assert.equal(buildAlertRiskResult(input, [office])?.riskScore, expectedScore);
+  }
+  const clear = buildOfficeRiskSummaries([office], [])[0];
+  assert.equal(clear.alertCount, 0);
+  assert.equal(clear.totalScore, null);
 });

@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { DisasterAlert } from '../../types';
 import { PROVINCES } from '../../constants/provinces';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import { playAlertSound } from '../../utils/alertSound';
+import { alertNotifications } from '../../domain/alertNotifications';
+import { useAlertNotifications } from '../../hooks/useAlertNotifications';
 
 export interface ToastItem {
   toastId: string;
@@ -38,24 +40,37 @@ const TYPE_LABEL: Record<string, string> = {
   landslide:     'Tanah Longsor',
 };
 
-function SingleToast({ item, onDismiss }: { item: ToastItem; onDismiss: () => void }) {
+function SingleToast({ item, onDismiss }: { item: ToastItem; onDismiss: (toastId: string) => void }) {
   const [exiting, setExiting] = useState(false);
   const { alert } = item;
   const province = PROVINCES.find((p) => p.id === alert.provinceId);
 
+  useAlertNotifications();
+  const dismissing = useRef(false);
+  const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleDismiss = useCallback(() => {
+    if (dismissing.current) return;
+    dismissing.current = true;
     setExiting(true);
-    setTimeout(onDismiss, 260);
-  }, [onDismiss]);
+    alertNotifications.markKnown(alert);
+    exitTimer.current = setTimeout(() => onDismiss(item.toastId), 260);
+  }, [alert, item.toastId, onDismiss]);
+
+  useEffect(() => () => {
+    if (exitTimer.current !== null) clearTimeout(exitTimer.current);
+  }, []);
 
   useEffect(() => {
-    playAlertSound();
-  }, []);
+    if (alertNotifications.claimSound(alert)) playAlertSound();
+  }, [alert]);
 
   useEffect(() => {
     const t = setTimeout(handleDismiss, DURATION);
     return () => clearTimeout(t);
   }, [handleDismiss]);
+
+  if (alertNotifications.isKnown(alert) && !exiting) return null;
 
   const sub = [
     province?.name,
@@ -101,7 +116,7 @@ export function AlertToast({ toasts, onDismiss }: AlertToastProps) {
   return (
     <div className="toast-stack">
       {toasts.map((item) => (
-        <SingleToast key={item.toastId} item={item} onDismiss={() => onDismiss(item.toastId)} />
+        <SingleToast key={item.toastId} item={item} onDismiss={onDismiss} />
       ))}
     </div>
   );

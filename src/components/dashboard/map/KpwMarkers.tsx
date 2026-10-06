@@ -6,7 +6,7 @@ import { severityToCssClass } from '../../../types';
 import { KPWBI_OFFICES } from '../../../constants/kpwbiOffices';
 import { PROVINCES } from '../../../constants/provinces';
 import { isOfficeAffectedByAlert } from '../../../utils/disasterImpact';
-import { resolveOfficeAssessment } from '../../../utils/officeHazardAssessment';
+import { resolveKerentananOfficeAssessment } from '../../../utils/kerentananAssessment';
 import { IspuService } from '../../../services/ispuService';
 import { isInaRiskHazardType, getInaRiskCategory, getHazardLevel, getHazardSeverity } from '../../../constants/kerentananCategories';
 import { useInariskRevision } from '../../../hooks/useInariskRevision';
@@ -212,7 +212,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
         const officeRisk = officeRiskMap.get(office.id);
         const ispuAssessment = isKerentananView && activeTypeFilter === 'air_quality' ? IspuService.getOfficeIspuAssessment(office.id) : null;
         const hazardIndex = isKerentananView && isInaRiskHazardType(activeTypeFilter)
-          ? resolveOfficeAssessment(office, activeTypeFilter).index : null;
+          ? resolveKerentananOfficeAssessment(office, activeTypeFilter).index : null;
         const riskSeverity: AlertSeverity | null = isKerentananView && hazardIndex === null ? null : hazardIndex !== null
           ? getHazardSeverity(hazardIndex)
           : officeRisk
@@ -326,7 +326,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                     );
                   }
                   if (!isInaRiskHazardType(hazard)) return null;
-                  const assessment = resolveOfficeAssessment(office, hazard);
+                  const assessment = resolveKerentananOfficeAssessment(office, hazard);
                   const indexVal = assessment.index;
                   if (indexVal === null) return <div style={{ marginTop: '4px', fontSize: '11px' }}>{assessment.explanation}</div>;
                   const hazardTitle = getInaRiskCategory(hazard)?.label ?? hazard;
@@ -379,7 +379,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                     );
                   }
                   if (!isInaRiskHazardType(hazard)) return null;
-                  const assessment = resolveOfficeAssessment(office, hazard);
+                  const assessment = resolveKerentananOfficeAssessment(office, hazard);
                   const indexVal = assessment.index;
                   if (indexVal === null) {
                     return <div className="ews-popup-content"><div className="ews-popup-title">{office.name} ({office.city})</div><p>{assessment.explanation}</p></div>;

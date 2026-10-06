@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useEffectEvent, useRef, useMemo } from 'react';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Popper from '@mui/material/Popper';
@@ -13,6 +13,8 @@ import { INARISK_CATEGORIES } from '../../constants/kerentananCategories';
 import { buildOfficeRiskMap } from '../../utils/riskCalculator';
 import FullPageCaptureButton from '../ui/FullPageCaptureButton';
 import { playAlertSound } from '../../utils/alertSound';
+import { alertFingerprint, alertNotifications, latestUnknownAlert } from '../../domain/alertNotifications';
+import { useAlertNotifications } from '../../hooks/useAlertNotifications';
 
 interface TopBarProps {
   criticalCount: number;
@@ -141,38 +143,42 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
   const [notiAnchor, setNotiAnchor] = useState<HTMLElement | null>(null);
   const notiRef = useRef<HTMLDivElement>(null);
   const notiPanelRef = useRef<HTMLDivElement>(null);
-  const [toastDisabled, setToastDisabled] = useState(
-    () => localStorage.getItem('bima_toast_disabled') === 'true',
-  );
-  const [dismissedToastAlert, setDismissedToastAlert] = useState<DisasterAlert | null>(null);
+  useAlertNotifications();
   const [demoAlert, setDemoAlert] = useState<DisasterAlert | null>(null);
-  const playedToastId = useRef<string | null>(null);
 
   const sortedNotiAlerts = useMemo(() => sortNotificationAlerts(allAlerts ?? []), [allAlerts]);
 
   // Automatic notifications use the same assessed risk as the dashboard.
-  const latestAlert = sortedNotiAlerts.find(alert => !alert.isForecast && !cachedAlertIds.has(alert.id) && props.riskResults.some(result => result.event.id === alert.id && result.shouldAlert)) ?? null;
+  const notificationAlerts = sortedNotiAlerts.filter(alert => !alert.isForecast && !cachedAlertIds.has(alert.id) && props.riskResults.some(result => result.event.id === alert.id && result.shouldAlert));
+  const latestAlert = notificationAlerts[0] ?? null;
+  const automaticToastAlert = latestUnknownAlert(notificationAlerts, alertNotifications);
+  const automaticToastFingerprint = automaticToastAlert ? alertFingerprint(automaticToastAlert) : null;
+  const acknowledgeAutomaticToast = useEffectEvent(() => {
+    if (automaticToastAlert) alertNotifications.markKnown(automaticToastAlert);
+  });
+
+  useEffect(() => {
+    if (!automaticToastFingerprint || demoAlert) return;
+    const timer = setTimeout(acknowledgeAutomaticToast, 7000);
+    return () => clearTimeout(timer);
+  }, [automaticToastFingerprint, demoAlert]);
   const latestRisk = props.riskResults.find(result => result.event.id === latestAlert?.id);
   const notificationStatusClass = latestRisk?.riskLevel === 'Tinggi'
     ? 'critical'
     : latestRisk?.riskLevel === 'Sedang' ? 'warning' : 'monitoring';
 
-  const showToast = latestAlert !== null && !toastDisabled && latestAlert !== dismissedToastAlert;
-
   useEffect(() => {
-    if (!showToast || !latestAlert) return;
-    if (playedToastId.current === latestAlert.id) return;
-    playedToastId.current = latestAlert.id;
-    playAlertSound();
-  }, [showToast, latestAlert]);
+    if (!demoAlert && automaticToastAlert && alertNotifications.claimSound(automaticToastAlert)) {
+      playAlertSound();
+    }
+  }, [automaticToastAlert, demoAlert]);
 
   const handleCloseToast = () => {
     if (demoAlert) {
       setDemoAlert(null);
       return;
     }
-    setToastDisabled(true);
-    localStorage.setItem('bima_toast_disabled', 'true');
+    if (automaticToastAlert) alertNotifications.markKnown(automaticToastAlert);
   };
 
   const handleTestAlert = () => {
@@ -264,7 +270,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     ? `${totalAffectedOffices} KPwBI Dipantau`
     : 'Status Normal';
 
-  const toastAlert = demoAlert ?? (showToast ? latestAlert : null);
+  const toastAlert = demoAlert ?? automaticToastAlert;
   const toastClass = toastAlert ? 'critical' : 'watch';
 
   return (
@@ -671,7 +677,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
             onClick={() => {
               onAlertSelect(toastAlert.id);
               if (demoAlert) setDemoAlert(null);
-              else setDismissedToastAlert(latestAlert);
+              else alertNotifications.markKnown(toastAlert);
             }}
           >
             <span className="bima-toast-alert-title">{toastAlert.title}</span>

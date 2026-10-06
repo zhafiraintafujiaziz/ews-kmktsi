@@ -11,7 +11,8 @@ import MobileSplitter from '../ui/MobileSplitter';
 import { INARISK_CATEGORIES, getHazardLevel, type InaRiskCategory } from '../../constants/kerentananCategories';
 import { useAlerts } from '../../hooks/useAlerts';
 import { useInariskRevision } from '../../hooks/useInariskRevision';
-import { resolveOfficeAssessment, type OfficeHazardAssessment } from '../../utils/officeHazardAssessment';
+import type { OfficeHazardAssessment } from '../../utils/officeHazardAssessment';
+import { resolveKerentananOfficeAssessment } from '../../utils/kerentananAssessment';
 import { KarhutlaRegionalService } from '../../services/karhutlaRegionalService';
 import { VOLCANO_REFERENCE_POINTS, VOLCANO_REFERENCE_SOURCE, VOLCANO_REFERENCE_RETRIEVED_AT } from '../../constants/volcanoReferencePoints';
 
@@ -48,7 +49,7 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
         selectedHazard === 'air_quality'
           ? IspuService.getOfficeIspuAssessment(office.id)
           : null;
-      const assessment = resolveOfficeAssessment(office, selectedHazard);
+      const assessment = resolveKerentananOfficeAssessment(office, selectedHazard);
       const score = assessment.index;
       if (score === null && selectedHazard !== 'karhutla' && selectedHazard !== 'extreme_weather') return [];
 
@@ -158,7 +159,7 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
           {useInaRisk && currentHazard.inariskLabel && (
             <p className="kerentanan-source-info">InaRISK · Bahaya {currentHazard.inariskLabel}. {selectedHazard === 'karhutla' ? 'Indeks kantor adalah rata-rata sel raster valid dalam radius 25 km. Warna provinsi mengikuti indeks kantor tertinggi, bukan rata-rata seluruh provinsi.' : 'Warna provinsi menunjukkan indeks tertinggi dari kantor yang memiliki data, bukan seluruh wilayah provinsi.'}</p>
           )}
-          {selectedHazard === 'extreme_weather' && <p className="kerentanan-source-info">Kerentanan Cuaca menggunakan indeks Bahaya Banjir InaRISK pada titik kantor. Indeks ini menggambarkan bahaya banjir, bukan seluruh jenis cuaca ekstrem. Halaman Perkiraan tetap menggunakan BMKG.</p>}
+          {selectedHazard === 'extreme_weather' && <p className="kerentanan-source-info">Kerentanan Cuaca menggunakan indeks Bahaya Banjir InaRISK pada titik kantor. Indeks ini menggambarkan bahaya banjir, bukan seluruh jenis cuaca ekstrem. Provinsi dan kantor tanpa data menggunakan asumsi indeks 0.10, kategori Rendah. Halaman Perkiraan tetap menggunakan BMKG.</p>}
           {selectedHazard === 'karhutla' && <div className="kerentanan-source-info" role="status" data-karhutla-status={assessmentStatus?.status}>
             <p>Nilai raster 25 km: {availableCount}/{KPWBI_OFFICES.length} kantor tersedia.</p>
             <p>{assessmentStatus?.status === 'loading' ? 'Menghitung statistik raster...' : assessmentStatus?.status === 'error' ? 'Statistik InaRISK gagal dimuat.' : assessmentStatus?.status === 'no_data' ? 'Tidak ada sel raster valid pada wilayah kantor.' : 'NoData dikecualikan; angka 0 tetap dihitung. Cakupan adalah perkiraan proporsi area dengan data valid.'}</p>

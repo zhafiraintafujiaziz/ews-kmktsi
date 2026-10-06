@@ -17,7 +17,7 @@ import KpwMarkers from './map/KpwMarkers';
 import NearestKpwPanel from './map/NearestKpwPanel';
 import MapLegend from './map/MapLegend';
 import VolcanoReferenceLayer from './map/VolcanoReferenceLayer';
-import { resolveOfficeAssessment } from '../../utils/officeHazardAssessment';
+import { resolveKerentananOfficeAssessment, getKerentananProvinceAssessment } from '../../utils/kerentananAssessment';
 
 export interface EwsMapProps {
   alerts: DisasterAlert[];
@@ -47,10 +47,7 @@ interface ProvinceProperties {
 type ProvinceFeature = Feature<Geometry, ProvinceProperties>;
 
 function getProvinceRisk(provinceId: string, hazard: InaRiskHazardType): number | null {
-  const values = KPWBI_OFFICES.filter((office) => office.provinceId === provinceId)
-    .map((office) => resolveOfficeAssessment(office, hazard).index)
-    .filter((value): value is number => value !== null);
-  return values.length > 0 ? Math.max(...values) : null;
+  return getKerentananProvinceAssessment(provinceId, hazard).index;
 }
 
 function getProvinceIspu(provinceId: string) {
@@ -234,11 +231,13 @@ export const EwsMap: React.FC<EwsMapProps> = ({
       let message = 'Tidak tersedia';
       if (isInariskFilter && isInaRiskHazardType(activeTypeFilter)) {
         const office = KPWBI_OFFICES.find(o => o.provinceId === provinceId);
-        message = office ? resolveOfficeAssessment(office, activeTypeFilter).explanation : 'Tidak ada titik kantor di provinsi ini.';
+        message = office ? resolveKerentananOfficeAssessment(office, activeTypeFilter).explanation : 'Tidak ada titik kantor di provinsi ini.';
       }
       layer.bindTooltip(`<div style="font-family: var(--font-sans); font-size: 12px; padding: 4px;"><strong>Provinsi ${propName}</strong><br/>${message}</div>`, { sticky: true });
       return;
     }
+    const assumedWeather = isInariskFilter && activeTypeFilter === 'extreme_weather'
+      && getKerentananProvinceAssessment(provinceId, activeTypeFilter).assumed;
     const severity = getHazardLevel(score);
     const statusColor = severity === 'Tinggi' ? 'var(--alert-critical)' : severity === 'Sedang' ? 'var(--alert-warning)' : 'var(--alert-watch)';
 
@@ -246,7 +245,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
       <div style="font-family: var(--font-sans); font-size: 12px; line-height: 1.4; padding: 4px;">
         <strong>Provinsi ${propName}</strong><br/>
         Indeks ${activeTypeFilter === 'karhutla' ? 'Rata-rata Raster 25 km' : activeTypeFilter === 'extreme_weather' ? 'Bahaya Banjir InaRISK sebagai dasar Cuaca' : activeTypeFilter === 'volcanic' || activeTypeFilter === 'volcanic_ash' ? 'Kerentanan geografis' : isPotensiView ? 'Potensi' : 'Bahaya'} ${hazardTitle}: <strong>${score > 0 ? score.toFixed(2) : '0.00'}</strong><br/>
-        ${isInariskFilter ? activeTypeFilter === 'karhutla' ? 'Rata-rata raster radius 25 km tertinggi dari kantor di provinsi ini.<br/>Bukan rata-rata seluruh provinsi.<br/>' : 'Indeks tertinggi dari kantor yang memiliki data di provinsi ini.<br/>' : ''}
+        ${isInariskFilter ? assumedWeather ? 'Data Cuaca tidak tersedia. Indeks diasumsikan 0.10, kategori Rendah.<br/>' : activeTypeFilter === 'karhutla' ? 'Rata-rata raster radius 25 km tertinggi dari kantor di provinsi ini.<br/>Bukan rata-rata seluruh provinsi.<br/>' : 'Indeks tertinggi dari kantor yang memiliki data di provinsi ini.<br/>' : ''}
         Status: <span style="font-weight: 700; color: ${statusColor}">${severity}</span>
       </div>
     `, { sticky: true });

@@ -7,7 +7,7 @@ import { KarhutlaRegionalService, type KarhutlaRegionalAssessment } from '../ser
 import { VOLCANO_REFERENCE_SOURCE } from '../constants/volcanoReferencePoints';
 
 export interface OfficeHazardAssessment {
-  source: 'InaRISK' | 'BMKG' | 'MAGMA / PVMBG' | 'ISPU';
+  source: 'InaRISK' | 'BMKG' | 'MAGMA / PVMBG' | 'ISPU' | 'Asumsi';
   sourceUrl: string;
   status: string;
   index: number | null;

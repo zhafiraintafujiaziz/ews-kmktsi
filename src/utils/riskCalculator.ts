@@ -2,7 +2,8 @@ import type { DisasterAlert, DisasterEvent, AssessmentLevel, RiskLevel, MarkedLo
 import { haversineDistance } from './geo';
 import { getAlertImpactRadiusKm, isOfficeAffectedByAlert } from './disasterImpact';
 import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
-import { resolveOfficeAssessment, type OfficeHazardAssessment } from './officeHazardAssessment';
+import type { OfficeHazardAssessment } from './officeHazardAssessment';
+import { resolveKerentananOfficeAssessment } from './kerentananAssessment';
 import { isInaRiskHazardType, getHazardLevel } from '../constants/kerentananCategories';
 
 /** Assessment availability and scoring support are separate from their source. */
@@ -40,7 +41,7 @@ export function scoreAlertForOffice(officeId: string, alert: DisasterAlert, offi
     return { alert, assessmentScore: null, totalScore, riskLevel: getRiskLevel(totalScore), isInaRiskSupported: false };
   }
   const supported = isRiskScoredType(alert.type);
-  const assessment = supported && office ? resolveOfficeAssessment(office, alert.type as import('../constants/kerentananCategories').InaRiskHazardType) : undefined;
+  const assessment = supported && office ? resolveKerentananOfficeAssessment(office, alert.type as import('../constants/kerentananCategories').InaRiskHazardType) : undefined;
   const assessmentScore = assessment?.factor ?? null;
   const totalScore = supported ? calculateRiskScore(alert.severity, assessmentScore) : null;
   const riskLevel = getRiskLevel(totalScore);
