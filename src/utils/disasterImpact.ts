@@ -1,5 +1,7 @@
 import type { KpwbiOffice, DisasterAlert } from '../types';
 import { haversineDistance } from './geo';
+import { pointInSourceGeometry } from './polygonExposure';
+import { isCurrentlyUsable } from '../domain/freshness';
 
 /**
  * Gets the impact radius of a disaster alert in kilometers.
@@ -32,6 +34,9 @@ export function getAlertImpactRadiusKm(alert: DisasterAlert): number {
 }
 
 export function isOfficeAffectedByAlert(office: KpwbiOffice, alert: DisasterAlert): boolean {
+  if (alert.type === 'volcanic_ash') {
+    return isCurrentlyUsable(alert) && pointInSourceGeometry(office.longitude, office.latitude, alert.sourceGeometry);
+  }
   if (alert.type === 'extreme_weather') {
     return alert.provinceId === office.provinceId;
   }

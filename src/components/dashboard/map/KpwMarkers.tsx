@@ -1,21 +1,25 @@
 import React, { useMemo } from 'react';
 import { Marker, Tooltip, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import type { DisasterAlert, DisasterType, KpwbiOffice, AlertSeverity, RiskCalcResult } from '../../../types';
+import type { DisasterAlert, DisasterType, KpwbiOffice, AlertSeverity, RiskCalcResult, RiskLevel } from '../../../types';
 import { severityToCssClass } from '../../../types';
 import { KPWBI_OFFICES } from '../../../constants/kpwbiOffices';
 import { PROVINCES } from '../../../constants/provinces';
 import { isOfficeAffectedByAlert } from '../../../utils/disasterImpact';
-import { BnpbInariskService } from '../../../services/bnpbInariskService';
+import { resolveKerentananOfficeAssessment } from '../../../utils/kerentananAssessment';
 import { IspuService } from '../../../services/ispuService';
+import { isInaRiskHazardType, getInaRiskCategory, getHazardLevel, getHazardSeverity } from '../../../constants/kerentananCategories';
+import { useInariskRevision } from '../../../hooks/useInariskRevision';
 import { classifyExtremeWeather, renderDisasterIcon } from '../../../utils/alertUtils';
 import type { NearestKpwResult } from '../../../utils/geo';
 import {
   buildOfficeRiskMap,
   scoreAlertForOffice,
-  getRiskLevel,
+  compareOfficeAlertRisk,
 } from '../../../utils/riskCalculator';
 
+const riskLevelColor = (level: RiskLevel | null) => level === 'Tinggi' ? 'var(--alert-critical)'
+  : level === 'Sedang' ? 'var(--alert-warning)' : level === 'Rendah' ? 'var(--alert-watch)' : 'var(--text-muted)';
 
 interface KpwMarkersProps {
   alerts: DisasterAlert[];
@@ -141,18 +145,9 @@ function createMarkerIcon(
     });
   }
 
-  if (office.category === 'dc') {
-    return L.divIcon({
-      className: 'custom-marker bi-dc-container',
-      html: `<svg ${ispuSvgStyle} class="bi-dc-building ${classString}" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" stroke="white" stroke-width="1.2" d="M12,2L1,7v2h22V7L12,2z M4,9v11h3V9H4z M10,9v11h4V9h-4z M17,9v11h3V9h-3z M2,20v2h20v-2H2z"/></svg>`,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-    });
-  }
-
   return L.divIcon({
     className: 'custom-marker',
-    html: `<div ${ispuDotStyle} class="${['marker-dot', ...classes].join(' ')}"></div>`,
+    html: `<div ${ispuDotStyle} class="${['marker-dot', office.category === 'dc' ? 'marker-square' : '', ...classes].filter(Boolean).join(' ')}"></div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
   });
@@ -173,11 +168,13 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
   selectedAlertId,
 }) => {
   useKpwPane();
-  const isInariskFilter = ['flood', 'tsunami', 'kekeringan', 'volcanic'].includes(activeTypeFilter)
-    || (isKerentananView && activeTypeFilter === 'air_quality');
+  const assessmentRevision = useInariskRevision();
+  const isInariskFilter = isKerentananView && (isInaRiskHazardType(activeTypeFilter) || activeTypeFilter === 'air_quality');
   const officeRiskMap = useMemo(
     () => buildOfficeRiskMap(KPWBI_OFFICES, riskAlerts ?? alerts),
-    [riskAlerts, alerts],
+    // The external InaRISK cache can change without a new alert array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [riskAlerts, alerts, assessmentRevision],
   );
 
   return (
@@ -214,7 +211,11 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
         const officeAlerts = alerts.filter((a) => isOfficeAffectedByAlert(office, a));
         const officeRisk = officeRiskMap.get(office.id);
         const ispuAssessment = isKerentananView && activeTypeFilter === 'air_quality' ? IspuService.getOfficeIspuAssessment(office.id) : null;
-        const riskSeverity: AlertSeverity | null = officeRisk
+        const hazardIndex = isKerentananView && isInaRiskHazardType(activeTypeFilter)
+          ? resolveKerentananOfficeAssessment(office, activeTypeFilter).index : null;
+        const riskSeverity: AlertSeverity | null = isKerentananView && hazardIndex === null ? null : hazardIndex !== null
+          ? getHazardSeverity(hazardIndex)
+          : officeRisk
           ? (officeRisk.riskLevel === 'Tinggi' ? 3 : officeRisk.riskLevel === 'Sedang' ? 2 : 1)
           : null;
 
@@ -233,12 +234,23 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
               },
             }}
           >
-            <Tooltip direction="top" offset={[0, -10]} opacity={0.9} permanent={false}>
+            <Tooltip className="kpw-tooltip" direction="top" offset={[0, -10]} opacity={0.97} permanent={false}>
               <div>
                 <strong>{office.city}</strong> — {office.name}
                 {office.isKantorPusat && ' 🏛️ (Kantor Pusat)'}
                 {office.isKorwil && !office.isKantorPusat && ' ★ Korwil'}
                 {office.category === 'dc' && ' 🏛️ (Data Center Sinergi)'}
+                <div className="kpw-tooltip-detail">
+                  {getProvinceName(office.provinceId)} · {office.region}
+                </div>
+                {!isKerentananView && officeRisk && (
+                  <div className="kpw-tooltip-section" style={{ color: riskLevelColor(officeRisk.riskLevel) }}>
+                    Risiko kantor tertinggi: {officeRisk.riskScore}/9 · {officeRisk.riskLevel}
+                  </div>
+                )}
+                {!isKerentananView && officeAlerts.length === 0 && !officeRisk && (
+                  <div className="kpw-tooltip-detail">Tidak ada peringatan aktif.</div>
+                )}
                 {nearestInfo && (
                   <div style={{ marginTop: '4px', fontSize: '11px', color: '#8b5cf6', fontWeight: 600 }}>
                     ↔️ Terdekat ({nearestInfo.distanceKm.toFixed(1)} km)
@@ -250,44 +262,84 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                   const extra = summary.length - shown.length;
                   return (
                     <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      {shown.map((row) => (
-                        <div key={row.type} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                          <span style={{ display: 'inline-flex' }}>
-                            {renderDisasterIcon(row.type, undefined, { width: '12px', height: '12px' }, row.alert)}
-                          </span>
-                          <span>
-                            {TYPE_LABEL[row.type] ?? row.type}
-                            {row.detail ? ` · ${row.detail}` : ''}
-                            {row.count > 1 ? ` ×${row.count}` : ''}
-                          </span>
-                        </div>
-                      ))}
+                      {shown.map((row) => {
+                        const { totalScore, riskLevel, assessmentScore, assessment } = scoreAlertForOffice(office.id, row.alert, office);
+                        const scoreColor = riskLevelColor(riskLevel);
+                        return (
+                          <div key={row.type} className="kpw-tooltip-section">
+                            <div className="kpw-tooltip-row">
+                              <span style={{ display: 'inline-flex' }}>
+                                {renderDisasterIcon(row.type, undefined, { width: '12px', height: '12px' }, row.alert)}
+                              </span>
+                              <span>
+                                {TYPE_LABEL[row.type] ?? row.type}
+                                {row.detail ? ` · ${row.detail}` : ''}
+                                {row.count > 1 ? ` ×${row.count}` : ''}
+                              </span>
+                              {!isKerentananView && (
+                                <span style={{ marginLeft: 'auto', color: scoreColor }}>
+                                  {totalScore === null ? 'Skor tidak tersedia' : `${totalScore}/9 · ${riskLevel}`}
+                                </span>
+                              )}
+                            </div>
+                            {!isKerentananView && (
+                              <>
+                                <div className="kpw-tooltip-detail">
+                                  {row.alert.type === 'air_quality'
+                                    ? `ISPU: Keparahan ${row.alert.severity}/3 × ${row.alert.severity}/3`
+                                    : `Keparahan ${row.alert.severity}/3 · Kerentanan ${assessmentScore === null ? 'tidak tersedia' : `${assessmentScore}/3`}`}
+                                </div>
+                                {assessment && (
+                                  <div className="kpw-tooltip-detail">
+                                    {assessment.regional ? 'InaRISK, rata-rata radius 25 km' : assessment.source}
+                                    {assessment.index !== null ? ` · Indeks ${assessment.index.toFixed(2)}` : ''}
+                                  </div>
+                                )}
+                                {row.alert.severity === 3 && totalScore === 9 && (
+                                  <div className="kpw-tooltip-detail" style={{ color: scoreColor }}>
+                                    Keparahan 3: otomatis 9/9.
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
                       {extra > 0 && (
-                        <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>+{extra}</div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>+{extra} jenis bencana lainnya</div>
                       )}
                     </div>
                   );
                 })()}
                 {isInariskFilter && (() => {
-                  const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
+                  const hazard = activeTypeFilter;
                   if (hazard === 'air_quality') {
                     const asmt = IspuService.getOfficeIspuAssessment(office.id);
-                    if (!asmt) return <div style={{ marginTop: '4px', fontSize: '11px' }}>Current data unavailable</div>;
+                    if (!asmt) return <div style={{ marginTop: '4px', fontSize: '11px' }}>Tidak tersedia</div>;
                     const color = IspuService.getCategoryColor(asmt.category);
                     return (
-                      <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: 700, color }}>
-                        ISPU: {asmt.ispuValue} ({asmt.category})
+                      <div className="kpw-tooltip-section">
+                        <div style={{ fontWeight: 700, color }}>ISPU: {asmt.ispuValue} · {asmt.category}</div>
+                        <div className="kpw-tooltip-detail">SPKU: {asmt.stationName} · {asmt.distanceKm} km</div>
+                        <div className="kpw-tooltip-detail">Parameter kritis: {asmt.dominantParam}</div>
                       </div>
                     );
                   }
-                  const indexVal = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
-                  if (indexVal === null) return <div style={{ marginTop: '4px', fontSize: '11px' }}>Current data unavailable</div>;
-                  const hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api', volcanic_ash: 'Abu Vulkanik' }[hazard] || hazard;
-                  const val = Math.round(indexVal * 100);
-                  const color = val >= 64 ? 'var(--alert-critical)' : val > 40 ? 'var(--alert-warning)' : 'var(--alert-watch)';
+                  if (!isInaRiskHazardType(hazard)) return null;
+                  const assessment = resolveKerentananOfficeAssessment(office, hazard);
+                  const indexVal = assessment.index;
+                  if (indexVal === null) return <div style={{ marginTop: '4px', fontSize: '11px' }}>{assessment.explanation}</div>;
+                  const hazardTitle = getInaRiskCategory(hazard)?.label ?? hazard;
+                  const level = getHazardLevel(indexVal);
+                  const color = level === 'Tinggi' ? 'var(--alert-critical)' : level === 'Sedang' ? 'var(--alert-warning)' : 'var(--alert-watch)';
                   return (
-                    <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: 700, color }}>
-                      {hazardTitle} Indeks: {indexVal.toFixed(2)}
+                    <div className="kpw-tooltip-section">
+                      <div style={{ fontWeight: 700, color }}>
+                        {hazardTitle} · Indeks {indexVal.toFixed(2)} · {level}
+                      </div>
+                      <div className="kpw-tooltip-detail">
+                        Kerentanan: {assessment.factor}/3 · {assessment.regional ? 'InaRISK, rata-rata radius 25 km' : assessment.source}
+                      </div>
                     </div>
                   );
                 })()}
@@ -297,11 +349,11 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
             <Popup offset={[0, -10]} minWidth={280}>
               {isInariskFilter ? (
                 (() => {
-                  const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
+                  const hazard = activeTypeFilter;
                   if (hazard === 'air_quality') {
                     const asmt = IspuService.getOfficeIspuAssessment(office.id);
                     if (!asmt) {
-                      return <div className="ews-popup-content"><div className="ews-popup-title">{office.name} ({office.city})</div><p>Current data unavailable</p></div>;
+                      return <div className="ews-popup-content"><div className="ews-popup-title">{office.name} ({office.city})</div><p>Data ISPU tidak tersedia.</p></div>;
                     }
                     const badge = IspuService.getCategoryBadge(asmt.category, asmt.ispuValue);
                     return (
@@ -326,24 +378,23 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                       </div>
                     );
                   }
-                  const indexVal = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
+                  if (!isInaRiskHazardType(hazard)) return null;
+                  const assessment = resolveKerentananOfficeAssessment(office, hazard);
+                  const indexVal = assessment.index;
                   if (indexVal === null) {
-                    return <div className="ews-popup-content"><div className="ews-popup-title">{office.name} ({office.city})</div><p>Current data unavailable</p></div>;
+                    return <div className="ews-popup-content"><div className="ews-popup-title">{office.name} ({office.city})</div><p>{assessment.explanation}</p></div>;
                   }
-                  const hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api', volcanic_ash: 'Abu Vulkanik' }[hazard] || hazard;
-                  const val = Math.round(indexVal * 100);
-                  let severity: AlertSeverity = 1;
-                  if (val >= 64) severity = 3;
-                  else if (val > 40) severity = 2;
+                  const hazardTitle = getInaRiskCategory(hazard)?.inariskLabel ?? hazard;
+                  const severity = getHazardSeverity(indexVal);
                   return (
                     <div className="ews-popup-content">
                       <div className={`ews-popup-header ${severityToCssClass(severity)}`}>
                         <span>{renderDisasterIcon(hazard, undefined, { color: 'inherit' })}</span>
-                        <span>Indeks Bahaya {hazardTitle} (InaRisk)</span>
+                        <span>{hazard === 'karhutla' ? 'Rata-rata Raster 25 km' : hazard === 'extreme_weather' ? 'Indeks Bahaya Banjir untuk' : hazard === 'volcanic' || hazard === 'volcanic_ash' ? 'Kerentanan Geografis' : 'Indeks Bahaya'} {hazardTitle} ({assessment.source})</span>
                       </div>
                       <div className="ews-popup-title" style={{ marginTop: 0 }}>{office.name} ({office.city})</div>
                       <p className="ews-popup-desc">
-                        Berdasarkan data InaRisk BNPB, lokasi sekitar {office.name} memiliki tingkat kerentanan/bahaya {hazardTitle} dengan indeks {indexVal.toFixed(2)} dari 1.0.
+                        {assessment.explanation}
                       </p>
                       <div className="ews-popup-footer">
                         <span className="ews-popup-tag" style={{
@@ -351,7 +402,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                           backgroundColor: `var(--alert-${severityToCssClass(severity)}-bg)`,
                           borderColor: `var(--alert-${severityToCssClass(severity)}-border)`,
                         }}>
-                          Level {severity} ({indexVal.toFixed(2)})
+                          {getHazardLevel(indexVal)} ({indexVal.toFixed(2)})
                         </span>
                       </div>
                     </div>
@@ -394,12 +445,10 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '160px', overflowY: 'auto', paddingRight: '2px' }}>
                           {officeAlerts.map((alert) => scoreAlertForOffice(office.id, alert))
-                          .filter((risk): risk is typeof risk & { totalScore: number } => risk.totalScore !== null)
-                          .sort((a, b) => b.totalScore - a.totalScore)
-                          .map(({ alert, totalScore, vulScore, isKerentananSupported }) => {
-                            const indexValStr = isKerentananSupported ? `${vulScore}/3` : 'N/A';
+                          .sort((a, b) => compareOfficeAlertRisk(b, a))
+                          .map(({ alert, totalScore, riskLevel, assessmentScore, assessment }) => {
+                            const indexValStr = assessmentScore !== null ? `${assessmentScore}/3` : 'Tidak tersedia';
                             const disasterScore = alert.severity;
-                            const riskLevel = getRiskLevel(totalScore);
 
                             return (
                               <div 
@@ -423,20 +472,25 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                                   <span style={{ 
                                     fontSize: '10px', 
                                     fontWeight: 700, 
-                                    color: totalScore >= 7 ? 'var(--alert-critical)' : totalScore >= 4 ? 'var(--alert-warning)' : 'var(--alert-watch)'
+                                    color: riskLevelColor(riskLevel)
                                   }}>
-                                    Skor {totalScore}/9
+                                    {totalScore === null ? 'Skor tidak tersedia' : `Skor ${totalScore}/9`}
                                   </span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)' }}>
-                                  <span>{alert.type === 'air_quality' ? `Keparahan: ${disasterScore}/3` : `Alert: ${disasterScore}/3 • Kerentanan: ${indexValStr}`}</span>
+                                  <span>{alert.type === 'air_quality' ? `ISPU: Keparahan ${disasterScore}/3 × ${disasterScore}/3` : `Keparahan: ${disasterScore}/3 • Kerentanan (${assessment?.regional ? 'InaRISK 25 km' : assessment?.source ?? 'Bahaya'}): ${indexValStr}`}</span>
                                   <span style={{ 
                                     fontWeight: 600, 
-                                    color: totalScore >= 7 ? 'var(--alert-critical)' : totalScore >= 4 ? 'var(--alert-warning)' : 'var(--alert-watch)' 
+                                    color: riskLevelColor(riskLevel)
                                   }}>
-                                    {riskLevel}
+                                    {riskLevel ?? 'Tidak tersedia'}
                                   </span>
                                 </div>
+                                {disasterScore === 3 && totalScore === 9 && (
+                                  <div style={{ color: 'var(--alert-critical)', fontSize: '10px' }}>
+                                    Keparahan bernilai 3 → otomatis 9/9.
+                                  </div>
+                                )}
                               </div>
                             );
                           })}

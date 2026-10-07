@@ -5,15 +5,7 @@ import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { isOfficeAffectedByAlert } from '../../utils/disasterImpact';
 import { haversineDistance } from '../../utils/geo';
-import { BnpbInariskService } from '../../services/bnpbInariskService';
-import {
-  mapAlertToDisasterEvent,
-  mapInariskToVulnerability,
-  mapDisasterTypeToInariskHazard,
-  vulnerabilityToScore,
-  getRiskLevel,
-  scoreAlertForOffice,
-} from '../../utils/riskCalculator';
+import { scoreAlertForOffice } from '../../utils/riskCalculator';
 import * as XLSX from 'xlsx';
 
 interface ReportModalProps {
@@ -27,7 +19,9 @@ interface ImpactedRecord {
   alert: DisasterAlert;
   distanceKm: number | null;
   riskLevel: string;
-  vulnerabilityIndex?: number;
+  hazardIndex?: number;
+  assessmentSource?: string;
+  assessmentDetails?: string;
   riskScore?: number;
 }
 
@@ -88,40 +82,19 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, alert
               ? haversineDistance(office.latitude, office.longitude, alert.latitude, alert.longitude)
               : null;
           
-          let riskLevelStr = '-';
-          let vulIndex: number | undefined;
-          let rScoreVal: number | undefined;
-          const event = mapAlertToDisasterEvent(alert);
-          if (event) {
-            if (event.type === 'air_quality') {
-              const { totalScore } = scoreAlertForOffice(office.id, alert);
-              if (totalScore !== null) {
-                rScoreVal = totalScore;
-                riskLevelStr = getRiskLevel(totalScore);
-              }
-            }
-            const kerentananDisasters = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash'];
-            const isKerentananSupported = kerentananDisasters.includes(event.type);
-            if (isKerentananSupported) {
-              const hazard = mapDisasterTypeToInariskHazard(event.type);
-              const index = BnpbInariskService.getLocalHazardIndex(office.id, hazard);
-              if (index !== null) {
-                const vulLevel = mapInariskToVulnerability(index);
-                const vulScore = vulnerabilityToScore(vulLevel);
-                vulIndex = index;
-                const rScore = event.disasterScore * vulScore;
-                rScoreVal = rScore;
-                riskLevelStr = getRiskLevel(rScore);
-              }
-            }
-          }
+          const risk = scoreAlertForOffice(office.id, alert);
+          const rScoreVal = risk.totalScore ?? undefined;
+          const assessmentIndex = risk.assessment?.index ?? undefined;
+          const riskLevelStr = risk.totalScore === 0 ? 'Tidak ada peringatan prakiraan' : risk.riskLevel ?? 'Tidak tersedia';
 
           impactedOffices.push({
             office,
             alert,
             distanceKm,
             riskLevel: riskLevelStr,
-            vulnerabilityIndex: vulIndex,
+            hazardIndex: assessmentIndex,
+            assessmentSource: risk.assessment?.source,
+            assessmentDetails: risk.assessment?.explanation,
             riskScore: rScoreVal,
           });
         }
@@ -195,15 +168,17 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, alert
 
     // 2. KPW Impacted Sheet
     const impactedHeaders = [
-      "KPW Office", "City", "Disaster Title", "Type", "Severity", "Indeks Kerentanan", "Skor Risiko", "Tingkat Risiko", "Distance (km)", "Time"
+      "KPW Office", "City", "Disaster Title", "Type", "Severity", "Indeks Penilaian", "Sumber Penilaian", "Metode Penilaian", "Skor Risiko", "Tingkat Risiko", "Distance (km)", "Time"
     ];
-    const impactedRows = report.impactedOffices.map(({ office, alert, distanceKm, riskLevel, vulnerabilityIndex, riskScore }) => [
+    const impactedRows = report.impactedOffices.map(({ office, alert, distanceKm, riskLevel, hazardIndex, riskScore, assessmentSource, assessmentDetails }) => [
       office.name,
       office.city,
       alert.title,
       alert.type,
       SEVERITY_NUM[alert.severity] || alert.severity,
-      vulnerabilityIndex !== undefined ? vulnerabilityIndex : '-',
+      hazardIndex !== undefined ? hazardIndex : '-',
+      assessmentSource || 'Keparahan langsung',
+      assessmentDetails || 'Keparahan langsung',
       riskScore !== undefined ? Math.round(riskScore) : '-',
       riskLevel,
       distanceKm !== null ? Number(distanceKm.toFixed(1)) : '-',
@@ -321,16 +296,16 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, alert
                           <th>Kantor Perwakilan</th>
                           <th>Kota</th>
                           <th>Disaster</th>
-                          <th style={{ textAlign: 'center' }}>Keparahan ([H]azard)</th>
-                          <th style={{ textAlign: 'center' }}>Kerentanan ([V]ulnerability)</th>
-                          <th style={{ textAlign: 'center' }}>Risiko ([R]isk)</th>
+                          <th style={{ textAlign: 'center' }}>Keparahan</th>
+                          <th style={{ textAlign: 'center' }}>Indeks Penilaian</th>
+                          <th style={{ textAlign: 'center' }}>Skor aplikasi</th>
                           <th style={{ textAlign: 'center' }}>Tingkat Risiko</th>
                           <th>Jarak Epicenter</th>
                           <th>Waktu</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {report.impactedOffices.map(({ office, alert, distanceKm, vulnerabilityIndex, riskScore, riskLevel }, idx) => (
+                        {report.impactedOffices.map(({ office, alert, distanceKm, hazardIndex, riskScore, riskLevel, assessmentDetails }, idx) => (
                           <tr key={`${office.id}-${alert.id}-${idx}`}>
                             <td className="font-semibold">{office.name}</td>
                             <td>{office.city}</td>
@@ -343,7 +318,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, alert
                             <td style={{ textAlign: 'center' }}>
                               {alert.severity}
                             </td>
-                            <td style={{ textAlign: 'center' }}>{vulnerabilityIndex !== undefined ? vulnerabilityIndex : '-'}</td>
+                            <td title={assessmentDetails} style={{ textAlign: 'center' }}>{hazardIndex !== undefined ? hazardIndex : '-'}</td>
                              <td className='font-semibold' style={{ textAlign: 'center' }}>{riskScore !== undefined ? Math.round(riskScore) : '-'}</td>
                             <td style={{ textAlign: 'center' }}>
                               <span className={`severity-tag ${riskLevel === 'Tinggi' ? 'critical' : riskLevel === 'Sedang' ? 'warning' : 'watch'}`}>

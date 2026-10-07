@@ -7,7 +7,9 @@ import {
 import { PROVINCES } from '../../constants/provinces';
 import { BnpbInariskService } from '../../services/bnpbInariskService';
 import { useAlerts } from '../../hooks/useAlerts';
-import type { DisasterAlert, AlertSeverity } from '../../types';
+import { getProvinceForecast, getForecastSnapshot } from '../../services/weatherForecastAssessment';
+import { useInariskRevision } from '../../hooks/useInariskRevision';
+import type { AlertSeverity } from '../../types';
 import { severityToCssClass } from '../../types';
 import PerkiraanMap from './PerkiraanMap';
 import EmailBlastButton from './EmailBlastButton';
@@ -21,13 +23,6 @@ function getSeverityRank(sev: AlertSeverity | null) {
   return sev ?? 0;
 }
 
-function getForecastSeverity(officeProvinceId: string, alerts: DisasterAlert[]): AlertSeverity | null {
-  const matching = alerts.filter((a) => a.isForecast && a.provinceId === officeProvinceId);
-  if (matching.length === 0) return null;
-  if (matching.some((a) => a.severity === 3)) return 3;
-  if (matching.some((a) => a.severity === 2)) return 2;
-  return 1;
-}
 
 const SEV_LABEL: Record<AlertSeverity, string> = {
   3: 'Siaga',
@@ -37,23 +32,26 @@ const SEV_LABEL: Record<AlertSeverity, string> = {
 
 const MingguanTab: React.FC<MingguanTabProps> = () => {
   const { alerts } = useAlerts();
+  const assessmentRevision = useInariskRevision();
   const [selectedProvinceId, setSelectedProvinceId] = useState<string | null>(null);
   const [selectedOfficeId, setSelectedOfficeId] = useState<string | null>(null);
 
-  const forecastAlerts = useMemo(() => alerts.filter((a) => a.isForecast), [alerts]);
+  const forecastAlerts = useMemo(() => alerts.filter((a) => a.type === 'extreme_weather' && a.isForecast), [alerts]);
 
   const provincesMap = useMemo(() => new Map(PROVINCES.map((p) => [p.id, p])), []);
 
   const rankedOffices = useMemo(() => {
     return KPWBI_OFFICES.map((office) => {
-      const forecastSev = getForecastSeverity(office.provinceId, forecastAlerts);
+      const forecastSev = getProvinceForecast(office.provinceId).severity || null;
       const floodScore = BnpbInariskService.getLocalHazardIndex(office.id, 'flood');
       const rank = getSeverityRank(forecastSev) * 100 + (floodScore ?? 0) * 100;
       return { office, forecastSev, floodScore, rank };
     })
       .filter((item) => item.forecastSev !== null || (item.floodScore !== null && item.floodScore > 0.3))
       .sort((a, b) => b.rank - a.rank);
-  }, [forecastAlerts]);
+    // Forecast snapshots publish independently from the alert list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forecastAlerts, assessmentRevision]);
 
   const hasCritical = rankedOffices.some((r) => r.forecastSev === 3);
 
@@ -77,6 +75,8 @@ const MingguanTab: React.FC<MingguanTabProps> = () => {
           <span className="perkiraan-panel-count">{rankedOffices.length} wilayah</span>
         </div>
 
+        <p className="kerentanan-source-info" role="status">{getForecastSnapshot()?.error || ('BMKG · Tanggal tersedia: ' + (getForecastSnapshot()?.dates.join(', ') || 'Memuat...'))}</p>
+        <p className="kerentanan-source-info">{getProvinceForecast(KPWBI_OFFICES[0].provinceId).dates.length < 3 ? 'Cakupan tanggal prakiraan belum lengkap 3 hari.' : 'Prakiraan dari hari ini hingga dua hari ke depan.'}</p>
         {/* In-app action reminder */}
         {hasCritical && (
           <div className="perkiraan-alert-banner critical">
@@ -130,7 +130,7 @@ const MingguanTab: React.FC<MingguanTabProps> = () => {
                         <div className="perkiraan-forecast-days">
                           {forecasts.map((a) => (
                             <span key={a.id} className={`forecast-day-pill sev-${severityToCssClass(a.severity)}`}>
-                              H+{a.forecastDay}: {a.title.split('(')[0].trim()}
+                              {a.forecastDateStr}: {a.title.split('(')[0].trim()}
                             </span>
                           ))}
                         </div>

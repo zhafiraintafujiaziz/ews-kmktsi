@@ -16,7 +16,7 @@ import { isOfficeAffectedByAlert } from '../../utils/disasterImpact';
 
 const ChecklistPanel: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const { getStatus, toggleItem, getCompletionCount } = usePreparednessChecklist();
+  const { getStatus, toggleItem, getCompletionCount, isLoading, isSaving, error, saveMessage, reload } = usePreparednessChecklist();
   const { alerts } = useAlerts();
 
   const provincesMap = useMemo(() => new Map(PROVINCES.map((p) => [p.id, p])), []);
@@ -55,6 +55,14 @@ const ChecklistPanel: React.FC = () => {
   const goToPrev = () => setSelectedIndex((i) => Math.max(0, i - 1));
   const goToNext = () => setSelectedIndex((i) => Math.min(atRiskOffices.length - 1, i + 1));
 
+  const storageStatus = (
+    <div aria-live="polite">
+      {(isLoading || isSaving) && <p className="checklist-flood-note">{isLoading ? 'Memuat checklist...' : 'Menyimpan checklist...'}</p>}
+      {error && <p className="checklist-flood-note" role="alert">{error} <button type="button" onClick={() => void reload()} disabled={isLoading || isSaving}>Muat ulang</button></p>}
+      {saveMessage && !isSaving && !error && <p className="checklist-flood-note">{saveMessage}</p>}
+    </div>
+  );
+
   if (atRiskOffices.length === 0) {
     return (
       <div className="checklist-container">
@@ -62,6 +70,7 @@ const ChecklistPanel: React.FC = () => {
           <span className="perkiraan-panel-title">Checklist Kesiapsiagaan KPw</span>
         </div>
         <p className="checklist-flood-note">Tidak ada KPw dengan risiko banjir atau gempa yang terdeteksi.</p>
+        {storageStatus}
       </div>
     );
   }
@@ -134,6 +143,7 @@ const ChecklistPanel: React.FC = () => {
         </div>
       </div>
 
+      {storageStatus}
       {/* Items */}
       <div className="checklist-items">
         {visibleItems.map((item) => {
@@ -144,7 +154,17 @@ const ChecklistPanel: React.FC = () => {
             <label
               key={item.id}
               className={`checklist-item${checked ? ' checked' : ''}${isFloodItem ? ' flood-only' : ''}${isGempaItem ? ' gempa-only' : ''}`}
-              onClick={() => toggleItem(officeId, item.id)}
+              role="checkbox"
+              aria-checked={checked}
+              aria-disabled={isLoading || isSaving || !!error}
+              tabIndex={isLoading || isSaving || !!error ? -1 : 0}
+              onClick={() => { if (!isLoading && !isSaving && !error) void toggleItem(officeId, item.id); }}
+              onKeyDown={(event) => {
+                if (event.key === ' ' || event.key === 'Enter') {
+                  event.preventDefault();
+                  if (!isLoading && !isSaving && !error) void toggleItem(officeId, item.id);
+                }
+              }}
             >
               <div className={`checklist-checkbox${checked ? ' checked' : ''}`}>
                 {checked && (

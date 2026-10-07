@@ -167,7 +167,7 @@ export const MagmaService = {
         mergedMap.set(r.name, r);
       });
 
-      const finalReports = Array.from(mergedMap.values());
+      const finalReports = Array.from(mergedMap.values()).filter((report) => report.level !== 'I');
 
       return finalReports.map((report) => {
         const isToday = todayReports.some((tr) => tr.name === report.name);
@@ -236,8 +236,8 @@ export function volcanoReportToAlert(report: VolcanoReport, dateStr: string): Di
   const coords = getVolcanoCoordinates(report.name);
   const severityMap: Record<VolcanoLevel | string, AlertSeverity> = {
     'IV': 3,
-    'III': 3,
-    'II': 2,
+    'III': 2,
+    'II': 1,
     'I': 1
   };
 
@@ -264,7 +264,7 @@ ${report.recommendation}`;
   return {
     id: `volcano-${report.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${dateStr}`,
     type: 'volcanic',
-    severity: severityMap[report.level] || 3,
+    severity: severityMap[report.level] || 2,
     provinceId: getProvinceIdForVolcano(report.name),
     title: `Gunung ${report.name} - ${statusLabel}`,
     description: fullDescription,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useEffectEvent, useRef, useMemo } from 'react';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Popper from '@mui/material/Popper';
@@ -8,9 +8,13 @@ import { severityToCssClass } from '../../types';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import { useAlerts } from '../../hooks/useAlerts';
+import { useInariskRevision } from '../../hooks/useInariskRevision';
+import { INARISK_CATEGORIES } from '../../constants/kerentananCategories';
 import { buildOfficeRiskMap } from '../../utils/riskCalculator';
 import FullPageCaptureButton from '../ui/FullPageCaptureButton';
 import { playAlertSound } from '../../utils/alertSound';
+import { alertFingerprint, alertNotifications, latestUnknownAlert } from '../../domain/alertNotifications';
+import { useAlertNotifications } from '../../hooks/useAlertNotifications';
 
 interface TopBarProps {
   criticalCount: number;
@@ -28,12 +32,7 @@ interface TopBarProps {
 
 const FILTER_OPTIONS: Array<{ value: DisasterType | 'all'; label: string }> = [
   { value: 'all', label: 'Semua' },
-  { value: 'earthquake', label: 'Gempa' },
-  { value: 'extreme_weather', label: 'Cuaca' },
-  { value: 'karhutla', label: 'Karhutla' },
-  { value: 'volcanic', label: 'Gunung Api' },
-  { value: 'volcanic_ash', label: 'Abu Vulkanik' },
-  { value: 'air_quality', label: 'Kualitas Udara' },
+  ...INARISK_CATEGORIES.map(({ key, label }) => ({ value: key, label })),
 ];
 
 function DisasterSelectChevron(props: React.ComponentProps<'svg'>) {
@@ -133,44 +132,53 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     onAlertSelect,
   } = props;
   
-  const { isFetching, lastCheckedTime } = useAlerts();
+  const { isFetching, lastCheckedTime, cachedSnapshotTime, cachedAlertIds } = useAlerts();
+  const assessmentRevision = useInariskRevision();
   const [timeStr, setTimeStr] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownAnchor, setDropdownAnchor] = useState<HTMLElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const dropdownPanelRef = useRef<HTMLDivElement>(null);
   const [notiOpen, setNotiOpen] = useState(false);
+  const [notiAnchor, setNotiAnchor] = useState<HTMLElement | null>(null);
   const notiRef = useRef<HTMLDivElement>(null);
   const notiPanelRef = useRef<HTMLDivElement>(null);
-  const [toastDisabled, setToastDisabled] = useState(
-    () => localStorage.getItem('bima_toast_disabled') === 'true',
-  );
-  const [dismissedToastAlert, setDismissedToastAlert] = useState<DisasterAlert | null>(null);
+  useAlertNotifications();
   const [demoAlert, setDemoAlert] = useState<DisasterAlert | null>(null);
-  const playedToastId = useRef<string | null>(null);
 
   const sortedNotiAlerts = useMemo(() => sortNotificationAlerts(allAlerts ?? []), [allAlerts]);
 
-  const latestAlert = sortedNotiAlerts[0] ?? null;
-  const notificationStatusClass = latestAlert?.severity === 3
-    ? 'critical'
-    : latestAlert?.severity === 2 ? 'warning' : 'monitoring';
-
-  const showToast = latestAlert !== null && !toastDisabled && latestAlert !== dismissedToastAlert;
+  // Automatic notifications use the same assessed risk as the dashboard.
+  const notificationAlerts = sortedNotiAlerts.filter(alert => !alert.isForecast && !cachedAlertIds.has(alert.id) && props.riskResults.some(result => result.event.id === alert.id && result.shouldAlert));
+  const latestAlert = notificationAlerts[0] ?? null;
+  const automaticToastAlert = latestUnknownAlert(notificationAlerts, alertNotifications);
+  const automaticToastFingerprint = automaticToastAlert ? alertFingerprint(automaticToastAlert) : null;
+  const acknowledgeAutomaticToast = useEffectEvent(() => {
+    if (automaticToastAlert) alertNotifications.markKnown(automaticToastAlert);
+  });
 
   useEffect(() => {
-    if (!showToast || !latestAlert) return;
-    if (playedToastId.current === latestAlert.id) return;
-    playedToastId.current = latestAlert.id;
-    playAlertSound();
-  }, [showToast, latestAlert]);
+    if (!automaticToastFingerprint || demoAlert) return;
+    const timer = setTimeout(acknowledgeAutomaticToast, 7000);
+    return () => clearTimeout(timer);
+  }, [automaticToastFingerprint, demoAlert]);
+  const latestRisk = props.riskResults.find(result => result.event.id === latestAlert?.id);
+  const notificationStatusClass = latestRisk?.riskLevel === 'Tinggi'
+    ? 'critical'
+    : latestRisk?.riskLevel === 'Sedang' ? 'warning' : 'monitoring';
+
+  useEffect(() => {
+    if (!demoAlert && automaticToastAlert && alertNotifications.claimSound(automaticToastAlert)) {
+      playAlertSound();
+    }
+  }, [automaticToastAlert, demoAlert]);
 
   const handleCloseToast = () => {
     if (demoAlert) {
       setDemoAlert(null);
       return;
     }
-    setToastDisabled(true);
-    localStorage.setItem('bima_toast_disabled', 'true');
+    if (automaticToastAlert) alertNotifications.markKnown(automaticToastAlert);
   };
 
   const handleTestAlert = () => {
@@ -230,7 +238,9 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
 
   const officeRiskLevels = useMemo(
     () => buildOfficeRiskMap(KPWBI_OFFICES, riskAlerts),
-    [riskAlerts],
+    // The external InaRISK cache can change without a new alert array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [riskAlerts, assessmentRevision],
   );
 
   // Counts of offices per risk level
@@ -258,10 +268,10 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     ? `${riskStats[3]} KPwBI Berisiko Tinggi`
     : totalAffectedOffices > 0
     ? `${totalAffectedOffices} KPwBI Dipantau`
-    : 'Risiko Rendah';
+    : 'Status Normal';
 
-  const toastAlert = demoAlert ?? (showToast ? latestAlert : null);
-  const toastClass = demoAlert ? 'critical' : toastAlert ? severityToCssClass(toastAlert.severity) : 'watch';
+  const toastAlert = demoAlert ?? automaticToastAlert;
+  const toastClass = toastAlert ? 'critical' : 'watch';
 
   return (
     <header className="topbar-container dashboard-topbar">
@@ -365,9 +375,9 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
         </div>
 
         <div className="topbar-right">
-          <div className="topbar-sync-status" title={lastCheckedTime ? `Terakhir sinkronisasi: ${lastCheckedTime.toLocaleTimeString('id-ID')} WIB` : 'Sinkronisasi berjalan...'}>
+          <div className="topbar-sync-status" title={cachedSnapshotTime ? `Data tersimpan: ${cachedSnapshotTime.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB. Menunggu konfirmasi sumber langsung.` : lastCheckedTime ? `Terakhir sinkronisasi: ${lastCheckedTime.toLocaleTimeString('id-ID')} WIB` : 'Sinkronisasi berjalan...'}>
             <span className={`sync-dot ${isFetching ? 'syncing' : 'active'}`} />
-            <span className="sync-text">{isFetching ? 'Sinkronisasi...' : 'Live'}</span>
+            <span className="sync-text">{cachedSnapshotTime ? `Cache ${cachedSnapshotTime.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} WIB${isFetching ? ' · Memperbarui...' : ''}` : isFetching ? 'Sinkronisasi...' : 'Live'}</span>
           </div>
 
           <span className="topbar-clock">{timeStr || '—'}</span>
@@ -385,7 +395,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
             {totalAffectedOffices > 0 ? (
               <button
                 className={`topbar-status ${statusClass} topbar-status-btn${dropdownOpen ? ' open' : ''}`}
-                onClick={() => setDropdownOpen((o) => !o)}
+                onClick={(event) => { setDropdownAnchor(event.currentTarget); setDropdownOpen((o) => !o); }}
                 aria-expanded={dropdownOpen}
               >
                 <span className="topbar-status-dot" />
@@ -409,7 +419,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
             {dropdownOpen && (
               <Popper
                 open
-                anchorEl={dropdownRef.current}
+                anchorEl={dropdownAnchor}
                 ref={dropdownPanelRef}
                 placement="bottom-end"
                 className="topbar-menu-popper"
@@ -528,7 +538,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
           <div className="topbar-noti-wrapper" ref={notiRef}>
             <button
               className={`topbar-noti-btn${notiOpen ? ' open' : ''}`}
-              onClick={() => setNotiOpen((o) => !o)}
+              onClick={(event) => { setNotiAnchor(event.currentTarget); setNotiOpen((o) => !o); }}
               title="Notifikasi Kebencanaan"
               aria-label="Notifikasi Kebencanaan"
               aria-expanded={notiOpen}
@@ -545,7 +555,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
             {notiOpen && (
               <Popper
                 open
-                anchorEl={notiRef.current}
+                anchorEl={notiAnchor}
                 ref={notiPanelRef}
                 placement="bottom-end"
                 className="topbar-menu-popper"
@@ -667,7 +677,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
             onClick={() => {
               onAlertSelect(toastAlert.id);
               if (demoAlert) setDemoAlert(null);
-              else setDismissedToastAlert(latestAlert);
+              else alertNotifications.markKnown(toastAlert);
             }}
           >
             <span className="bima-toast-alert-title">{toastAlert.title}</span>

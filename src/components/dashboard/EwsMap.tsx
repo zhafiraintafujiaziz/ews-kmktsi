@@ -1,19 +1,23 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Polyline, Circle, Pane } from 'react-leaflet';
 import L from 'leaflet';
 import type { Feature, FeatureCollection, Geometry, Position } from 'geojson';
 import type { DisasterAlert, DisasterType, AlertSeverity, KpwbiOffice } from '../../types';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { findNearestOffices } from '../../utils/geo';
 import { mapTextToProvinceId } from '../../utils/provinceMap';
-import { BnpbInariskService } from '../../services/bnpbInariskService';
 import { IspuService } from '../../services/ispuService';
+import { isInaRiskHazardType, getInaRiskCategory, getHazardLevel, getHazardSeverity, type InaRiskHazardType } from '../../constants/kerentananCategories';
+import { useInariskRevision } from '../../hooks/useInariskRevision';
+import { useAlerts } from '../../hooks/useAlerts';
 import MapController from './map/MapController';
 import MapEventsHandler from './map/MapEventsHandler';
 import AlertCircles from './map/AlertCircles';
 import KpwMarkers from './map/KpwMarkers';
 import NearestKpwPanel from './map/NearestKpwPanel';
 import MapLegend from './map/MapLegend';
+import VolcanoReferenceLayer from './map/VolcanoReferenceLayer';
+import { resolveKerentananOfficeAssessment, getKerentananProvinceAssessment } from '../../utils/kerentananAssessment';
 
 export interface EwsMapProps {
   alerts: DisasterAlert[];
@@ -29,11 +33,11 @@ export interface EwsMapProps {
   activeTypeFilter?: DisasterType | 'all';
   isSidebarCollapsed?: boolean;
   isKerentananView?: boolean;
+  showVolcanoReference?: boolean;
   isPotensiView?: boolean;
 }
 
 const INDONESIA_CENTER: [number, number] = [-2.5489, 118.0149];
-const INARISK_TYPES = ['flood', 'tsunami', 'kekeringan', 'volcanic', 'volcanic_ash', 'air_quality'];
 const POTENSI_TYPES = ['gempa', 'karhutla', 'cuaca', 'pasang'];
 
 interface ProvinceProperties {
@@ -42,11 +46,8 @@ interface ProvinceProperties {
 
 type ProvinceFeature = Feature<Geometry, ProvinceProperties>;
 
-function getProvinceRisk(provinceId: string, hazard: 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality'): number | null {
-  const values = KPWBI_OFFICES.filter((office) => office.provinceId === provinceId)
-    .map((office) => BnpbInariskService.getLocalHazardIndex(office.id, hazard))
-    .filter((value): value is number => value !== null);
-  return values.length > 0 ? Math.max(...values) : null;
+function getProvinceRisk(provinceId: string, hazard: InaRiskHazardType): number | null {
+  return getKerentananProvinceAssessment(provinceId, hazard).index;
 }
 
 function getProvinceIspu(provinceId: string) {
@@ -76,8 +77,11 @@ export const EwsMap: React.FC<EwsMapProps> = ({
   activeTypeFilter = 'all',
   isSidebarCollapsed = false,
   isKerentananView = false,
+  showVolcanoReference = false,
   isPotensiView = false,
 }) => {
+  const assessmentRevision = useInariskRevision();
+  const { lastCheckedTime } = useAlerts();
   const [resetTrigger, setResetTrigger] = useState(0);
   const [geoJsonData, setGeoJsonData] = useState<FeatureCollection<Geometry, ProvinceProperties> | null>(null);
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
@@ -109,7 +113,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
       .catch((err) => console.error('Failed to load province GeoJSON:', err));
   }, []);
 
-  const isInariskFilter = isKerentananView && INARISK_TYPES.includes(activeTypeFilter);
+  const isInariskFilter = isKerentananView && (isInaRiskHazardType(activeTypeFilter) || activeTypeFilter === 'air_quality');
   const isPotensiFilter = isPotensiView && POTENSI_TYPES.includes(activeTypeFilter);
 
   const visibleAlerts = useMemo(() => {
@@ -177,21 +181,21 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     
     let score: number | null = null;
     if (isInariskFilter) {
-      const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
-      score = getProvinceRisk(provinceId, hazard);
+      const hazard = activeTypeFilter;
+      if (isInaRiskHazardType(hazard)) score = getProvinceRisk(provinceId, hazard);
     } else {
       score = getProvincePotensi();
     }
 
     if (score === null) return { fillColor: 'transparent', fillOpacity: 0, color: 'rgba(0,0,0,0.12)', weight: 0.8, bubblingMouseEvents: false };
-    const val = Math.round(score * 100);
-    if (val >= 64) {
+    const severity = getHazardSeverity(score);
+    if (severity === 3) {
       return { fillColor: 'var(--alert-critical)', fillOpacity: 0.35, color: 'var(--alert-critical)', weight: 1.5, bubblingMouseEvents: false };
     }
-    if (val > 40) {
+    if (severity === 2) {
       return { fillColor: 'var(--alert-warning)', fillOpacity: 0.3, color: 'var(--alert-warning)', weight: 1.5, bubblingMouseEvents: false };
     }
-    if (val > 0) {
+    if (severity === 1) {
       return { fillColor: 'var(--alert-watch)', fillOpacity: 0.2, color: 'var(--alert-watch)', weight: 1.2, bubblingMouseEvents: false };
     }
     return { fillColor: 'transparent', fillOpacity: 0, color: 'rgba(0,0,0,0.12)', weight: 0.8, bubblingMouseEvents: false };
@@ -203,7 +207,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     if (activeTypeFilter === 'air_quality') {
       const assessment = getProvinceIspu(provinceId);
       const badge = assessment ? IspuService.getCategoryBadge(assessment.category, assessment.ispuValue) : null;
-      layer.bindTooltip(`<div style="font-family: var(--font-sans); font-size: 12px; padding: 4px;"><strong>Provinsi ${propName}</strong><br/>${assessment && badge ? `ISPU: <strong>${assessment.ispuValue}</strong><br/><span style="background:${badge.bg};color:${badge.color};padding:2px 4px;border-radius:3px">${badge.label}</span>` : 'Current data unavailable'}</div>`, { sticky: true });
+      layer.bindTooltip(`<div style="font-family: var(--font-sans); font-size: 12px; padding: 4px;"><strong>Provinsi ${propName}</strong><br/>${assessment && badge ? `ISPU: <strong>${assessment.ispuValue}</strong><br/><span style="background:${badge.bg};color:${badge.color};padding:2px 4px;border-radius:3px">${badge.label}</span>` : 'Tidak tersedia'}</div>`, { sticky: true });
       return;
     }
 
@@ -211,9 +215,10 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     let hazardTitle = '';
     
     if (isInariskFilter) {
-      const hazard = activeTypeFilter as 'flood' | 'tsunami' | 'kekeringan' | 'volcanic' | 'volcanic_ash' | 'air_quality';
+      const hazard = activeTypeFilter;
+      if (!isInaRiskHazardType(hazard)) return;
       score = getProvinceRisk(provinceId, hazard);
-      hazardTitle = { flood: 'Banjir', tsunami: 'Tsunami', kekeringan: 'Kekeringan', volcanic: 'Gunung Api', volcanic_ash: 'Abu Vulkanik', air_quality: 'Kualitas Udara' }[hazard] ?? hazard;
+      hazardTitle = getInaRiskCategory(hazard)?.label ?? hazard;
     } else if (isPotensiFilter) {
       const hazard = activeTypeFilter as 'gempa' | 'karhutla' | 'cuaca' | 'pasang';
       score = getProvincePotensi();
@@ -223,17 +228,24 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     }
 
     if (score === null) {
-      layer.bindTooltip(`<div style="font-family: var(--font-sans); font-size: 12px; padding: 4px;"><strong>Provinsi ${propName}</strong><br/>Current data unavailable</div>`, { sticky: true });
+      let message = 'Tidak tersedia';
+      if (isInariskFilter && isInaRiskHazardType(activeTypeFilter)) {
+        const office = KPWBI_OFFICES.find(o => o.provinceId === provinceId);
+        message = office ? resolveKerentananOfficeAssessment(office, activeTypeFilter).explanation : 'Tidak ada titik kantor di provinsi ini.';
+      }
+      layer.bindTooltip(`<div style="font-family: var(--font-sans); font-size: 12px; padding: 4px;"><strong>Provinsi ${propName}</strong><br/>${message}</div>`, { sticky: true });
       return;
     }
-    const val = Math.round(score * 100);
-    const severity = val >= 64 ? 'Tinggi' : val > 40 ? 'Sedang' : val > 0 ? 'Rendah' : 'Aman';
-    const statusColor = val >= 64 ? 'var(--alert-critical)' : val > 40 ? 'var(--alert-warning)' : 'var(--alert-watch)';
+    const assumedWeather = isInariskFilter && activeTypeFilter === 'extreme_weather'
+      && getKerentananProvinceAssessment(provinceId, activeTypeFilter).assumed;
+    const severity = getHazardLevel(score);
+    const statusColor = severity === 'Tinggi' ? 'var(--alert-critical)' : severity === 'Sedang' ? 'var(--alert-warning)' : 'var(--alert-watch)';
 
     layer.bindTooltip(`
       <div style="font-family: var(--font-sans); font-size: 12px; line-height: 1.4; padding: 4px;">
         <strong>Provinsi ${propName}</strong><br/>
-        Indeks ${isPotensiView ? 'Potensi' : 'Kerentanan'} ${hazardTitle}: <strong>${score > 0 ? score.toFixed(2) : '0.00'}</strong><br/>
+        Indeks ${activeTypeFilter === 'karhutla' ? 'Rata-rata Raster 25 km' : activeTypeFilter === 'extreme_weather' ? 'Bahaya Banjir InaRISK sebagai dasar Cuaca' : activeTypeFilter === 'volcanic' || activeTypeFilter === 'volcanic_ash' ? 'Kerentanan geografis' : isPotensiView ? 'Potensi' : 'Bahaya'} ${hazardTitle}: <strong>${score > 0 ? score.toFixed(2) : '0.00'}</strong><br/>
+        ${isInariskFilter ? assumedWeather ? 'Data Cuaca tidak tersedia. Indeks diasumsikan 0.10, kategori Rendah.<br/>' : activeTypeFilter === 'karhutla' ? 'Rata-rata raster radius 25 km tertinggi dari kantor di provinsi ini.<br/>Bukan rata-rata seluruh provinsi.<br/>' : 'Indeks tertinggi dari kantor yang memiliki data di provinsi ini.<br/>' : ''}
         Status: <span style="font-weight: 700; color: ${statusColor}">${severity}</span>
       </div>
     `, { sticky: true });
@@ -386,9 +398,13 @@ export const EwsMap: React.FC<EwsMapProps> = ({
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
+        {isKerentananView && activeTypeFilter === 'karhutla' && selectedOffice && <Pane name="karhutlaAssessment" style={{ zIndex: 450, pointerEvents: 'none' }}>
+          <Circle center={[selectedOffice.latitude, selectedOffice.longitude]} radius={25000} interactive={false} pathOptions={{ color: '#475569', fillOpacity: 0.04, weight: 2, dashArray: '5 5', className: 'karhutla-assessment-radius' }} />
+        </Pane>}
+
         {isInariskFilter && geoJsonData && (
           <GeoJSON
-            key={`${activeTypeFilter}-${resetTrigger}`}
+            key={`${activeTypeFilter}-${resetTrigger}-${assessmentRevision}-${lastCheckedTime?.getTime()}`}
             data={geoJsonData}
             style={getGeoJsonStyle}
             onEachFeature={onEachFeature}
@@ -403,6 +419,8 @@ export const EwsMap: React.FC<EwsMapProps> = ({
             onEachFeature={onEachWeatherFeature}
           />
         )}
+
+        {showVolcanoReference && <VolcanoReferenceLayer />}
 
         <MapController
           selectedOffice={selectedOffice}
@@ -452,6 +470,9 @@ export const EwsMap: React.FC<EwsMapProps> = ({
 
       <MapLegend
         isInariskFilter={isInariskFilter}
+        assessmentCategory={isKerentananView ? activeTypeFilter : undefined}
+        activeTypeFilter={activeTypeFilter}
+        showVolcanoReference={showVolcanoReference}
         isAirQualityFilter={activeTypeFilter === 'air_quality'}
         mapLayers={mapLayers}
         onToggleLayer={toggleLayer}

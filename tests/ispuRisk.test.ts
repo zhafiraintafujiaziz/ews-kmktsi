@@ -21,7 +21,7 @@ const { IspuService } = await import('../src/services/ispuService.ts');
 const { BnpbInariskService } = await import('../src/services/bnpbInariskService.ts');
 const { KPWBI_OFFICES } = await import('../src/constants/kpwbiOffices.ts');
 const { getIspuCategory } = await import('../src/constants/ispuCategories.ts');
-const { scoreAlertForOffice, buildOfficeRiskMap, getRiskLevel } = await import('../src/utils/riskCalculator.ts');
+const { scoreAlertForOffice, buildOfficeRiskMap, buildAlertRiskResult, calculateRisk, mapAlertToDisasterEvent } = await import('../src/utils/riskCalculator.ts');
 const office = KPWBI_OFFICES[0];
 
 function airAlert(category: IspuCategory, severity: 1 | 2 | 3): DisasterAlert {
@@ -48,23 +48,33 @@ test('ISPU stations generate severity 1, 2 and 3; Baik and Sedang generate no al
   ]);
 });
 
-test('ISPU contributes low, medium and high KPw risk without querying Kerentanan', (t) => {
+test('ISPU contributes low, medium and high KPw risk without querying InaRISK', (t) => {
   const inarisk = t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => {
-    throw new Error('ISPU must not query Kerentanan');
+    throw new Error('ISPU must not query InaRISK');
   });
   const cases = [
-    ['TIDAK SEHAT', 1, 3, 'Rendah'],
-    ['SANGAT TIDAK SEHAT', 2, 6, 'Sedang'],
+    ['TIDAK SEHAT', 1, 1, 'Rendah'],
+    ['SANGAT TIDAK SEHAT', 2, 4, 'Sedang'],
     ['BERBAHAYA', 3, 9, 'Tinggi'],
   ] as const;
   for (const [category, severity, score, level] of cases) {
     const alert = airAlert(category, severity);
     const risk = scoreAlertForOffice(office.id, alert);
     assert.equal(risk.totalScore, score);
-    assert.equal(getRiskLevel(risk.totalScore!), level);
-    assert.equal(risk.vulScore, null);
-    assert.equal(risk.isKerentananSupported, false);
+    assert.equal(risk.riskLevel, level);
+    assert.equal(risk.assessmentScore, null);
+    assert.equal(risk.isInaRiskSupported, false);
     assert.equal(buildOfficeRiskMap([office], [alert]).get(office.id)?.riskLevel, level);
+    assert.equal(buildOfficeRiskMap([office], [alert]).get(office.id)?.riskScore, score);
+    assert.equal(buildAlertRiskResult(alert, [office])?.riskScore, score);
+    assert.equal(buildAlertRiskResult(alert, [office])?.shouldAlert, severity === 3);
+    const event = mapAlertToDisasterEvent(alert)!;
+    for (const assessmentLevel of ['Rendah', 'Sedang', 'Tinggi'] as const) {
+      const result = calculateRisk(event, assessmentLevel, [office]);
+      assert.equal(result.riskScore, score);
+      assert.equal(result.assessmentScore, null);
+      assert.equal(result.assessmentLevel, null);
+    }
   }
   assert.equal(inarisk.mock.callCount(), 0);
 });
@@ -79,17 +89,16 @@ test('KPw uses the highest ISPU risk and excludes offices outside the impact are
   assert.equal(risks.get(office.id)?.alerts.length, 3);
 });
 
-test('other hazards retain their existing vulnerability scoring and missing-data behavior', (t) => {
+test('severity 3 gives high risk with an available or missing InaRISK assessment', (t) => {
   const inarisk = t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => 0.6);
-  const flood: DisasterAlert = { ...airAlert('BERBAHAYA', 3), type: 'flood' };
-  const scored = scoreAlertForOffice(office.id, flood);
-  assert.equal(scored.vulScore, 2);
-  assert.equal(scored.totalScore, 6);
-  assert.equal(getRiskLevel(scored.totalScore!), 'Sedang');
+  const earthquake: DisasterAlert = { ...airAlert('BERBAHAYA', 3), type: 'earthquake' };
+  const scored = scoreAlertForOffice(office.id, earthquake);
+  assert.equal(scored.assessmentScore, 2);
+  assert.equal(scored.totalScore, 9);
+  assert.equal(scored.riskLevel, 'Tinggi');
   assert.equal(inarisk.mock.callCount(), 1);
 
-  const earthquake = { ...flood, type: 'earthquake' as const };
-  assert.equal(scoreAlertForOffice(office.id, earthquake).totalScore, null);
   inarisk.mock.mockImplementation(() => null);
-  assert.equal(scoreAlertForOffice(office.id, flood).totalScore, null);
+  assert.equal(scoreAlertForOffice(office.id, earthquake).totalScore, 9);
+  assert.equal(scoreAlertForOffice(office.id, earthquake).assessmentScore, null);
 });

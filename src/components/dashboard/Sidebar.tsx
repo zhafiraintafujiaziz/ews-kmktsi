@@ -1,13 +1,16 @@
 import React, { useState, useMemo, useRef } from 'react';
-import type { DisasterAlert, AlertSeverity, DisasterType, RiskCalcResult } from '../../types';
+import type { DisasterAlert, AlertSeverity, DisasterType, RiskCalcResult, RiskLevel } from '../../types';
 import { severityToCssClass } from '../../types';
 import { PROVINCES } from '../../constants/provinces';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import { buildOfficeRiskMap } from '../../utils/riskCalculator';
+import { useInariskRevision } from '../../hooks/useInariskRevision';
 import AlertCard from './AlertCard';
+import OfficeRiskCard from './OfficeRiskCard';
+import { buildOfficeRiskSummaries, filterOfficeRiskSummaries, type OfficeRiskFilter } from '../../utils/officeRiskSummary';
 
-const SEV_LABEL: Record<AlertSeverity, string> = {
+const SEV_LABEL: Record<AlertSeverity, RiskLevel> = {
   3: 'Tinggi',
   2: 'Sedang',
   1: 'Rendah',
@@ -15,6 +18,7 @@ const SEV_LABEL: Record<AlertSeverity, string> = {
 
 interface SidebarProps {
   filteredAlerts: DisasterAlert[];
+  totalAlertCount: number;
   riskResults: RiskCalcResult[];
   stats: Record<AlertSeverity | 'total', number>;
   selectedOfficeId: string | null;
@@ -43,6 +47,7 @@ type SortKey = typeof SORT_OPTIONS[number]['value'];
 
 export const Sidebar: React.FC<SidebarProps> = ({
   filteredAlerts,
+  totalAlertCount,
   stats,
   selectedOfficeId,
   onProvinceSelect,
@@ -60,21 +65,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'alerts' | 'provinces'>('alerts');
+  const [alertSearch, setAlertSearch] = useState('');
   const [officeSearch, setOfficeSearch] = useState('');
+  const [officeProvinceFilter, setOfficeProvinceFilter] = useState('all');
+  const [officeRiskFilter, setOfficeRiskFilter] = useState<OfficeRiskFilter>('all');
   const [sortBy, setSortBy] = useState<SortKey>('newest');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [officeFiltersOpen, setOfficeFiltersOpen] = useState(false);
   const [activeStatPanel, setActiveStatPanel] = useState<AlertSeverity | null>(null);
-  const [expandedRegions, setExpandedRegions] = useState<Record<string, boolean>>({
-    'Sumatera': true,
-    'Jawa': true,
-    'Kalimantan': true,
-    'Bali & Nusa Tenggara': true,
-    'Sulawesi, Maluku, & Papua': true,
-  });
 
+  const assessmentRevision = useInariskRevision();
   const officeRiskLevels = useMemo(
     () => buildOfficeRiskMap(KPWBI_OFFICES, filteredAlerts),
-    [filteredAlerts],
+    // The external InaRISK cache can change without a new alert array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filteredAlerts, assessmentRevision],
   );
 
   // Counts of offices per risk level
@@ -108,7 +113,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [officeRiskLevels]);
 
   const sortedAlerts = useMemo(() => {
-    const list = [...filteredAlerts];
+    const search = alertSearch.trim().toLocaleLowerCase('id');
+    const list = filteredAlerts.filter(alert => !search || [
+      alert.title, alert.description, alert.affectedArea, alert.stationName,
+      PROVINCES.find(province => province.id === alert.provinceId)?.name,
+    ].some(value => value?.toLocaleLowerCase('id').includes(search)));
     switch (sortBy) {
       case 'newest': return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       case 'oldest': return list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -120,30 +129,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
       });
       default: return list;
     }
-  }, [filteredAlerts, sortBy]);
+  }, [filteredAlerts, sortBy, alertSearch]);
 
-  const groupedOffices = useMemo(() => {
-    const searchLower = officeSearch.toLowerCase();
-    const filtered = KPWBI_OFFICES.filter(
-      (o) => o.name.toLowerCase().includes(searchLower) || o.city.toLowerCase().includes(searchLower)
-    );
-    const groups: Record<string, typeof KPWBI_OFFICES> = {
-      'Sumatera': [],
-      'Jawa': [],
-      'Kalimantan': [],
-      'Bali & Nusa Tenggara': [],
-      'Sulawesi, Maluku, & Papua': [],
-    };
-    filtered.forEach((o) => {
-      const r = o.region || 'Lainnya';
-      if (groups[r]) groups[r].push(o);
-      else {
-        if (!groups['Lainnya']) groups['Lainnya'] = [];
-        groups['Lainnya'].push(o);
-      }
-    });
-    return groups;
-  }, [officeSearch]);
+  const rankedOffices = useMemo(
+    () => buildOfficeRiskSummaries(KPWBI_OFFICES, filteredAlerts),
+    // Assessment caches publish revisions without changing the alerts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filteredAlerts, assessmentRevision],
+  );
+  const scopedOffices = useMemo(() => filterOfficeRiskSummaries(rankedOffices, {
+    search: officeSearch, provinceId: officeProvinceFilter,
+  }), [rankedOffices, officeSearch, officeProvinceFilter]);
+  const visibleOffices = useMemo(() => filterOfficeRiskSummaries(scopedOffices, {
+    risk: officeRiskFilter,
+  }), [scopedOffices, officeRiskFilter]);
+  const officeInsights = {
+    affected: scopedOffices.filter(summary => summary.alertCount > 0).length,
+    multiple: scopedOffices.filter(summary => summary.hazards.length > 1).length,
+    unaffected: scopedOffices.filter(summary => summary.alertCount === 0).length,
+  };
+  const hasOfficeFilters = officeSearch.trim() !== '' || officeProvinceFilter !== 'all' || officeRiskFilter !== 'all';
+  const resetOfficeFilters = () => {
+    setOfficeSearch('');
+    setOfficeProvinceFilter('all');
+    setOfficeRiskFilter('all');
+  };
+  const officeProvinces = useMemo(() => PROVINCES.filter(province =>
+    KPWBI_OFFICES.some(office => office.provinceId === province.id))
+    .sort((a, b) => a.name.localeCompare(b.name, 'id')), []);
 
   const provincesMap = useMemo(() => new Map(PROVINCES.map((p) => [p.id, p])), []);
 
@@ -158,6 +171,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (isCollapsed) onToggleCollapse();
   };
 
+  const hasAlertFilters = alertSearch.trim() !== '' || severityFilter !== 'all' || typeFilter !== 'all' || sortBy !== 'newest';
+  const resetAlertFilters = () => {
+    setAlertSearch('');
+    setSeverityFilter('all');
+    setTypeFilter('all');
+    setSortBy('newest');
+  };
+  const levelFilter = (
+    <div className="filter-group sidebar-level-filter">
+      <div className="severity-pills" role="group" aria-label="Filter tingkat risiko">
+        {([3, 2, 1] as AlertSeverity[]).map((sev) => {
+          const sevCss = severityToCssClass(sev);
+          return (
+            <button
+              type="button"
+              key={sev}
+              aria-label={`Tingkat ${SEV_LABEL[sev]}`}
+              aria-pressed={severityFilter === sev}
+              className={`severity-pill sev-${sevCss}${severityFilter === sev ? ' active' : ''}`}
+              onClick={() => setSeverityFilter(severityFilter === sev ? 'all' : sev)}
+            >
+              <span className="pill-boxes">
+                {[1, 2, 3].map((i) => (
+                  <span key={i} className={`pill-box${i <= sev ? ' filled' : ''}`} />
+                ))}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   void stats;
 
   return (
@@ -165,7 +211,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <section className="sidebar-stats-container" aria-label="Tingkat risiko kantor">
         <div className="sidebar-stats-title-row">
           <span className="sidebar-stats-title">Tingkat Risiko Lokasi Kerja</span>
-          <span className="sidebar-info-tooltip-container" title="Risiko Bencana: Tingkat Keparahan x Indeks Kerentanan. Skor 1-3: Rendah; 4-6: Sedang; 7-9: Tinggi." aria-label="Risiko dihitung dari tingkat keparahan dan indeks kerentanan">
+          <span className="sidebar-info-tooltip-container" title="Kategori berdasarkan skor akhir: 1–2 Rendah, 3–5 Sedang, 6–9 Tinggi. Keparahan 3: selalu 9/9 Tinggi. Keparahan 1 atau 2: skor = Keparahan × Kerentanan. Nilai kerentanan mengikuti halaman Kerentanan. ISPU memakai keparahan sebagai kedua faktor: 1/9 Rendah, 4/9 Sedang, 9/9 Tinggi." aria-label="Kategori risiko berdasarkan skor akhir: 1 sampai 2 Rendah, 3 sampai 5 Sedang, 6 sampai 9 Tinggi">
             <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7v1" />
             </svg>
@@ -213,11 +259,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="sidebar-tab-label">Peringatan</span>
           <span className="sidebar-tab-count">{filteredAlerts.length}</span>
         </button>
-        <button type="button" className={`sidebar-tab-btn ${activeTab === 'provinces' ? 'active' : ''}`} onClick={() => handleTabClick('provinces')} aria-pressed={activeTab === 'provinces'} aria-label={`Kantor BI: ${KPWBI_OFFICES.length}`} title={`Kantor BI: ${KPWBI_OFFICES.length}`}>
+        <button type="button" className={`sidebar-tab-btn ${activeTab === 'provinces' ? 'active' : ''}`} onClick={() => handleTabClick('provinces')} aria-pressed={activeTab === 'provinces'} aria-label={`Lokasi Kerja: ${KPWBI_OFFICES.length}`} title={`Lokasi Kerja: ${KPWBI_OFFICES.length}`}>
           <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 7h1m4 0h1M9 11h1m4 0h1M10 21v-5h4v5" />
           </svg>
-          <span className="sidebar-tab-label">Kantor BI</span>
+          <span className="sidebar-tab-label">Lokasi Kerja</span>
           <span className="sidebar-tab-count">{KPWBI_OFFICES.length}</span>
         </button>
       </nav>
@@ -287,6 +333,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <>
             {activeTab === 'alerts' && (
               <>
+                {levelFilter}
                 <div className="filters-accordion">
                   <button
                     className="filters-accordion-trigger"
@@ -296,7 +343,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   >
                     <span className="filters-trigger-label">
                       Filter &amp; Urutkan
-                      {(severityFilter !== 'all' || typeFilter !== 'all' || sortBy !== 'newest') && (
+                      {hasAlertFilters && (
                         <span className="filters-active-dot" />
                       )}
                     </span>
@@ -312,47 +359,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                   {filtersOpen && (
                     <div className="filters-accordion-body" id="sidebar-filter-options">
-                      <div className="filter-group">
-                        <label className="filter-label">Tingkat</label>
-                        <div className="severity-pills">
-                          <button aria-pressed={severityFilter === 'all'} className={`severity-pill${severityFilter === 'all' ? ' active' : ''}`} onClick={() => setSeverityFilter('all')}>Semua</button>
-                          {([3, 2, 1] as AlertSeverity[]).map((sev) => {
-                            const sevCss = severityToCssClass(sev);
-                            return (
-                              <button
-                                key={sev}
-                                aria-label={`Tingkat ${SEV_LABEL[sev]}`}
-                                aria-pressed={severityFilter === sev}
-                                className={`severity-pill sev-${sevCss}${severityFilter === sev ? ' active' : ''}`}
-                                onClick={() => setSeverityFilter(sev)}
-                              >
-                                <span className="pill-boxes">
-                                  {[1, 2, 3].map((i) => (
-                                    <span key={i} className={`pill-box${i <= sev ? ' filled' : ''}`} />
-                                  ))}
-                                </span>
-                              </button>
-                            );
-                          })}
+                      <input type="search" placeholder="Cari peringatan, wilayah, atau provinsi..."
+                        aria-label="Cari peringatan, wilayah, atau provinsi" className="sidebar-search-box"
+                        value={alertSearch} onChange={(e) => setAlertSearch(e.target.value)} />
+                      <div className="sidebar-filter-grid">
+                        <div className="filter-group">
+                          <label className="filter-label" htmlFor="sidebar-disaster-type">Jenis Bencana</label>
+                          <select id="sidebar-disaster-type" className="filter-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as DisasterType | 'all')}>
+                            <option value="all">Semua Jenis</option>
+                            <option value="earthquake">Gempa Bumi</option>
+                            <option value="extreme_weather">Cuaca Buruk</option>
+                            <option value="karhutla">Karhutla</option>
+                            <option value="volcanic">Gunung Api</option>
+                            <option value="volcanic_ash">Abu Vulkanik (INA-SIAM)</option>
+                            <option value="air_quality">Kualitas Udara (ISPU)</option>
+                          </select>
+                        </div>
+                        <div className="filter-group">
+                          <label className="filter-label" htmlFor="sidebar-sort">Urutkan</label>
+                          <select id="sidebar-sort" className="filter-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)}>
+                            {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
                         </div>
                       </div>
-                      <div className="filter-group">
-                        <label className="filter-label" htmlFor="sidebar-disaster-type">Jenis Bencana</label>
-                        <select id="sidebar-disaster-type" className="filter-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as DisasterType | 'all')}>
-                          <option value="all">Semua Jenis</option>
-                          <option value="earthquake">Gempa Bumi</option>
-                          <option value="extreme_weather">Cuaca Buruk</option>
-                          <option value="karhutla">Karhutla</option>
-                          <option value="volcanic">Gunung Api</option>
-                          <option value="volcanic_ash">Abu Vulkanik (INA-SIAM)</option>
-                          <option value="air_quality">Kualitas Udara (ISPU)</option>
-                        </select>
-                      </div>
-                      <div className="filter-group">
-                        <label className="filter-label" htmlFor="sidebar-sort">Urutkan</label>
-                        <select id="sidebar-sort" className="filter-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)}>
-                          {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
+                      <div className="sidebar-filter-result-count">
+                        <span>{sortedAlerts.length} dari {totalAlertCount} peringatan</span>
+                        {hasAlertFilters && <button type="button" onClick={resetAlertFilters}>Reset filter peringatan</button>}
                       </div>
                     </div>
                   )}
@@ -370,7 +402,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   ))
                 ) : (
                   <div className="empty-state">
-                    <p>Tidak ada peringatan yang cocok dengan filter.</p>
+                    <p>Tidak ada peringatan yang cocok dengan pencarian dan filter.</p>
+                    {hasAlertFilters && <button type="button" className="office-risk-reset" onClick={resetAlertFilters}>Reset filter peringatan</button>}
                   </div>
                 )}
               </>
@@ -378,58 +411,88 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {activeTab === 'provinces' && (
               <>
-                <input
-                  type="text"
-                  placeholder="Cari kantor BI atau kota..."
-                  aria-label="Cari kantor BI atau kota"
-                  className="sidebar-search-box"
-                  value={officeSearch}
-                  onChange={(e) => setOfficeSearch(e.target.value)}
-                />
-                {Object.keys(groupedOffices).map((region) => {
-                  const list = groupedOffices[region];
-                  if (!list || list.length === 0) return null;
-                  const isExpanded = !!expandedRegions[region];
-                  return (
-                    <div key={region} className="province-group">
-                      <button type="button" className="province-group-header" aria-expanded={isExpanded} onClick={() => setExpandedRegions((prev) => ({ ...prev, [region]: !prev[region] }))}>
-                        <span className="province-group-title">{region}</span>
-                        <span className="province-group-count">{list.length}<svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className={isExpanded ? 'rotated' : ''}><polyline points="6 9 12 15 18 9" /></svg></span>
+                <div className="office-risk-overview">
+                  <div className="office-risk-insights" aria-label="Ringkasan kantor berdasarkan pencarian dan provinsi">
+                    {([
+                      ['affected', 'Terdampak'],
+                      ['multiple', '>1 Bencana'],
+                      ['unaffected', 'Tanpa peringatan'],
+                    ] as const).map(([filter, label]) => (
+                      <button type="button" key={filter} className={'office-risk-insight office-risk-insight-' + filter + (officeRiskFilter === filter ? ' active' : '')}
+                        aria-pressed={officeRiskFilter === filter}
+                        onClick={() => setOfficeRiskFilter(previous => previous === filter ? 'all' : filter)}>
+                        <strong>{officeInsights[filter]}</strong><span>{label}</span>
                       </button>
-                      {isExpanded && (
-                        <div className="province-group-list">
-                          {list.map((office) => {
-                            const hasAlert = filteredAlerts.some((a) => a.provinceId === office.provinceId);
-                            return (
-                              <button
-                                key={office.id}
-                                className={`province-item-btn ${selectedOfficeId === office.id ? 'selected' : ''} ${office.isKorwil ? 'korwil-office' : ''}`}
-                                aria-pressed={selectedOfficeId === office.id}
-                                onClick={() => onOfficeSelect ? onOfficeSelect(office.id) : onProvinceSelect(office.provinceId)}
-                              >
-                                <div className="province-item-left">
-                                  <span className={`province-item-dot ${hasAlert ? 'active-alert' : ''}`} />
-                                  <span style={{ fontWeight: office.isKorwil ? 600 : 400 }}>
-                                    {office.name}
-                                    {office.isKantorPusat && ' 🏛️'}
-                                    {office.isKorwil && !office.isKantorPusat && ' ★'}
-                                  </span>
-                                </div>
-                                <span className="province-capital-lbl" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  {office.city}
-                                  {office.isKorwil && <span className="korwil-badge">KORWIL</span>}
-                                </span>
-                              </button>
-                            );
-                          })}
+                    ))}
+                  </div>
+                </div>
+                <div className="filters-accordion">
+                  <button type="button" className="filters-accordion-trigger"
+                    aria-expanded={officeFiltersOpen} aria-controls="office-filter-options"
+                    onClick={() => setOfficeFiltersOpen(previous => !previous)}>
+                    <span className="filters-trigger-label">
+                      Filter Lokasi Kerja
+                      {(hasOfficeFilters || severityFilter !== 'all' || typeFilter !== 'all') && <span className="filters-active-dot" />}
+                    </span>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14"
+                      fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                      className={officeFiltersOpen ? 'rotated' : ''}>
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  {officeFiltersOpen && (
+                    <div className="filters-accordion-body" id="office-filter-options">
+                      {(severityFilter !== 'all' || typeFilter !== 'all') && (
+                        <div className="office-risk-filter-note">
+                          <span>Filter peringatan aktif membatasi data bencana.</span>
+                          <button type="button" onClick={() => { setSeverityFilter('all'); setTypeFilter('all'); }}>Reset peringatan</button>
                         </div>
                       )}
+                      <div className="office-risk-controls">
+                        <input type="search" placeholder="Cari kantor, kota, atau provinsi..."
+                          aria-label="Cari kantor BI, kota, atau provinsi" className="sidebar-search-box"
+                          value={officeSearch} onChange={(e) => setOfficeSearch(e.target.value)} />
+                        <div className="sidebar-filter-grid">
+                          <div className="filter-group">
+                            <label className="filter-label" htmlFor="office-province-filter">Provinsi</label>
+                            <select id="office-province-filter" className="filter-select" value={officeProvinceFilter}
+                              onChange={(e) => setOfficeProvinceFilter(e.target.value)}>
+                              <option value="all">Semua provinsi</option>
+                              {officeProvinces.map(province => <option key={province.id} value={province.id}>{province.name}</option>)}
+                            </select>
+                          </div>
+                          <div className="filter-group">
+                            <label className="filter-label" htmlFor="office-risk-filter">Status kantor</label>
+                            <select id="office-risk-filter" className="filter-select" value={officeRiskFilter}
+                              onChange={(e) => setOfficeRiskFilter(e.target.value as OfficeRiskFilter)}>
+                              <option value="all">Semua kantor</option>
+                              <option value="affected">Terdampak</option>
+                              <option value="multiple">2+ jenis bencana</option>
+                              {scopedOffices.some(summary => summary.alertCount > 0 && summary.totalScore === null) && <option value="unscored">Skor belum tersedia</option>}
+                              <option value="unaffected">Tanpa peringatan</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="sidebar-filter-result-count">
+                          <span>{visibleOffices.length} dari {rankedOffices.length} kantor · Urutan risiko tertinggi</span>
+                          {hasOfficeFilters && <button type="button" onClick={resetOfficeFilters}>Reset filter lokasi kerja</button>}
+                        </div>
+                      </div>
                     </div>
-                  );
-                })}
-                {Object.values(groupedOffices).every((l) => l.length === 0) && (
+                  )}
+                </div>
+                <ol className="office-risk-list" aria-label="Lokasi Kerja diurutkan berdasarkan skor risiko tertinggi">
+                  {visibleOffices.map((summary, index) => (
+                    <OfficeRiskCard key={summary.office.id} summary={summary} rank={index + 1}
+                      isSelected={selectedOfficeId === summary.office.id} selectedAlertId={selectedAlertId}
+                      onOfficeSelect={() => onOfficeSelect ? onOfficeSelect(summary.office.id) : onProvinceSelect(summary.office.provinceId)}
+                      onAlertSelect={onAlertSelect} />
+                  ))}
+                </ol>
+                {visibleOffices.length === 0 && (
                   <div className="empty-state">
-                    <p>Kantor BI tidak ditemukan: "{officeSearch}"</p>
+                    <p>Tidak ada kantor yang cocok dengan pencarian dan filter.</p>
+                    {hasOfficeFilters && <button type="button" className="office-risk-reset" onClick={resetOfficeFilters}>Reset filter lokasi kerja</button>}
                   </div>
                 )}
               </>

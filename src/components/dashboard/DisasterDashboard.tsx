@@ -1,14 +1,12 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAlerts } from '../../hooks/useAlerts';
 import { useDisasterAlert } from '../../hooks/useDisasterAlert';
 import type { AlertSeverity, DisasterType } from '../../types';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
-import { haversineDistance } from '../../utils/geo';
+import { isRiskScoredType } from '../../utils/riskCalculator';
 import TopBar from './TopBar';
 import Sidebar from './Sidebar';
 import EwsMap from './EwsMap';
-import AlertToast from '../ui/AlertToast';
-import type { ToastItem } from '../ui/AlertToast';
 import MobileSplitter from '../ui/MobileSplitter';
 
 interface DisasterDashboardProps {
@@ -21,7 +19,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
   onSwitchToPerkiraan
 }) => {
   const { alerts, isLoading, loadingSources } = useAlerts();
-  const { activeAlerts, riskResults } = useDisasterAlert();
+  const { riskResults } = useDisasterAlert();
 
   const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<DisasterType | 'all'>('all');
@@ -40,9 +38,6 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
     return () => media.removeEventListener('change', handleChange);
   }, []);
 
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const shownAlertIds = useRef<Set<string>>(new Set());
-
   // Display window only. The fetch keeps the longer history.
   const [minTimestamp] = useState(() => Date.now() - 3 * 24 * 3600 * 1000);
 
@@ -53,61 +48,12 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
     });
   }, [alerts, minTimestamp]);
 
-  const todayActiveAlerts = useMemo(() => {
-    return activeAlerts.filter((calc) => {
-      const alert = alerts.find((a) => a.id === calc.event.id);
-      if (!alert) return false;
-      return new Date(alert.timestamp).getTime() >= minTimestamp;
-    });
-  }, [activeAlerts, alerts, minTimestamp]);
-
-  useEffect(() => {
-    if (isLoading) return;
-    const unseen = todayActiveAlerts.filter(
-      (calc) => !shownAlertIds.current.has(calc.event.id)
-    );
-    unseen.forEach((calc) => shownAlertIds.current.add(calc.event.id));
-    if (unseen.length === 0) return;
-    // Show max 4; stagger by 350 ms so they don't all pop at once
-    unseen.slice(0, 4).forEach((calc, i) => {
-      const alert = alerts.find((a) => a.id === calc.event.id);
-      if (!alert) return;
-
-      const nearestLoc = calc.affectedLocations[0];
-      let nearestKpwName: string | undefined;
-      let nearestKpwDistanceKm: number | undefined;
-
-      if (nearestLoc && alert.latitude != null && alert.longitude != null) {
-        nearestKpwName = nearestLoc.name;
-        nearestKpwDistanceKm = Math.round(
-          haversineDistance(alert.latitude, alert.longitude, nearestLoc.latitude, nearestLoc.longitude)
-        );
-      }
-
-      setTimeout(() => {
-        setToasts((prev) => [
-          ...prev,
-          {
-            toastId: `${alert.id}-${Date.now()}`,
-            alert,
-            nearestKpwName,
-            nearestKpwDistanceKm,
-          },
-        ]);
-      }, i * 350);
-    });
-  }, [todayActiveAlerts, alerts, isLoading]);
-
-  const dismissToast = useCallback((toastId: string) => {
-    setToasts((prev) => prev.filter((t) => t.toastId !== toastId));
-  }, []);
-
   const calculatedCriticalAlerts = useMemo(() => {
     return recentAlerts.filter((a) => {
       if (typeFilter !== 'all' && a.type !== typeFilter) return false;
       const riskRes = riskResults.find((r) => r.event.id === a.id);
       if (riskRes) return riskRes.riskLevel === 'Tinggi';
-      return a.severity === 3;
+      return !isRiskScoredType(a.type) && a.severity === 3;
     });
   }, [recentAlerts, riskResults, typeFilter]);
 
@@ -116,7 +62,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
       const riskRes = riskResults.find((r) => r.event.id === a.id);
       const effectiveRiskLevel = riskRes 
         ? riskRes.riskLevel 
-        : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
+        : isRiskScoredType(a.type) ? null : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
 
       if (severityFilter !== 'all') {
         const mappedRiskLevel = { 3: 'Tinggi', 2: 'Sedang', 1: 'Rendah' }[severityFilter];
@@ -137,7 +83,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
       const riskRes = riskResults.find((r) => r.event.id === a.id);
       const effectiveRiskLevel = riskRes 
         ? riskRes.riskLevel 
-        : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
+        : isRiskScoredType(a.type) ? null : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
 
       if (effectiveRiskLevel === 'Tinggi') stats[3]++;
       else if (effectiveRiskLevel === 'Sedang') stats[2]++;
@@ -194,6 +140,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
       <div className="dashboard-content">
         <Sidebar
           filteredAlerts={filteredAlerts}
+          totalAlertCount={recentAlerts.length}
           riskResults={riskResults}
           stats={filteredStats}
           selectedOfficeId={selectedOfficeId}
@@ -229,7 +176,6 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
         />
       </div>
 
-      <AlertToast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 };

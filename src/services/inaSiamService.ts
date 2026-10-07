@@ -4,6 +4,7 @@ import { findNearestKpwOffice } from '../utils/geo';
 import { getProvinceIdForVolcano } from './magmaService';
 
 export interface LiveSigmetPolygon {
+  id: string;
   volcanoKey: string;
   volcanoName: string;
   rawSigmet: string;
@@ -21,6 +22,25 @@ const DIR_TO_BEARING: Record<string, number> = {
   N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5, SE: 135, SSE: 157.5,
   S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5,
 };
+const DIR_TO_LABEL: Record<string, string> = {
+  N: 'utara', NNE: 'utara-timur laut', NE: 'timur laut', ENE: 'timur-timur laut',
+  E: 'timur', ESE: 'timur-tenggara', SE: 'tenggara', SSE: 'selatan-tenggara',
+  S: 'selatan', SSW: 'selatan-barat daya', SW: 'barat daya', WSW: 'barat-barat daya',
+  W: 'barat', WNW: 'barat-barat laut', NW: 'barat laut', NNW: 'utara-barat laut',
+};
+
+function describeAshCloud(sigmet: LiveSigmetPolygon): string {
+  const [direction, speed] = sigmet.directionText?.split(' ') ?? [];
+  const directionLabel = DIR_TO_LABEL[direction];
+  const speedKnots = speed !== undefined && Number.isFinite(Number(speed)) && Number(speed) >= 0
+    ? Number(speed) : undefined;
+  const movement = directionLabel
+    ? `Awan abu bergerak ke ${directionLabel}${speedKnots !== undefined ? ` dengan kecepatan ${speedKnots} knot` : ''}.`
+    : `Peringatan sebaran abu vulkanik Gunung ${sigmet.volcanoName}.`;
+  const flightLevel = sigmet.flightLevel?.replace(/^FL(\d+)$/, (_match, level: string) => `FL${level.padStart(3, '0')}`);
+  return flightLevel ? `${movement} Batas atas awan abu ${flightLevel}.` : movement;
+}
+
 const VOLCANO_KEYWORDS = [
   'SEMERU', 'IBU', 'DUKONO', 'KRAKATAU', 'LEWOTOBI', 'LEWOTOLOK', 'MARAPI', 'MERAPI',
   'RUANG', 'SINABUNG', 'KERINCI', 'SOPUTAN', 'AWU', 'KARANGETANG', 'RAUNG', 'BROMO',
@@ -103,14 +123,20 @@ export const InaSiamService = {
           if (coordinates.length < 4) continue;
           const direction = String(properties.dir || '').toUpperCase();
           const bearing = DIR_TO_BEARING[direction];
-          current[keyword.toLowerCase()] = {
+          // Keep alert identity stable if the provider changes feature ordering.
+          const signature = JSON.stringify([properties.firId, validTimeFrom, validTimeTo, rawSigmet, feature.geometry]);
+          let hash = 2166136261;
+          for (const character of signature) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0;
+          const id = keyword.toLowerCase() + '-' + hash.toString(16);
+          current[id] = {
+            id,
             volcanoKey: keyword.toLowerCase(),
             volcanoName: keyword.split(' ').map((part) => `${part[0]}${part.slice(1).toLowerCase()}`).join(' '),
             rawSigmet,
             firId: String(properties.firId || ''),
             validTimeFrom,
             validTimeTo,
-            ...(Number.isFinite(Number(properties.top)) ? { flightLevel: `FL${Math.round(Number(properties.top) / 100)}` } : {}),
+            ...(properties.top != null && properties.top !== '' && Number.isFinite(Number(properties.top)) && Number(properties.top) >= 0 ? { flightLevel: `FL${Math.round(Number(properties.top) / 100)}` } : {}),
             ...(bearing !== undefined ? { bearing, directionText: `${direction}${properties.spd ? ` ${properties.spd} KT` : ''}` } : {}),
             coordinates,
             sourceGeometry: feature.geometry,
@@ -128,7 +154,7 @@ export const InaSiamService = {
   getSigmetForVolcano(volcanoName: string): LiveSigmetPolygon | null {
     const name = volcanoName.toLowerCase();
     return Object.values(currentSigmets).find((sigmet) =>
-      name.includes(sigmet.volcanoKey) || sigmet.volcanoKey.includes(name)
+      isActivePeriod(sigmet.validTimeFrom, sigmet.validTimeTo) && (name.includes(sigmet.volcanoKey) || sigmet.volcanoKey.includes(name))
     ) || null;
   },
 
@@ -158,12 +184,12 @@ export const InaSiamService = {
       if (!center) return [];
       const nearestOffice = findNearestKpwOffice(center[0], center[1]);
       const alert: DisasterAlert = {
-        id: `inasiam-va-${sigmet.volcanoKey}-${sigmet.validTimeFrom}`,
+        id: `inasiam-va-${sigmet.id}-${sigmet.validTimeFrom}`,
         type: 'volcanic_ash',
         severity: 2 as AlertSeverity,
         provinceId: nearestOffice.provinceId || getProvinceIdForVolcano(sigmet.volcanoName),
         title: `Volcanic ash SIGMET: ${sigmet.volcanoName}`,
-        description: sigmet.rawSigmet,
+        description: describeAshCloud(sigmet),
         timestamp: sigmet.validTimeFrom,
         validFrom: sigmet.validTimeFrom,
         validUntil: sigmet.validTimeTo,

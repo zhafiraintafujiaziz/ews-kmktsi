@@ -1,6 +1,6 @@
 import React from 'react';
 import type { DisasterAlert, Province } from '../../types';
-import { severityToCssClass } from '../../types';
+import { severityToCssClass, VOLCANO_SEVERITY_LABELS } from '../../types';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import { getIspuStyle } from '../../constants/ispuCategories';
 
@@ -301,7 +301,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert, province, isSelecte
           <span className="alertcard-icon">{renderDisasterIcon(alert.type, undefined, undefined, alert)}</span>
           <span className="alertcard-type-label">{TYPE_LABELS[alert.type] ?? alert.type}</span>
         </div>
-        <div className={`alertcard-sev-badge sev-${sevCss}`}>
+        <div className={`alertcard-sev-badge sev-${sevCss}`} title={alert.type === 'volcanic' ? `Keparahan ${alert.severity}/3 · ${VOLCANO_SEVERITY_LABELS[alert.severity]}` : undefined}>
           {[1, 2, 3].map((i) => (
             <span key={i} className={`sev-box${i <= sevBoxCount ? ' filled' : ''}`} style={ispuStyle && i <= sevBoxCount ? { backgroundColor: ispuStyle.color } : undefined} />
           ))}

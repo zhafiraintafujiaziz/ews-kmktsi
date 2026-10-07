@@ -1,4 +1,5 @@
 import type { DisasterAlert, AlertSeverity } from '../types';
+import { parseForecastTable, publishForecastSnapshot, failForecastSnapshot, FORECAST_SOURCE } from './weatherForecastAssessment';
 import type { WeatherData } from '../types/weather';
 import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
 import { findNearestKpwOffice } from '../utils/geo';
@@ -45,18 +46,6 @@ function parsePolygonCentroid(polygonStr: string): { latitude: number; longitude
   }
   if (count === 0) return null;
   return { latitude: totalLat / count, longitude: totalLon / count };
-}
-
-function parseBmkgDate(value: string): Date | null {
-  const months: Record<string, string> = {
-    januari: 'January', februari: 'February', maret: 'March', april: 'April', mei: 'May',
-    juni: 'June', juli: 'July', agustus: 'August', september: 'September', oktober: 'October',
-    november: 'November', desember: 'December', jan: 'Jan', feb: 'Feb', mar: 'Mar', apr: 'Apr',
-    jun: 'Jun', jul: 'Jul', agu: 'Aug', agt: 'Aug', sep: 'Sep', okt: 'Oct', nov: 'Nov', des: 'Dec',
-  };
-  const normalized = value.replace(/\b[A-Za-z]+\b/g, (month) => months[month.toLowerCase()] ?? month);
-  const parsed = new Date(normalized);
-  return Number.isFinite(parsed.getTime()) ? parsed : null;
 }
 
 // Removed local fetchWithProxy in favor of fetchHtmlWithCorsProxy from proxy.ts
@@ -253,81 +242,24 @@ export async function fetchExtremeWeather(): Promise<DisasterAlert[]> {
 
 export async function fetchThreeDayForecast(): Promise<DisasterAlert[]> {
   try {
-    const html = await fetchHtmlWithCorsProxy('https://www.bmkg.go.id/cuaca/potensi-cuaca-ekstrem');
-    if (!html) throw new Error('No HTML content returned');
-
-    const theadMatch = html.match(/<thead[^>]*>([\s\S]*?)<\/thead>/i);
-    const headers: string[] = [];
-    if (theadMatch) {
-      const rxTh = /<th[^>]*>([\s\S]*?)<\/th>/gi;
-      let mTh;
-      while ((mTh = rxTh.exec(theadMatch[1])) !== null) {
-        headers.push(mTh[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
-      }
-    }
-
-    const day1Date = headers[2];
-    const day2Date = headers[3];
-    const day3Date = headers[4];
-
-    const tbodyMatch = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
-    if (!tbodyMatch) return [];
-
-    const tbody = tbodyMatch[1];
-    const alerts: DisasterAlert[] = [];
-    const rxTr = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-    let mTr;
-
-    while ((mTr = rxTr.exec(tbody)) !== null) {
-      const trContent = mTr[1];
-      const rxTd = /<td[^>]*>([\s\S]*?)<\/td>/gi;
-      let mTd;
-      const cells: string[] = [];
-      while ((mTd = rxTd.exec(trContent)) !== null) {
-        cells.push(mTd[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
-      }
-
-      if (cells.length >= 5) {
-        const provinceName = cells[1];
-        const dayStatuses = [cells[2], cells[3], cells[4]];
-        const provinceId = mapTextToProvinceId(provinceName);
-        const office = KPWBI_OFFICES.find((o) => o.provinceId === provinceId);
-
-        dayStatuses.forEach((statusText, idx) => {
-          if (!statusText || statusText === '—' || statusText.trim() === '') return;
-
-          const dayNum = idx + 1;
-          const dateStr = dayNum === 1 ? day1Date : dayNum === 2 ? day2Date : day3Date;
-          const forecastTime = dateStr ? parseBmkgDate(dateStr) : null;
-          if (!forecastTime || forecastTime.getTime() + 86400000 <= Date.now()) return;
-
-          let severity: AlertSeverity = 1;
-          const lowerStatus = statusText.toLowerCase();
-          if (lowerStatus.includes('siaga')) severity = 3;
-          else if (lowerStatus.includes('waspada')) severity = 2;
-
-          alerts.push({
-            id: `bmkg-forecast-${provinceId}-${dayNum}`,
-            type: 'extreme_weather',
-            severity,
-            provinceId,
-            title: `${statusText} (${dateStr})`,
-            description: `Potensi Cuaca Buruk di Provinsi ${provinceName}: ${statusText}. Rencana perkiraan untuk tanggal ${dateStr}.`,
-            timestamp: forecastTime.toISOString(),
-            validFrom: forecastTime.toISOString(),
-            validUntil: new Date(forecastTime.getTime() + 86400000).toISOString(),
-            ...(office ? { latitude: office.latitude, longitude: office.longitude } : {}),
-            affectedArea: provinceName,
-            isForecast: true,
-            forecastDay: dayNum,
-            forecastDateStr: dateStr,
-          });
-        });
-      }
-    }
-
-    return alerts;
+    const html = await fetchHtmlWithCorsProxy(FORECAST_SOURCE);
+    const snapshot = parseForecastTable(html);
+    publishForecastSnapshot(snapshot);
+    return snapshot.cells.flatMap(cell => {
+      if (cell.severity === null || cell.severity === 0) return [];
+      const office = KPWBI_OFFICES.find(o => o.provinceId === cell.provinceId);
+      return [{
+        id: 'bmkg-forecast-' + cell.provinceId + '-' + cell.validFrom,
+        type: 'extreme_weather' as const, severity: cell.severity, provinceId: cell.provinceId,
+        title: cell.label + ' (' + cell.date + ')', description: 'Potensi cuaca ekstrem BMKG: ' + cell.label,
+        timestamp: cell.validFrom, validFrom: cell.validFrom, validUntil: cell.validUntil,
+        ...(office ? { latitude: office.latitude, longitude: office.longitude } : {}),
+        isForecast: true, forecastDay: Math.round((Date.parse(cell.validFrom) - Date.parse(snapshot.cells[0].validFrom)) / 86400000) + 1,
+        forecastDateStr: cell.date, sourceUrl: FORECAST_SOURCE,
+      }];
+    });
   } catch (error) {
+    failForecastSnapshot();
     console.error('Failed to fetch/parse 3-day BMKG weather forecast:', error);
     throw error;
   }

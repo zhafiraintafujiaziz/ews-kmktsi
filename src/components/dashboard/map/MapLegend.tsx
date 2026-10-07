@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import type { DisasterAlert, AlertSeverity } from '../../../types';
+import type { DisasterAlert, AlertSeverity, DisasterType } from '../../../types';
+import { VOLCANO_SEVERITY_LABELS } from '../../../types';
 import { renderDisasterIcon, getDisasterTypeStatus } from '../../../utils/alertUtils';
 import { ISPU_CATEGORIES } from '../../../constants/ispuCategories';
 
 interface MapLegendProps {
   isInariskFilter: boolean;
+  assessmentCategory?: string;
+  activeTypeFilter?: DisasterType | 'all';
   isAirQualityFilter?: boolean;
+  showVolcanoReference?: boolean;
   mapLayers: {
     critical: boolean;
     warning: boolean;
@@ -39,7 +43,10 @@ const DISASTER_TYPES_CONFIG: Array<{ key: 'earthquake' | 'extreme_weather' | 'ka
 
 const MapLegend: React.FC<MapLegendProps> = ({
   isInariskFilter,
+  assessmentCategory,
+  activeTypeFilter = 'all',
   isAirQualityFilter = false,
+  showVolcanoReference = false,
   mapLayers,
   onToggleLayer,
   selectedAlert,
@@ -61,7 +68,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
             <img src="/manggala-logo.png" alt="Manggala Agni Logo" title="Manggala Agni" className="legend-agency-logo" style={{ zIndex: 1 }} />
           </div>
           <span className="legend-title" style={{ marginLeft: '6px' }}>
-            {isAirQualityFilter ? 'Kategori ISPU' : isInariskFilter ? 'Indikator Wilayah (InaRisk)' : 'Map Legend'}
+            {isAirQualityFilter ? 'Kategori ISPU' : showVolcanoReference ? 'Kerentanan geografis' : assessmentCategory === 'extreme_weather' ? 'Bahaya Banjir (InaRISK)' : isInariskFilter ? 'Indeks Bahaya (InaRISK)' : 'Map Legend'}
           </span>
         </div>
         <svg
@@ -89,16 +96,23 @@ const MapLegend: React.FC<MapLegendProps> = ({
               <span>{label} ({range})</span>
             </div>
           ))}
+          {showVolcanoReference && <>
+            <div className="legend-item"><span style={{ color: '#fb923c', fontSize: 20 }}>●</span><span>Gunung api, koordinat MAGMA / PVMBG</span></div>
+            <div className="legend-item"><span style={{ borderTop: '3px dashed #ef4444', width: 24 }} /><span>Sketsa busur Ring of Fire</span></div>
+            <div className="legend-item"><span>Estimasi jarak, bukan zona bahaya resmi atau prakiraan abu.</span></div>
+          </>}
           {!isAirQualityFilter && SEV_CONFIG.map(({ key, num, label, color }) => {
             const show = !selectedAlert || selectedSeverity === num;
             if (!show) return null;
+            const isVolcanicSeverity = selectedAlert ? selectedAlert.type === 'volcanic' : activeTypeFilter === 'volcanic';
+            const severityLabel = isVolcanicSeverity ? `${label} · ${VOLCANO_SEVERITY_LABELS[num]}` : label;
             const count = allAlerts.filter((alert) => alert.severity === num).length;
             return (
               <div
                 key={key}
                 className={`legend-item ${(!mapLayers[key] && !isInariskFilter) ? 'disabled' : ''}`}
                 onClick={() => { if (!isInariskFilter) onToggleLayer(key); }}
-                title={isInariskFilter ? label : `Toggle ${label}`}
+                title={isInariskFilter ? label : `Toggle ${severityLabel}`}
                 style={{ cursor: isInariskFilter ? 'default' : 'pointer' }}
               >
                 <span className="legend-shape-icon" style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
@@ -112,12 +126,14 @@ const MapLegend: React.FC<MapLegendProps> = ({
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flex: 1 }}>{isInariskFilter ? (() => {
                   const inariskLabels: Record<number, string> = { 
-                    3: 'Kerentanan Tinggi (61-100)', 
-                    2: 'Kerentanan Sedang (31-60)', 
-                    1: 'Kerentanan Rendah (0-30)' 
+                    3: 'Bahaya Tinggi (>0,6–1)',
+                    2: 'Bahaya Sedang (>0,3–0,6)',
+                    1: 'Bahaya Rendah (0–0,3)'
                   };
+                  if (assessmentCategory === 'karhutla') return { 1: 'Rata-rata 25 km ≤0,3', 2: 'Rata-rata 25 km >0,3–0,6', 3: 'Rata-rata 25 km >0,6' }[num];
+                  if (assessmentCategory === 'volcanic' || assessmentCategory === 'volcanic_ash') return { 1: 'Jarak >100 km · 0,20', 2: 'Jarak >30–100 km · 0,50', 3: 'Jarak ≤30 km · 0,80' }[num];
                   return inariskLabels[num];
-                })() : label}
+                })() : severityLabel}
                   {!isInariskFilter && (
                     <span
                       className="legend-count-badge"
@@ -243,7 +259,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
               <div className="legend-item legend-item--shape">
                 <span className="legend-shape-icon">
                   <svg viewBox="0 0 24 24" width="14" height="14">
-                    <path fill="#10b981" d="M12,2L1,7v2h22V7L12,2z M4,9v11h3V9H4z M10,9v11h4V9h-4z M17,9v11h3V9h-3z M2,20v2h20v-2H2z"/>
+                    <rect x="3" y="3" width="18" height="18" fill="var(--accent-primary)" stroke="white" strokeWidth="2" />
                   </svg>
                 </span>
                 <span>Data Center (Sinergi)</span>
