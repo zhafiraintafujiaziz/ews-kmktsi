@@ -1,6 +1,7 @@
 import type { KpwbiOffice } from '../types';
 import { fetchWithCorsProxy } from './proxy';
 import { parseHazardIndex, type InaRiskAssessmentStatus } from './bnpbInariskService';
+import { logSyncFailure, syncErrorDetails } from './syncDiagnostics';
 
 export const KARHUTLA_IMAGE_SERVICE = 'https://gis.bnpb.go.id/server/rest/services/inarisk/layer_bahaya_kebakaran_hutan_dan_lahan/ImageServer';
 export const KARHUTLA_RADIUS_KM = 25;
@@ -49,8 +50,10 @@ export function karhutlaStatisticsUrl(latitude: number, longitude: number) {
 }
 export function parseKarhutlaStatistics(data: unknown, projectedArea: number): KarhutlaStatistics | null {
   if (!data || typeof data !== 'object') throw new Error('Respons statistik InaRISK tidak valid.');
-  const response = data as { error?: { message?: string }; statistics?: unknown[] };
-  if (response.error) throw new Error(response.error.message || 'Statistik InaRISK gagal dimuat.');
+  const response = data as { error?: { message?: string; code?: number; details?: string[] }; statistics?: unknown[] };
+  if (response.error) throw Object.assign(new Error([response.error.message || 'Statistik InaRISK gagal dimuat.', ...(response.error.details ?? [])].join('; ')), {
+    kind: 'service_error', status: response.error.code,
+  });
   if (!Array.isArray(response.statistics) || response.statistics.length > 1) throw new Error('Respons InaRISK bukan raster indeks satu band.');
   if (!response.statistics.length) return null;
   const stats = response.statistics[0] as Record<string, unknown> | null;
@@ -98,10 +101,16 @@ export class KarhutlaRegionalService {
     if (!pending.length) return;
     pending.forEach(office => {
       this.locations.set(office.id, office.latitude + ',' + office.longitude);
-      this.assessments.set(office.id, { status: 'loading', statistics: null, radiusKm: KARHUTLA_RADIUS_KM, checkedAt: null, error: null });
+      const previous = this.assessments.get(office.id);
+      this.assessments.set(office.id, {
+        status: 'loading', statistics: previous?.statistics ?? null, radiusKm: KARHUTLA_RADIUS_KM,
+        checkedAt: previous?.checkedAt ?? null, error: null,
+      });
     });
     this.notify();
     const batch = new AbortController();
+    const errors: unknown[] = [];
+    const noDataOfficeIds: string[] = [];
     const deadline = setTimeout(() => batch.abort(new Error('Batas waktu statistik Karhutla tercapai.')), BATCH_MS);
     let nextOffice = 0;
     try {
@@ -118,13 +127,28 @@ export class KarhutlaRegionalService {
             const data = await Promise.race([fetchWithCorsProxy(region.url, { signal }), new Promise<never>((_, reject) => { onAbort = () => reject(signal.reason); signal.addEventListener('abort', onAbort, { once: true }); })]);
             signal.throwIfAborted();
             const statistics = parseKarhutlaStatistics(data, region.projectedArea);
+            if (!statistics) noDataOfficeIds.push(office.id);
             this.assessments.set(office.id, { status: statistics ? 'available' : 'no_data', statistics, radiusKm: KARHUTLA_RADIUS_KM, checkedAt: new Date(Date.now()).toISOString(), error: null });
           } catch (error) {
+            errors.push(Object.assign(new Error(error instanceof Error ? error.message : String(error), { cause: error }),
+              syncErrorDetails(error)[0], { officeId: office.id }));
             this.assessments.set(office.id, { status: 'error', statistics: null, radiusKm: KARHUTLA_RADIUS_KM, checkedAt: new Date(Date.now()).toISOString(), error: error instanceof Error ? error.message : String(error) });
           } finally { clearTimeout(timeout); signal.removeEventListener('abort', onAbort); this.notify(); }
         }
       }));
-      for (const office of pending.slice(nextOffice)) this.assessments.set(office.id, { status: 'error', statistics: null, radiusKm: KARHUTLA_RADIUS_KM, checkedAt: new Date(Date.now()).toISOString(), error: 'Batas waktu statistik Karhutla tercapai.' });
+      for (const office of pending.slice(nextOffice)) {
+        const error = Object.assign(new Error('Batas waktu statistik Karhutla tercapai.'), { officeId: office.id });
+        errors.push(error);
+        this.assessments.set(office.id, { status: 'error', statistics: null, radiusKm: KARHUTLA_RADIUS_KM, checkedAt: new Date(Date.now()).toISOString(), error: error.message });
+      }
     } finally { clearTimeout(deadline); this.notify(); }
+    const status = this.getAssessmentStatus();
+    const context = { source: 'InaRISK Karhutla', category: 'karhutla', endpoint: KARHUTLA_IMAGE_SERVICE + '/computeStatisticsHistograms',
+      officeCount: status.officeCount, valueCount: status.valueCount, failedOfficeCount: status.failedOfficeCount };
+    if (errors.length) logSyncFailure(context, new AggregateError(errors, 'Karhutla raster assessment failed'));
+    if (noDataOfficeIds.length) console.info('[sync] InaRISK Karhutla no_data', {
+      ...context, checkedAt: new Date().toISOString(), kind: 'no_data', noDataOfficeIds,
+      reason: 'No valid raster cells in the sampled office areas.',
+    });
   }
 }

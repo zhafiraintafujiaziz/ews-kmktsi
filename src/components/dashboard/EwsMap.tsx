@@ -9,7 +9,7 @@ import { mapTextToProvinceId } from '../../utils/provinceMap';
 import { IspuService } from '../../services/ispuService';
 import { isInaRiskHazardType, getInaRiskCategory, getHazardLevel, getHazardSeverity, type InaRiskHazardType } from '../../constants/kerentananCategories';
 import { useInariskRevision } from '../../hooks/useInariskRevision';
-import { useAlerts } from '../../hooks/useAlerts';
+import { useAlertField } from '../../hooks/useAlerts';
 import MapController from './map/MapController';
 import MapEventsHandler from './map/MapEventsHandler';
 import AlertCircles from './map/AlertCircles';
@@ -35,6 +35,7 @@ export interface EwsMapProps {
   isKerentananView?: boolean;
   showVolcanoReference?: boolean;
   isPotensiView?: boolean;
+  baseMapOnly?: boolean;
 }
 
 const INDONESIA_CENTER: [number, number] = [-2.5489, 118.0149];
@@ -63,7 +64,7 @@ function getProvincePotensi(): null {
   return null;
 }
 
-export const EwsMap: React.FC<EwsMapProps> = ({
+const EwsMapComponent: React.FC<EwsMapProps> = ({
   alerts,
   allAlerts,
   riskAlerts,
@@ -79,9 +80,10 @@ export const EwsMap: React.FC<EwsMapProps> = ({
   isKerentananView = false,
   showVolcanoReference = false,
   isPotensiView = false,
+  baseMapOnly = false,
 }) => {
   const assessmentRevision = useInariskRevision();
-  const { lastCheckedTime } = useAlerts();
+  const lastCheckedTime = useAlertField('lastCheckedTime');
   const [resetTrigger, setResetTrigger] = useState(0);
   const [geoJsonData, setGeoJsonData] = useState<FeatureCollection<Geometry, ProvinceProperties> | null>(null);
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
@@ -244,7 +246,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
     layer.bindTooltip(`
       <div style="font-family: var(--font-sans); font-size: 12px; line-height: 1.4; padding: 4px;">
         <strong>Provinsi ${propName}</strong><br/>
-        Indeks ${activeTypeFilter === 'karhutla' ? 'Rata-rata Raster 25 km' : activeTypeFilter === 'extreme_weather' ? 'Bahaya Banjir InaRISK sebagai dasar Cuaca' : activeTypeFilter === 'volcanic' || activeTypeFilter === 'volcanic_ash' ? 'Kerentanan geografis' : isPotensiView ? 'Potensi' : 'Bahaya'} ${hazardTitle}: <strong>${score > 0 ? score.toFixed(2) : '0.00'}</strong><br/>
+        Indeks ${activeTypeFilter === 'karhutla' ? 'Rata-rata Raster 25 km' : activeTypeFilter === 'extreme_weather' ? 'Bahaya Cuaca Ekstrim InaRISK' : activeTypeFilter === 'volcanic' || activeTypeFilter === 'volcanic_ash' ? 'Kerentanan geografis' : isPotensiView ? 'Potensi' : 'Bahaya'} ${hazardTitle}: <strong>${score > 0 ? score.toFixed(2) : '0.00'}</strong><br/>
         ${isInariskFilter ? assumedWeather ? 'Data Cuaca tidak tersedia. Indeks diasumsikan 0.10, kategori Rendah.<br/>' : activeTypeFilter === 'karhutla' ? 'Rata-rata raster radius 25 km tertinggi dari kantor di provinsi ini.<br/>Bukan rata-rata seluruh provinsi.<br/>' : 'Indeks tertinggi dari kantor yang memiliki data di provinsi ini.<br/>' : ''}
         Status: <span style="font-weight: 700; color: ${statusColor}">${severity}</span>
       </div>
@@ -398,11 +400,11 @@ export const EwsMap: React.FC<EwsMapProps> = ({
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {isKerentananView && activeTypeFilter === 'karhutla' && selectedOffice && <Pane name="karhutlaAssessment" style={{ zIndex: 450, pointerEvents: 'none' }}>
+        {!baseMapOnly && isKerentananView && activeTypeFilter === 'karhutla' && selectedOffice && <Pane name="karhutlaAssessment" style={{ zIndex: 450, pointerEvents: 'none' }}>
           <Circle center={[selectedOffice.latitude, selectedOffice.longitude]} radius={25000} interactive={false} pathOptions={{ color: '#475569', fillOpacity: 0.04, weight: 2, dashArray: '5 5', className: 'karhutla-assessment-radius' }} />
         </Pane>}
 
-        {isInariskFilter && geoJsonData && (
+        {!baseMapOnly && isInariskFilter && geoJsonData && (
           <GeoJSON
             key={`${activeTypeFilter}-${resetTrigger}-${assessmentRevision}-${lastCheckedTime?.getTime()}`}
             data={geoJsonData}
@@ -411,7 +413,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
           />
         )}
 
-        {!isInariskFilter && !isPotensiFilter && weatherAlertProvinces.size > 0 && geoJsonData && (
+        {!baseMapOnly && !isInariskFilter && !isPotensiFilter && weatherAlertProvinces.size > 0 && geoJsonData && (
           <GeoJSON
             key={`weather-${weatherAlertKey}`}
             data={geoJsonData}
@@ -420,7 +422,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
           />
         )}
 
-        {showVolcanoReference && <VolcanoReferenceLayer />}
+        {!baseMapOnly && showVolcanoReference && <VolcanoReferenceLayer />}
 
         <MapController
           selectedOffice={selectedOffice}
@@ -431,7 +433,7 @@ export const EwsMap: React.FC<EwsMapProps> = ({
         />
         <MapEventsHandler onClearSelection={clearSelection} />
 
-        {selectedOffice && nearestOffices.map(({ office }) => (
+        {!baseMapOnly && selectedOffice && nearestOffices.map(({ office }) => (
           <Polyline
             key={`line-${selectedOffice.id}-${office.id}`}
             positions={[[selectedOffice.latitude, selectedOffice.longitude], [office.latitude, office.longitude]]}
@@ -439,9 +441,9 @@ export const EwsMap: React.FC<EwsMapProps> = ({
           />
         ))}
 
-        <AlertCircles alerts={visibleAlerts} onAlertSelect={onAlertSelect} provinceCentroids={provinceCentroids} />
+        {!baseMapOnly && <AlertCircles alerts={visibleAlerts} onAlertSelect={onAlertSelect} provinceCentroids={provinceCentroids} />}
 
-        <KpwMarkers
+        {!baseMapOnly && <KpwMarkers
           alerts={visibleAlerts}
           riskAlerts={riskAlerts}
           riskResults={riskResults}
@@ -455,20 +457,20 @@ export const EwsMap: React.FC<EwsMapProps> = ({
           markerRefs={markerRefs}
           mapLayers={mapLayers}
           selectedAlertId={selectedAlertId}
-        />
+        />}
 
       </MapContainer>
 
-      <NearestKpwPanel
+      {!baseMapOnly && <NearestKpwPanel
         selectedOffice={selectedOffice}
         nearestOffices={nearestOffices}
         alerts={alerts}
         onAlertSelect={onAlertSelect}
         onProvinceSelect={onProvinceSelect}
         onOfficeSelect={onOfficeSelect}
-      />
+      />}
 
-      <MapLegend
+      {!baseMapOnly && <MapLegend
         isInariskFilter={isInariskFilter}
         assessmentCategory={isKerentananView ? activeTypeFilter : undefined}
         activeTypeFilter={activeTypeFilter}
@@ -478,9 +480,10 @@ export const EwsMap: React.FC<EwsMapProps> = ({
         onToggleLayer={toggleLayer}
         selectedAlert={selectedAlert}
         allAlerts={allAlerts || alerts}
-      />
+      />}
     </div>
   );
 };
 
+export const EwsMap = React.memo(EwsMapComponent);
 export default EwsMap;

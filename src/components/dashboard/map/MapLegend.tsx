@@ -68,7 +68,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
             <img src="/manggala-logo.png" alt="Manggala Agni Logo" title="Manggala Agni" className="legend-agency-logo" style={{ zIndex: 1 }} />
           </div>
           <span className="legend-title" style={{ marginLeft: '6px' }}>
-            {isAirQualityFilter ? 'Kategori ISPU' : showVolcanoReference ? 'Kerentanan geografis' : assessmentCategory === 'extreme_weather' ? 'Bahaya Banjir (InaRISK)' : isInariskFilter ? 'Indeks Bahaya (InaRISK)' : 'Map Legend'}
+            {isAirQualityFilter ? 'Kategori ISPU' : showVolcanoReference ? 'Kerentanan geografis' : assessmentCategory === 'extreme_weather' ? 'Bahaya Cuaca Ekstrim (InaRISK)' : isInariskFilter ? 'Indeks Bahaya (InaRISK)' : 'Map Legend'}
           </span>
         </div>
         <svg

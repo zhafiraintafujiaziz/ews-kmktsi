@@ -10,6 +10,8 @@ const ALLOWED_DOMAINS = new Set([
   'inasiam.rack.my.id',
   'api.rss2json.com',
   'gis.bnpb.go.id',
+  'inarisk.bnpb.go.id',
+  'inarisk1.bnpb.go.id',
   'opsroom.sipongidata.my.id',
   'opsroom-sipongi.gakkum.kehutanan.go.id',
   'sipongi.menlhk.go.id',

@@ -40,3 +40,23 @@ export const alertSnapshots = sqliteTable('alert_snapshots', {
   checkedAt: text('checked_at').notNull(),
   records: text('records', { mode: 'json' }).$type<DisasterRecord[]>().notNull(),
 });
+
+export const iqairLocations = sqliteTable('iqair_locations', {
+  id: text('id').primaryKey(),
+  province: text('province').notNull(),
+  data: text('data').notNull(),
+});
+export const iqairSnapshots = sqliteTable('iqair_snapshots', {
+  key: text('key').primaryKey(),
+  retrievedAt: integer('retrieved_at').notNull(),
+  data: text('data').notNull(),
+});
+export const iqairRequests = sqliteTable('iqair_requests', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  method: text('method').notNull(),
+  attemptedAt: integer('attempted_at').notNull(),
+}, table => [index('iqair_requests_time_idx').on(table.method, table.attemptedAt)]);
+export const iqairControls = sqliteTable('iqair_controls', {
+  key: text('key').primaryKey(),
+  until: integer('until').notNull(),
+});

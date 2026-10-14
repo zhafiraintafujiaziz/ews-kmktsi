@@ -1,11 +1,9 @@
 import { useMemo } from 'react';
-import { useAlerts } from './useAlerts';
 import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
-import type { MarkedLocation, RiskCalcResult } from '../types';
+import type { DisasterAlert, MarkedLocation, RiskCalcResult } from '../types';
 import { buildAlertRiskResult } from '../utils/riskCalculator';
 import { useInariskRevision } from './useInariskRevision';
-export const useDisasterAlert = () => {
-  const { alerts, isLoading } = useAlerts();
+export const useDisasterAlert = (alerts: DisasterAlert[], isLoading: boolean) => {
   const assessmentRevision = useInariskRevision();
   const markedLocations = useMemo<MarkedLocation[]>(() => KPWBI_OFFICES.map(office => ({ id: office.id, name: office.name, latitude: office.latitude, longitude: office.longitude })), []);
   const riskResults = useMemo<RiskCalcResult[]>(() => {

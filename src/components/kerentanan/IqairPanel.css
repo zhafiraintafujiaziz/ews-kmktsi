@@ -1,0 +1,49 @@
+.iqair-view { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; background: var(--bg-card, #fff); color: var(--text-primary, #1e293b); }
+.iqair-view[hidden], .iqair-city-details[hidden] { display: none; }
+.iqair-source-entry { width: 100%; max-width: 780px; box-sizing: border-box; padding: clamp(24px, 5vw, 64px); margin: auto; }
+.iqair-source-entry h2 { margin: 0 0 16px; font-size: clamp(24px, 3vw, 32px); }
+.iqair-source-entry p { margin: 0 0 20px; line-height: 1.6; }
+.iqair-source-link { display: inline-flex; align-items: center; gap: 12px; padding: 14px 20px; margin-bottom: 16px; border-radius: 8px; background: #2563eb; color: #fff; text-decoration: none; font-weight: 600; }
+.iqair-source-link:hover { background: #1d4ed8; }
+.iqair-source-entry .iqair-source-note { color: var(--text-secondary, #64748b); font-size: 13px; }
+.iqair-details-toggle { padding: 10px 14px; border: 1px solid #94a3b8; border-radius: 6px; background: var(--bg-card, #fff); color: inherit; cursor: pointer; }
+.iqair-source-link:focus-visible, .iqair-details-toggle:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.iqair-view-expanded .iqair-source-entry { max-width: none; margin: 0; padding: 20px 24px; border-bottom: 1px solid #cbd5e1; }
+.iqair-view-expanded .iqair-source-entry h2 { font-size: 20px; }
+.iqair-view-expanded .iqair-source-entry p { margin-bottom: 12px; }
+.iqair-city-details { display: flex; flex: 1; min-height: 420px; }
+.iqair-content { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.iqair-panel { width: 420px; max-width: 45%; padding: 20px; overflow-y: auto; background: var(--bg-card, #fff); color: var(--text-primary, #1e293b); }
+.iqair-panel h2 { font-size: 20px; margin: 0 0 12px; }
+.iqair-panel h3 { font-size: 16px; margin: 0 0 12px; }
+.iqair-panel h4 { font-size: 14px; margin: 12px 0 4px; }
+.iqair-panel p { font-size: 13px; line-height: 1.6; }
+.iqair-panel .MuiAutocomplete-root { margin: 14px 0; }
+.iqair-panel section { border-top: 1px solid #cbd5e1; padding: 18px 0; }
+.iqair-panel dl { margin: 8px 0; font-size: 13px; }
+.iqair-panel dl div { display: flex; justify-content: space-between; gap: 12px; margin: 8px 0; }
+.iqair-panel dt { color: #64748b; }
+.iqair-panel dd { text-align: right; margin: 0; overflow-wrap: anywhere; }
+.iqair-panel button { padding: 8px 12px; border: 1px solid #94a3b8; background: #f8fafc; color: #0f172a; border-radius: 6px; cursor: pointer; }
+.iqair-panel button:disabled { opacity: .6; cursor: default; }
+.iqair-panel details { margin: 12px 0; font-size: 13px; }
+.iqair-panel form { display: grid; gap: 8px; margin-top: 12px; }
+.iqair-panel input { max-width: 100%; min-width: 0; padding: 8px; }
+.iqair-message { color: #64748b; }
+.iqair-city-list { display: grid; gap: 6px; max-height: 280px; overflow-y: auto; margin: 12px 0 18px; }
+.iqair-city-list button { display: flex; justify-content: space-between; align-items: center; text-align: left; gap: 10px; }
+.iqair-city-list button span { color: #64748b; font-size: 12px; }
+.iqair-city-list button.selected { border-color: #2563eb; background: #eff6ff; }
+.iqair-clear-city { margin-left: 8px; }
+.iqair-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.iqair-badges span { background: #e2e8f0; color: #334155; border-radius: 6px; padding: 5px 8px; font-size: 12px; }
+.iqair-index { border-left: 6px solid; padding: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: #f1f5f9; color: #0f172a; }
+.iqair-index strong { font-size: 32px; }
+.iqair-index span { font-size: 14px; }
+.iqair-map { flex: 1; min-width: 0; position: relative; }
+.iqair-map-message { position: absolute; bottom: 24px; left: 12px; right: 12px; z-index: 500; background: #fff; color: #334155; padding: 10px; border-radius: 6px; font-size: 13px; }
+@media (max-width: 768px) {
+  .iqair-content { flex-direction: column; overflow-y: auto; }
+  .iqair-panel { width: 100%; max-width: none; overflow: visible; box-sizing: border-box; }
+  .iqair-map { flex: none; min-height: 360px; height: 45vh; }
+}

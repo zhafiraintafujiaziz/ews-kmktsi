@@ -1,0 +1,800 @@
+{
+  "success": true,
+  "mode": "direct",
+  "appUrl": null,
+  "startedAt": "2026-10-14T04:00:45.413Z",
+  "finishedAt": "2026-10-14T04:00:49.584Z",
+  "durationMs": 4167.41,
+  "source": {
+    "provider": "BNPB InaRISK",
+    "assessment": "bahaya",
+    "hazard": "gempabumi",
+    "endpoint": "https://inarisk1.bnpb.go.id/geoserver/ows",
+    "layer": "raster:INDEKS_BAHAYA_GEMPABUMI1"
+  },
+  "status": {
+    "status": "available",
+    "checkedAt": "2026-10-14T04:00:49.584Z",
+    "error": null,
+    "officeCount": 48,
+    "valueCount": 48,
+    "failedOfficeCount": 0
+  },
+  "expectedOfficeCount": 48,
+  "officeCount": 48,
+  "validCount": 48,
+  "zeroCount": 12,
+  "requestCount": 48,
+  "requests": [
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D95.31835%252C5.55615%252C95.31845%252C5.5562499999999995%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=95.31835%2C5.55615%2C95.31845%2C5.5562499999999995&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=95.31835%2C5.55615%2C95.31845%2C5.5562499999999995&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 787.55
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D97.14314999999999%252C5.17635%252C97.14325%252C5.17645%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=97.14314999999999%2C5.17635%2C97.14325%2C5.17645&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=97.14314999999999%2C5.17635%2C97.14325%2C5.17645&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 727.87
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D98.67745%252C3.59015%252C98.67755%252C3.5902499999999997%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=98.67745%2C3.59015%2C98.67755%2C3.5902499999999997&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=98.67745%2C3.59015%2C98.67755%2C3.5902499999999997&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 693.1
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D99.06205%252C2.96015%252C99.06215%252C2.96025%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=99.06205%2C2.96015%2C99.06215%2C2.96025&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=99.06205%2C2.96015%2C99.06215%2C2.96025&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 678.01
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D98.78444999999999%252C1.73705%252C98.78455%252C1.7371500000000002%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=98.78444999999999%2C1.73705%2C98.78455%2C1.7371500000000002&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=98.78444999999999%2C1.73705%2C98.78455%2C1.7371500000000002&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 731.11
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D100.36075%252C-0.94275%252C100.36085%252C-0.94265%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=100.36075%2C-0.94275%2C100.36085%2C-0.94265&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=100.36075%2C-0.94275%2C100.36085%2C-0.94265&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 680.18
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D101.44675%252C0.51855%252C101.44685%252C0.5186499999999999%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=101.44675%2C0.51855%2C101.44685%2C0.5186499999999999&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=101.44675%2C0.51855%2C101.44685%2C0.5186499999999999&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 517.23
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D104.05584999999999%252C1.1277499999999998%252C104.05595%252C1.12785%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=104.05584999999999%2C1.1277499999999998%2C104.05595%2C1.12785&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=104.05584999999999%2C1.1277499999999998%2C104.05595%2C1.12785&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 562.8
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D103.61425%252C-1.5947500000000001%252C103.61435%252C-1.59465%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=103.61425%2C-1.5947500000000001%2C103.61435%2C-1.59465&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=103.61425%2C-1.5947500000000001%2C103.61435%2C-1.59465&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 499.6
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D102.26895%252C-3.8055499999999998%252C102.26905000000001%252C-3.80545%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=102.26895%2C-3.8055499999999998%2C102.26905000000001%2C-3.80545&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=102.26895%2C-3.8055499999999998%2C102.26905000000001%2C-3.80545&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 492.15
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D104.74595%252C-2.9818499999999997%252C104.74605%252C-2.98175%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=104.74595%2C-2.9818499999999997%2C104.74605%2C-2.98175&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=104.74595%2C-2.9818499999999997%2C104.74605%2C-2.98175&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 525.87
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D106.10865%252C-2.1226499999999997%252C106.10875%252C-2.12255%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=106.10865%2C-2.1226499999999997%2C106.10875%2C-2.12255&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=106.10865%2C-2.1226499999999997%2C106.10875%2C-2.12255&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 514.3
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D105.26375%252C-5.43725%252C105.26385%252C-5.43715%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=105.26375%2C-5.43725%2C105.26385%2C-5.43715&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=105.26375%2C-5.43725%2C105.26385%2C-5.43715&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 280.2
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D106.82155%252C-6.18235%252C106.82165%252C-6.18225%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=106.82155%2C-6.18235%2C106.82165%2C-6.18225&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=106.82155%2C-6.18235%2C106.82165%2C-6.18225&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 383.32
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D106.83725%252C-6.1770499999999995%252C106.83735%252C-6.17695%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=106.83725%2C-6.1770499999999995%2C106.83735%2C-6.17695&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=106.83725%2C-6.1770499999999995%2C106.83735%2C-6.17695&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 526.33
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D107.61045%252C-6.91725%252C107.61055%252C-6.91715%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=107.61045%2C-6.91725%2C107.61055%2C-6.91715&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=107.61045%2C-6.91725%2C107.61055%2C-6.91715&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 497.15
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D108.56694999999999%252C-6.71715%252C108.56705%252C-6.71705%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=108.56694999999999%2C-6.71715%2C108.56705%2C-6.71705&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=108.56694999999999%2C-6.71715%2C108.56705%2C-6.71705&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 551.54
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D108.22265%252C-7.3241499999999995%252C108.22275%252C-7.32405%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=108.22265%2C-7.3241499999999995%2C108.22275%2C-7.32405&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=108.22265%2C-7.3241499999999995%2C108.22275%2C-7.32405&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 508.76
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D106.15565%252C-6.11715%252C106.15575%252C-6.11705%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=106.15565%2C-6.11715%2C106.15575%2C-6.11705&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=106.15565%2C-6.11715%2C106.15575%2C-6.11705&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 405.99
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D110.42075%252C-6.99315%252C110.42085%252C-6.99305%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=110.42075%2C-6.99315%2C110.42085%2C-6.99305&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=110.42075%2C-6.99315%2C110.42085%2C-6.99305&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 379.24
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D110.82905%252C-7.57145%252C110.82915%252C-7.57135%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=110.82905%2C-7.57145%2C110.82915%2C-7.57135&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=110.82905%2C-7.57145%2C110.82915%2C-7.57135&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 417.72
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D109.23145%252C-7.42395%252C109.23155%252C-7.42385%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=109.23145%2C-7.42395%2C109.23155%2C-7.42385&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=109.23145%2C-7.42395%2C109.23155%2C-7.42385&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 485.82
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D109.13515%252C-6.86655%252C109.13525%252C-6.86645%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=109.13515%2C-6.86655%2C109.13525%2C-6.86645&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=109.13515%2C-6.86655%2C109.13525%2C-6.86645&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 485.29
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D110.36625%252C-7.8016499999999995%252C110.36635%252C-7.80155%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=110.36625%2C-7.8016499999999995%2C110.36635%2C-7.80155&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=110.36625%2C-7.8016499999999995%2C110.36635%2C-7.80155&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 472.1
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D112.73795%252C-7.24735%252C112.73805%252C-7.24725%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=112.73795%2C-7.24735%2C112.73805%2C-7.24725&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=112.73795%2C-7.24735%2C112.73805%2C-7.24725&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 445.74
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D112.63055%252C-7.98125%252C112.63065%252C-7.98115%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=112.63055%2C-7.98125%2C112.63065%2C-7.98115&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=112.63055%2C-7.98125%2C112.63065%2C-7.98115&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 471.32
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D112.01245%252C-7.81895%252C112.01255%252C-7.81885%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=112.01245%2C-7.81895%2C112.01255%2C-7.81885&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=112.01245%2C-7.81895%2C112.01255%2C-7.81885&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 490.74
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D113.69335%252C-8.17255%252C113.69345%252C-8.17245%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=113.69335%2C-8.17255%2C113.69345%2C-8.17245&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=113.69335%2C-8.17255%2C113.69345%2C-8.17245&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 444.18
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D109.34235%252C-0.02425%252C109.34245%252C-0.024149999999999998%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=109.34235%2C-0.02425%2C109.34245%2C-0.024149999999999998&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=109.34235%2C-0.02425%2C109.34245%2C-0.024149999999999998&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 445.61
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D113.91595%252C-2.2091499999999997%252C113.91605%252C-2.20905%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=113.91595%2C-2.2091499999999997%2C113.91605%2C-2.20905&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=113.91595%2C-2.2091499999999997%2C113.91605%2C-2.20905&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 436.22
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D114.59155%252C-3.32435%252C114.59165%252C-3.32425%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=114.59155%2C-3.32435%2C114.59165%2C-3.32425&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=114.59155%2C-3.32435%2C114.59165%2C-3.32425&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 483.46
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D117.14705%252C-0.50345%252C117.14715%252C-0.50335%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=117.14705%2C-0.50345%2C117.14715%2C-0.50335&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=117.14705%2C-0.50345%2C117.14715%2C-0.50335&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 443.58
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D116.82925%252C-1.2721500000000001%252C116.82935%252C-1.27205%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=116.82925%2C-1.2721500000000001%2C116.82935%2C-1.27205&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=116.82925%2C-1.2721500000000001%2C116.82935%2C-1.27205&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 456.13
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D117.59125%252C3.30865%252C117.59135%252C3.30875%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=117.59125%2C3.30865%2C117.59135%2C3.30875&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=117.59125%2C3.30865%2C117.59135%2C3.30875&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 436.48
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D115.22845%252C-8.67575%252C115.22855%252C-8.675650000000001%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=115.22845%2C-8.67575%2C115.22855%2C-8.675650000000001&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=115.22845%2C-8.67575%2C115.22855%2C-8.675650000000001&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 596.2
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D116.10255%252C-8.58315%252C116.10265%252C-8.58305%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=116.10255%2C-8.58315%2C116.10265%2C-8.58305&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=116.10255%2C-8.58315%2C116.10265%2C-8.58305&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 577.4
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D123.58545%252C-10.15855%252C123.58555%252C-10.15845%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=123.58545%2C-10.15855%2C123.58555%2C-10.15845&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=123.58545%2C-10.15855%2C123.58555%2C-10.15845&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 482.51
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D124.84985%252C1.4645499999999998%252C124.84995%252C1.46465%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=124.84985%2C1.4645499999999998%2C124.84995%2C1.46465&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=124.84985%2C1.4645499999999998%2C124.84995%2C1.46465&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 412.99
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D123.05825%252C0.54275%252C123.05835%252C0.5428499999999999%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=123.05825%2C0.54275%2C123.05835%2C0.5428499999999999&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=123.05825%2C0.54275%2C123.05835%2C0.5428499999999999&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 296.07
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D119.85185%252C-0.89535%252C119.85195%252C-0.89525%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=119.85185%2C-0.89535%2C119.85195%2C-0.89525&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=119.85185%2C-0.89535%2C119.85195%2C-0.89525&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 305.14
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D118.87695%252C-2.68415%252C118.87705%252C-2.68405%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=118.87695%2C-2.68415%2C118.87705%2C-2.68405&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=118.87695%2C-2.68415%2C118.87705%2C-2.68405&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 487.45
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D122.58335%252C-3.97235%252C122.58345%252C-3.9722500000000003%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=122.58335%2C-3.97235%2C122.58345%2C-3.9722500000000003&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=122.58335%2C-3.97235%2C122.58345%2C-3.9722500000000003&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 482.57
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D119.41085%252C-5.13845%252C119.41095%252C-5.13835%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=119.41085%2C-5.13845%2C119.41095%2C-5.13835&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=119.41085%2C-5.13845%2C119.41095%2C-5.13835&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 518.81
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D127.38544999999999%252C0.78905%252C127.38555%252C0.78915%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=127.38544999999999%2C0.78905%2C127.38555%2C0.78915&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=127.38544999999999%2C0.78905%2C127.38555%2C0.78915&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 499.79
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D128.18315%252C-3.69615%252C128.18325%252C-3.69605%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=128.18315%2C-3.69615%2C128.18325%2C-3.69605&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=128.18315%2C-3.69615%2C128.18325%2C-3.69605&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 468.21
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D134.07595%252C-0.86605%252C134.07604999999998%252C-0.86595%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=134.07595%2C-0.86605%2C134.07604999999998%2C-0.86595&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=134.07595%2C-0.86605%2C134.07604999999998%2C-0.86595&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 473.22
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D140.71065000000002%252C-2.53695%252C140.71075%252C-2.5368500000000003%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=140.71065000000002%2C-2.53695%2C140.71075%2C-2.5368500000000003&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=140.71065000000002%2C-2.53695%2C140.71075%2C-2.5368500000000003&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 267.06
+    },
+    {
+      "method": "GET",
+      "requestedUrl": "/api/proxy?url=https%3A%2F%2Finarisk1.bnpb.go.id%2Fgeoserver%2Fows%3Fservice%3DWMS%26version%3D1.1.1%26request%3DGetFeatureInfo%26layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26query_layers%3Draster%253AINDEKS_BAHAYA_GEMPABUMI1%26styles%3D%26srs%3DEPSG%253A4326%26bbox%3D107.33805%252C-6.32155%252C107.33815%252C-6.3214500000000005%26width%3D1%26height%3D1%26x%3D0%26y%3D0%26buffer%3D0%26format%3Dimage%252Fpng%26info_format%3Dapplication%252Fjson%26feature_count%3D1",
+      "actualUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=107.33805%2C-6.32155%2C107.33815%2C-6.3214500000000005&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "upstreamUrl": "https://inarisk1.bnpb.go.id/geoserver/ows?service=WMS&version=1.1.1&request=GetFeatureInfo&layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&query_layers=raster%3AINDEKS_BAHAYA_GEMPABUMI1&styles=&srs=EPSG%3A4326&bbox=107.33805%2C-6.32155%2C107.33815%2C-6.3214500000000005&width=1&height=1&x=0&y=0&buffer=0&format=image%2Fpng&info_format=application%2Fjson&feature_count=1",
+      "status": 200,
+      "durationMs": 283.45
+    }
+  ],
+  "offices": [
+    {
+      "id": "kpwbi-banda-aceh",
+      "name": "KPwBI Provinsi Aceh",
+      "latitude": 5.5562,
+      "longitude": 95.3184,
+      "index": 0.5538657903671265,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-lhokseumawe",
+      "name": "KPwBI Lhokseumawe",
+      "latitude": 5.1764,
+      "longitude": 97.1432,
+      "index": 0.31533896923065186,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-medan",
+      "name": "KPwBI Provinsi Sumatera Utara",
+      "latitude": 3.5902,
+      "longitude": 98.6775,
+      "index": 0.10987259447574615,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-pematangsiantar",
+      "name": "KPwBI Pematangsiantar",
+      "latitude": 2.9602,
+      "longitude": 99.0621,
+      "index": 0.3091242015361786,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-sibolga",
+      "name": "KPwBI Sibolga",
+      "latitude": 1.7371,
+      "longitude": 98.7845,
+      "index": 0.5388165712356567,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-padang",
+      "name": "KPwBI Provinsi Sumatera Barat",
+      "latitude": -0.9427,
+      "longitude": 100.3608,
+      "index": 0.7848081588745117,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-pekanbaru",
+      "name": "KPwBI Provinsi Riau",
+      "latitude": 0.5186,
+      "longitude": 101.4468,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-batam",
+      "name": "KPwBI Provinsi Kepulauan Riau",
+      "latitude": 1.1278,
+      "longitude": 104.0559,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-jambi",
+      "name": "KPwBI Provinsi Jambi",
+      "latitude": -1.5947,
+      "longitude": 103.6143,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-bengkulu",
+      "name": "KPwBI Provinsi Bengkulu",
+      "latitude": -3.8055,
+      "longitude": 102.269,
+      "index": 0.9927290678024292,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-palembang",
+      "name": "KPwBI Provinsi Sumatera Selatan",
+      "latitude": -2.9818,
+      "longitude": 104.746,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-pangkalpinang",
+      "name": "KPwBI Provinsi Kepulauan Bangka Belitung",
+      "latitude": -2.1226,
+      "longitude": 106.1087,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-bandar-lampung",
+      "name": "KPwBI Provinsi Lampung",
+      "latitude": -5.4372,
+      "longitude": 105.2638,
+      "index": 0.1788078248500824,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-jakarta",
+      "name": "Bank Indonesia Kantor Pusat",
+      "latitude": -6.1823,
+      "longitude": 106.8216,
+      "index": 0.036089926958084106,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-jakarta-kpw",
+      "name": "KPwBI Provinsi DKI Jakarta",
+      "latitude": -6.177,
+      "longitude": 106.8373,
+      "index": 0.13642430305480957,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-bandung",
+      "name": "KPwBI Provinsi Jawa Barat",
+      "latitude": -6.9172,
+      "longitude": 107.6105,
+      "index": 0.7593859434127808,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-cirebon",
+      "name": "KPwBI Cirebon",
+      "latitude": -6.7171,
+      "longitude": 108.567,
+      "index": 0.19625093042850494,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-tasikmalaya",
+      "name": "KPwBI Tasikmalaya",
+      "latitude": -7.3241,
+      "longitude": 108.2227,
+      "index": 0.7686075568199158,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-serang",
+      "name": "KPwBI Provinsi Banten",
+      "latitude": -6.1171,
+      "longitude": 106.1557,
+      "index": 0.4801395833492279,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-semarang",
+      "name": "KPwBI Provinsi Jawa Tengah",
+      "latitude": -6.9931,
+      "longitude": 110.4208,
+      "index": 0.05069894716143608,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-solo",
+      "name": "KPwBI Solo / Surakarta",
+      "latitude": -7.5714,
+      "longitude": 110.8291,
+      "index": 0.4411735534667969,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-purwokerto",
+      "name": "KPwBI Purwokerto",
+      "latitude": -7.4239,
+      "longitude": 109.2315,
+      "index": 0.43598616123199463,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-tegal",
+      "name": "KPwBI Tegal",
+      "latitude": -6.8665,
+      "longitude": 109.1352,
+      "index": 0.10148748010396957,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-yogyakarta",
+      "name": "KPwBI DI Yogyakarta",
+      "latitude": -7.8016,
+      "longitude": 110.3663,
+      "index": 0.8087192177772522,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-surabaya",
+      "name": "KPwBI Provinsi Jawa Timur",
+      "latitude": -7.2473,
+      "longitude": 112.738,
+      "index": 0.05928804352879524,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-malang",
+      "name": "KPwBI Malang",
+      "latitude": -7.9812,
+      "longitude": 112.6306,
+      "index": 0.4055456519126892,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-kediri",
+      "name": "KPwBI Kediri",
+      "latitude": -7.8189,
+      "longitude": 112.0125,
+      "index": 0.5549587607383728,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-jember",
+      "name": "KPwBI Jember",
+      "latitude": -8.1725,
+      "longitude": 113.6934,
+      "index": 0.5310842990875244,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-pontianak",
+      "name": "KPwBI Provinsi Kalimantan Barat",
+      "latitude": -0.0242,
+      "longitude": 109.3424,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-palangka-raya",
+      "name": "KPwBI Provinsi Kalimantan Tengah",
+      "latitude": -2.2091,
+      "longitude": 113.916,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-banjarmasin",
+      "name": "KPwBI Provinsi Kalimantan Selatan",
+      "latitude": -3.3243,
+      "longitude": 114.5916,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-samarinda",
+      "name": "KPwBI Provinsi Kalimantan Timur",
+      "latitude": -0.5034,
+      "longitude": 117.1471,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-balikpapan",
+      "name": "KPwBI Balikpapan",
+      "latitude": -1.2721,
+      "longitude": 116.8293,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-tarakan",
+      "name": "KPwBI Provinsi Kalimantan Utara",
+      "latitude": 3.3087,
+      "longitude": 117.5913,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-denpasar",
+      "name": "KPwBI Provinsi Bali",
+      "latitude": -8.6757,
+      "longitude": 115.2285,
+      "index": 0.6896631121635437,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-mataram",
+      "name": "KPwBI Provinsi Nusa Tenggara Barat",
+      "latitude": -8.5831,
+      "longitude": 116.1026,
+      "index": 0.7802087664604187,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-kupang",
+      "name": "KPwBI Provinsi Nusa Tenggara Timur",
+      "latitude": -10.1585,
+      "longitude": 123.5855,
+      "index": 0.5303788781166077,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-manado",
+      "name": "KPwBI Provinsi Sulawesi Utara",
+      "latitude": 1.4646,
+      "longitude": 124.8499,
+      "index": 0.6863191723823547,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-gorontalo",
+      "name": "KPwBI Provinsi Gorontalo",
+      "latitude": 0.5428,
+      "longitude": 123.0583,
+      "index": 0.9417592287063599,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-palu",
+      "name": "KPwBI Provinsi Sulawesi Tengah",
+      "latitude": -0.8953,
+      "longitude": 119.8519,
+      "index": 1,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-mamuju",
+      "name": "KPwBI Provinsi Sulawesi Barat",
+      "latitude": -2.6841,
+      "longitude": 118.877,
+      "index": 0.9699168801307678,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-kendari",
+      "name": "KPwBI Provinsi Sulawesi Tenggara",
+      "latitude": -3.9723,
+      "longitude": 122.5834,
+      "index": 0.03109804540872574,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-makassar",
+      "name": "KPwBI Provinsi Sulawesi Selatan",
+      "latitude": -5.1384,
+      "longitude": 119.4109,
+      "index": 0,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-ternate",
+      "name": "KPwBI Provinsi Maluku Utara",
+      "latitude": 0.7891,
+      "longitude": 127.3855,
+      "index": 0.6844956874847412,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-ambon",
+      "name": "KPwBI Provinsi Maluku",
+      "latitude": -3.6961,
+      "longitude": 128.1832,
+      "index": 0.5656377673149109,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-manokwari",
+      "name": "KPwBI Provinsi Papua Barat",
+      "latitude": -0.866,
+      "longitude": 134.076,
+      "index": 0.9433693885803223,
+      "valid": true
+    },
+    {
+      "id": "kpwbi-jayapura",
+      "name": "KPwBI Provinsi Papua",
+      "latitude": -2.5369,
+      "longitude": 140.7107,
+      "index": 1,
+      "valid": true
+    },
+    {
+      "id": "drc-sinergi-karawang",
+      "name": "Gedung Sinergi — Data Center Bank Indonesia",
+      "latitude": -6.3215,
+      "longitude": 107.3381,
+      "index": 0.24422986805438995,
+      "valid": true
+    }
+  ]
+}

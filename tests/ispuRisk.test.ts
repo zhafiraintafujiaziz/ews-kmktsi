@@ -18,7 +18,7 @@ registerHooks({
 });
 
 const { IspuService } = await import('../src/services/ispuService.ts');
-const { BnpbInariskService } = await import('../src/services/bnpbInariskService.ts');
+const { BnpbIrbiService } = await import('../src/services/bnpbIrbiService.ts');
 const { KPWBI_OFFICES } = await import('../src/constants/kpwbiOffices.ts');
 const { getIspuCategory } = await import('../src/constants/ispuCategories.ts');
 const { scoreAlertForOffice, buildOfficeRiskMap, buildAlertRiskResult, calculateRisk, mapAlertToDisasterEvent } = await import('../src/utils/riskCalculator.ts');
@@ -49,7 +49,7 @@ test('ISPU stations generate severity 1, 2 and 3; Baik and Sedang generate no al
 });
 
 test('ISPU contributes low, medium and high KPw risk without querying InaRISK', (t) => {
-  const inarisk = t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => {
+  const inarisk = t.mock.method(BnpbIrbiService, 'getIndex', () => {
     throw new Error('ISPU must not query InaRISK');
   });
   const cases = [
@@ -90,7 +90,7 @@ test('KPw uses the highest ISPU risk and excludes offices outside the impact are
 });
 
 test('severity 3 gives high risk with an available or missing InaRISK assessment', (t) => {
-  const inarisk = t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => 0.6);
+  const inarisk = t.mock.method(BnpbIrbiService, 'getIndex', () => 0.6);
   const earthquake: DisasterAlert = { ...airAlert('BERBAHAYA', 3), type: 'earthquake' };
   const scored = scoreAlertForOffice(office.id, earthquake);
   assert.equal(scored.assessmentScore, 2);

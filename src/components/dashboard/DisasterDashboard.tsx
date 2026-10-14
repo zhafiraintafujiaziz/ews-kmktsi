@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useAlerts } from '../../hooks/useAlerts';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useAlertField } from '../../hooks/useAlerts';
 import { useDisasterAlert } from '../../hooks/useDisasterAlert';
 import type { AlertSeverity, DisasterType } from '../../types';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
@@ -18,8 +18,10 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
   onSwitchToKerentanan,
   onSwitchToPerkiraan
 }) => {
-  const { alerts, isLoading, loadingSources } = useAlerts();
-  const { riskResults } = useDisasterAlert();
+  const alerts = useAlertField('alerts');
+  const isLoading = useAlertField('isLoading');
+  const { riskResults } = useDisasterAlert(alerts, isLoading);
+  const riskById = useMemo(() => new Map(riskResults.map(result => [result.event.id, result])), [riskResults]);
 
   const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<DisasterType | 'all'>('all');
@@ -51,15 +53,15 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
   const calculatedCriticalAlerts = useMemo(() => {
     return recentAlerts.filter((a) => {
       if (typeFilter !== 'all' && a.type !== typeFilter) return false;
-      const riskRes = riskResults.find((r) => r.event.id === a.id);
+      const riskRes = riskById.get(a.id);
       if (riskRes) return riskRes.riskLevel === 'Tinggi';
       return !isRiskScoredType(a.type) && a.severity === 3;
     });
-  }, [recentAlerts, riskResults, typeFilter]);
+  }, [recentAlerts, riskById, typeFilter]);
 
   const filteredAlerts = useMemo(() => {
     return recentAlerts.filter((a) => {
-      const riskRes = riskResults.find((r) => r.event.id === a.id);
+      const riskRes = riskById.get(a.id);
       const effectiveRiskLevel = riskRes 
         ? riskRes.riskLevel 
         : isRiskScoredType(a.type) ? null : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
@@ -72,7 +74,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
       if (typeFilter !== 'all' && a.type !== typeFilter) return false;
       return true;
     });
-  }, [recentAlerts, riskResults, severityFilter, typeFilter]);
+  }, [recentAlerts, riskById, severityFilter, typeFilter]);
 
   const filteredStats = useMemo(() => {
     const stats: Record<AlertSeverity | 'total', number> = { 3: 0, 2: 0, 1: 0, total: 0 };
@@ -80,7 +82,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
     recentAlerts.forEach((a) => {
       if (typeFilter !== 'all' && a.type !== typeFilter) return;
 
-      const riskRes = riskResults.find((r) => r.event.id === a.id);
+      const riskRes = riskById.get(a.id);
       const effectiveRiskLevel = riskRes 
         ? riskRes.riskLevel 
         : isRiskScoredType(a.type) ? null : (a.severity === 3 ? 'Tinggi' : a.severity === 2 ? 'Sedang' : 'Rendah');
@@ -99,27 +101,29 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
     }
 
     return stats;
-  }, [recentAlerts, riskResults, severityFilter, typeFilter]);
+  }, [recentAlerts, riskById, severityFilter, typeFilter]);
 
-  const handleProvinceSelect = (provinceId: string) => {
+  const mapAlerts = useMemo(() => typeFilter === 'all' ? recentAlerts : recentAlerts.filter(alert => alert.type === typeFilter), [recentAlerts, typeFilter]);
+
+  const handleProvinceSelect = useCallback((provinceId: string) => {
     setSelectedProvinceId(provinceId);
     setSelectedOfficeId(null);
     setSelectedAlertId(null);
-  };
+  }, []);
 
-  const handleOfficeSelect = (officeId: string) => {
+  const handleOfficeSelect = useCallback((officeId: string) => {
     setSelectedOfficeId(officeId);
     const office = KPWBI_OFFICES.find((o) => o.id === officeId);
     if (office) setSelectedProvinceId(office.provinceId);
     setSelectedAlertId(null);
-  };
+  }, []);
 
-  const handleAlertSelect = (alertId: string) => {
+  const handleAlertSelect = useCallback((alertId: string) => {
     setSelectedAlertId(alertId);
     setSelectedOfficeId(null);
     const alert = alerts.find((a) => a.id === alertId);
     if (alert) setSelectedProvinceId(alert.provinceId);
-  };
+  }, [alerts]);
 
   return (
     <div className="dashboard-container">
@@ -153,7 +157,6 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
           typeFilter={typeFilter}
           setTypeFilter={setTypeFilter}
           isLoading={isLoading}
-          loadingSources={loadingSources}
           isCollapsed={effectiveSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed((c) => !c)}
         />
@@ -161,7 +164,7 @@ export const DisasterDashboard: React.FC<DisasterDashboardProps> = ({
         <MobileSplitter />
 
         <EwsMap
-          alerts={typeFilter === 'all' ? recentAlerts : recentAlerts.filter((a) => a.type === typeFilter)}
+          alerts={mapAlerts}
           allAlerts={recentAlerts}
           riskAlerts={filteredAlerts}
           riskResults={riskResults}

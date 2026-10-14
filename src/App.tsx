@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import DisasterDashboard from './components/dashboard/DisasterDashboard';
 import KerentananScreen from './components/kerentanan/KerentananScreen';
-import PerkiraanScreen from './components/perkiraan/PerkiraanScreen';
+const PerkiraanScreen = lazy(() => import('./components/perkiraan/PerkiraanScreen'));
 
 type AppScreen = 'dashboard' | 'kerentanan' | 'gunungapi' | 'perkiraan';
 
@@ -20,7 +20,9 @@ function App() {
         <KerentananScreen onBack={() => setScreen('dashboard')} />
       )}
       {screen === 'perkiraan' && (
-        <PerkiraanScreen onBack={() => setScreen('dashboard')} />
+        <Suspense fallback={<div className="screen-loading" role="status">Memuat halaman Perkiraan...</div>}>
+          <PerkiraanScreen onBack={() => setScreen('dashboard')} />
+        </Suspense>
       )}
     </div>
   );

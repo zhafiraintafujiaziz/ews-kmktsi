@@ -10,6 +10,8 @@ const ALLOWED_DOMAINS = new Set([
   'inasiam.rack.my.id',
   'api.rss2json.com',
   'gis.bnpb.go.id',
+  'inarisk.bnpb.go.id',
+  'inarisk1.bnpb.go.id',
   'opsroom.sipongidata.my.id',
   'opsroom-sipongi.gakkum.kehutanan.go.id',
   'ispu.kemenlh.go.id',
@@ -81,7 +83,7 @@ export async function fetchWithCorsProxy(url: string, { signal }: FetchProxyOpti
   const pubRes = await fetchViaPublicProxies(url, signal, true);
   if (pubRes) return pubRes.json();
   const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error('Direct fetch failed: ' + res.status);
+  if (!res.ok) throw Object.assign(new Error('Direct fetch failed: ' + res.status), { kind: 'http_error', status: res.status, endpoint: url });
   return res.json();
 }
 
@@ -92,6 +94,6 @@ export async function fetchHtmlWithCorsProxy(url: string): Promise<string> {
   const pubRes = await fetchViaPublicProxies(url);
   if (pubRes) return pubRes.text();
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Direct fetch failed: ' + res.status);
+  if (!res.ok) throw Object.assign(new Error('Direct fetch failed: ' + res.status), { kind: 'http_error', status: res.status, endpoint: url });
   return res.text();
 }

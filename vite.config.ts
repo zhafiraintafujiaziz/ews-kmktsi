@@ -4,9 +4,12 @@ import react from "@vitejs/plugin-react";
 import { powerApps } from "@microsoft/power-apps-vite/plugin";
 import proxyHandler from "./api/proxy.mjs";
 import { createHandler, type Resource } from "./server/handlers.ts";
+import { createIqairHandler } from "./server/iqairHandler.ts";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 function mountDatabaseRoutes(middlewares: { use: (route: string, handler: (req: IncomingMessage, res: ServerResponse) => void) => void }) {
+  const iqairHandler = createIqairHandler();
+  middlewares.use('/api/iqair', (req, res) => { void iqairHandler(req, res); });
   for (const resource of ['reports', 'checklist', 'alerts', 'import', 'alert-cache'] as const satisfies readonly Resource[]) {
     const handler = createHandler(resource);
     middlewares.use(`/api/${resource}`, (req, res) => { void handler(req, res); });

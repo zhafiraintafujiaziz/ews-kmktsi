@@ -21,7 +21,7 @@ registerHooks({
 const { KarhutlaRegionalService, karhutlaRegion, karhutlaStatisticsUrl, parseKarhutlaStatistics, project3395 } = await import('../src/services/karhutlaRegionalService.ts');
 const { resolveOfficeAssessment } = await import('../src/utils/officeHazardAssessment.ts');
 const { scoreAlertForOffice, buildOfficeRiskMap, buildAlertRiskResult } = await import('../src/utils/riskCalculator.ts');
-const { BnpbInariskService } = await import('../src/services/bnpbInariskService.ts');
+const { BnpbIrbiService } = await import('../src/services/bnpbIrbiService.ts');
 const { KPWBI_OFFICES } = await import('../src/constants/kpwbiOffices.ts');
 const makeOffice = (id: string, longitude = 114) => ({ ...KPWBI_OFFICES[0], id, latitude: -2.5, longitude });
 const response = (mean = 0.5, count = 100000) => ({ statistics: [{ mean, min: mean, max: mean, count, skipX: 1, skipY: 1 }] });
@@ -54,14 +54,14 @@ test('numeric statistics preserve mean precision, real zero, NoData, and estimat
 test('statistics errors, invalid values and rendered multiband data stay unavailable', () => {
   for (const value of [null, {}, { statistics: null }, { error: { message: 'Unavailable' } }, { statistics: [response().statistics[0], response().statistics[0]] }, response(12), response(0.5, -1), { statistics: [{ ...response().statistics[0], mean: null }] }, { statistics: [{ ...response().statistics[0], min: 0.6 }] }]) assert.throws(() => parseKarhutlaStatistics(value, 1e7));
 });
-test('regional mean drives shared scoring even when the exact office point is NoData', async t => {
+test('IRBI kelas risiko drives shared scoring for Karhutla', async t => {
   const office = makeOffice('regional-shared');
   t.mock.method(globalThis, 'fetch', async input => { assert.ok(target(input).pathname.endsWith('/computeStatisticsHistograms'));return Response.json(response(0.61)); });
-  t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => { throw new Error('Exact-point source must not be used for Karhutla'); });
+  t.mock.method(BnpbIrbiService, 'getIndex', () => 0.7);
   await KarhutlaRegionalService.refresh([office], true);
   const assessment = resolveOfficeAssessment(office, 'karhutla');
-  assert.equal(assessment.index, 0.61);assert.equal(assessment.factor, 3);
-  assert.match(assessment.explanation, /100.000 sel valid/);
+  assert.equal(assessment.index, 0.7);assert.equal(assessment.factor, 3);
+  assert.match(assessment.explanation, /IRBI/);
   for (const severity of [1, 2, 3] as const) {
     const alert: DisasterAlert = { id: 'regional-live', type: 'karhutla', severity, provinceId: office.provinceId, title: 'Fixture', description: 'Fixture', timestamp: new Date().toISOString(), latitude: office.latitude, longitude: office.longitude };
     assert.equal(scoreAlertForOffice(office.id, alert, office).totalScore, [3, 6, 9][severity - 1]);
@@ -90,7 +90,50 @@ test('cached numeric results avoid polling, expire after six hours, and support 
   clock += 6 * 3600000;await KarhutlaRegionalService.refresh([office]);assert.equal(calls, 3);
   await KarhutlaRegionalService.refresh([{ ...office, longitude: 115 }]);assert.equal(calls, 4);
 });
+test('refresh retains statistics until each office finishes, then publishes success, NoData or error', async t => {
+  t.mock.method(BnpbIrbiService, 'getIndex', () => 0.42);
+  const offices = ['available', 'no-data', 'error'].map((outcome, i) => makeOffice('regional-refresh-' + outcome, 110 + i * 4));
+  let refresh = false;
+  const releases = new Map<string, (data: unknown) => void>();
+  t.mock.method(globalThis, 'fetch', async input => {
+    if (!refresh) return Response.json(response(0.42));
+    const x = JSON.parse(target(input).searchParams.get('geometry')!).rings[0][0][0];
+    const office = offices.find(item => Math.abs(project3395(item.longitude, item.latitude)[0] - x) < 0.01);
+    assert.ok(office);
+    return new Promise<Response>(resolve => { releases.set(office.id, data => resolve(Response.json(data))); });
+  });
+  await KarhutlaRegionalService.refresh(offices, true);
+  const previousCheckedAt = KarhutlaRegionalService.getOfficeAssessment(offices[0].id)?.checkedAt;
+  refresh = true;
+  const pending = KarhutlaRegionalService.refresh(offices, true);
+  await nextTurn();
+  for (const office of offices) {
+    const duringRefresh = KarhutlaRegionalService.getOfficeAssessment(office.id);
+    assert.equal(duringRefresh?.status, 'loading');
+    assert.equal(duringRefresh?.statistics?.mean, 0.42);
+    assert.equal(resolveOfficeAssessment(office, 'karhutla').index, 0.42);
+  }
+  assert.equal(KarhutlaRegionalService.getOfficeAssessment(offices[0].id)?.checkedAt, previousCheckedAt);
+  assert.equal(KarhutlaRegionalService.getAssessmentStatus().valueCount, 3);
+  releases.get(offices[0].id)!(response(0.73));
+  await nextTurn();
+  assert.equal(KarhutlaRegionalService.getOfficeAssessment(offices[0].id)?.statistics?.mean, 0.73);
+  assert.equal(KarhutlaRegionalService.getOfficeAssessment(offices[1].id)?.statistics?.mean, 0.42);
+  assert.equal(KarhutlaRegionalService.getOfficeAssessment(offices[2].id)?.statistics?.mean, 0.42);
+  releases.get(offices[1].id)!({ statistics: [] });
+  releases.get(offices[2].id)!({ error: { message: 'Refresh fixture failure' } });
+  await pending;
+  assert.equal(KarhutlaRegionalService.getOfficeAssessment(offices[1].id)?.status, 'no_data');
+  assert.equal(KarhutlaRegionalService.getOfficeAssessment(offices[1].id)?.statistics, null);
+  assert.equal(KarhutlaRegionalService.getOfficeAssessment(offices[2].id)?.status, 'error');
+  assert.equal(KarhutlaRegionalService.getOfficeAssessment(offices[2].id)?.statistics, null);
+  assert.equal(KarhutlaRegionalService.getAssessmentStatus().status, 'partial');
+  assert.equal(KarhutlaRegionalService.getAssessmentStatus().valueCount, 1);
+  assert.equal(KarhutlaRegionalService.getAssessmentStatus().failedOfficeCount, 1);
+});
 test('area NoData, a valid zero and individual service errors remain distinct and retry recovers', async t => {
+  const diagnostics = t.mock.method(console, 'error', () => {});
+  const noData = t.mock.method(console, 'info', () => {});
   const offices = [makeOffice('regional-zero', 110), makeOffice('regional-empty', 114), makeOffice('regional-error', 118)];
   let fail = true;
   t.mock.method(globalThis, 'fetch', async input => {
@@ -105,16 +148,45 @@ test('area NoData, a valid zero and individual service errors remain distinct an
   assert.equal(KarhutlaRegionalService.getOfficeAssessment(offices[2].id)?.status, 'error');
   assert.equal(KarhutlaRegionalService.getAssessmentStatus().status, 'partial');
   assert.equal(KarhutlaRegionalService.getAssessmentStatus().failedOfficeCount, 1);
+  const detail = diagnostics.mock.calls[0].arguments[1];
+  assert.equal(detail.category, 'karhutla');
+  assert.match(detail.endpoint, /computeStatisticsHistograms$/);
+  assert.equal(detail.failedOfficeCount, 1);
+  assert.equal(detail.errors[0].reason, 'Fixture failure');
+  assert.equal(detail.errors[0].officeId, offices[2].id);
+  assert.equal(detail.errors[0].kind, 'service_error');
+  assert.deepEqual(noData.mock.calls[0].arguments[1].noDataOfficeIds, [offices[1].id]);
   fail = false;await KarhutlaRegionalService.refresh(offices);
   assert.equal(KarhutlaRegionalService.getOfficeAssessment(offices[2].id)?.statistics?.mean, 0.3);
+  assert.equal(diagnostics.mock.callCount(), 1);
 });
 test('request timeout cancels the active source and leaves a clear error without hanging', async t => {
+  const diagnostics = t.mock.method(console, 'error', () => {});
   const office = makeOffice('regional-timeout');const signals: AbortSignal[] = [];
   t.mock.timers.enable({ apis: ['setTimeout'] });
   t.mock.method(globalThis, 'fetch', (_input, options) => { signals.push(options!.signal!);return new Promise<Response>(() => {}); });
   const promise = KarhutlaRegionalService.refresh([office], true);await nextTurn();
   t.mock.timers.tick(12000);await promise;
   assert.equal(signals[0].aborted, true);assert.equal(KarhutlaRegionalService.getOfficeAssessment(office.id)?.status, 'error');
+  assert.equal(diagnostics.mock.calls[0].arguments[1].errors[0].kind, 'timeout');
+});
+
+test('forced regional refreshes share an unfinished batch instead of starting duplicate requests', async t => {
+  const office = makeOffice('regional-overlap');
+  let release!: (value: Response) => void;
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', () => {
+    calls++;
+    return new Promise<Response>(resolve => { release = resolve; });
+  });
+  const first = KarhutlaRegionalService.refresh([office], true);
+  await nextTurn();
+  const second = KarhutlaRegionalService.refresh([office], true);
+  assert.strictEqual(first, second);
+  assert.equal(calls, 1);
+  release(Response.json(response(0.6)));
+  await Promise.all([first, second]);
+  assert.equal(KarhutlaRegionalService.getOfficeAssessment(office.id)?.statistics?.mean, 0.6);
 });
 test('the batch deadline retains completed areas and marks queued areas unavailable', async t => {
   const offices = Array.from({ length: 12 }, (_, i) => makeOffice('regional-deadline-' + i));let calls = 0;
