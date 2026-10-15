@@ -1,4 +1,4 @@
-import type { AlertSeverity, IspuCategory } from '../types';
+import type { AlertSeverity, IspuCategory } from '../types/index.ts';
 
 export const ISPU_CATEGORIES = [
   { category: 'BAIK', label: 'Baik', range: '0-50', color: '#00cc00', textColor: '#000000' },

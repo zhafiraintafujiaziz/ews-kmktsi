@@ -8,9 +8,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node --expose-gc --experimental-strip-types --test tests/freshness.test.ts tests/disasterRecord.test.ts tests/ispuRisk.test.ts tests/kerentanan.test.ts tests/hazardAssessment.test.ts tests/earthquakeHazard.test.ts tests/karhutlaRegional.test.ts tests/persistence.test.ts tests/alertNotifications.test.ts tests/alertStore.test.ts tests/iqair.test.ts",
+    "test": "node --expose-gc --experimental-strip-types --test tests/freshness.test.ts tests/disasterRecord.test.ts tests/ispuRisk.test.ts tests/kerentanan.test.ts tests/hazardAssessment.test.ts tests/earthquakeHazard.test.ts tests/karhutlaRegional.test.ts tests/persistence.test.ts tests/alertNotifications.test.ts tests/alertStore.test.ts tests/ispuHistory.test.ts tests/browserStorage.test.ts tests/feeds.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --experimental-strip-types scripts/migrate.ts",
+    "ispu:collect": "node --experimental-strip-types scripts/collect-ispu.ts",
+    "ispu:schedule": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/schedule-ispu.ps1",
+    "ispu:export": "node --experimental-strip-types scripts/export-ispu.ts",
     "preview": "vite preview"
   },
   "dependencies": {

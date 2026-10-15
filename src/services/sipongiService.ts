@@ -1,8 +1,10 @@
-import type { DisasterAlert, AlertSeverity } from '../types';
-import { fetchWithCorsProxy } from './proxy';
-import { mapTextToProvinceId } from '../utils/provinceMap';
-import { haversineDistance } from '../utils/geo';
-import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
+import type { DisasterAlert, AlertSeverity } from '../types/index.ts';
+import { fetchWithCorsProxy } from './proxy.ts';
+import { usesBrowserStorage } from '../domain/dataMode.ts';
+import { requestFeed } from './feedClient.ts';
+import { mapTextToProvinceId } from '../utils/provinceMap.ts';
+import { haversineDistance } from '../utils/geo.ts';
+import { KPWBI_OFFICES } from '../constants/kpwbiOffices.ts';
 
 export interface SipongiRow {
   provinsi: string;
@@ -295,6 +297,7 @@ export const SipongiService = {
    * dengan konsolidasi multi-satelit (NASA + LAPAN) per kabupaten untuk mencegah spam.
    */
   async fetchKarhutlaAlerts(): Promise<DisasterAlert[]> {
+    if (usesBrowserStorage()) return requestFeed('sipongi');
     const apiBase = "https://opsroom.sipongidata.my.id";
     try {
       const periodEnd = new Date();

@@ -58,11 +58,16 @@ the dashboard is open. The key is feed + record ID + revision. Repeated sighting
 update `lastSeenAt` while preserving the first payload and `firstSeenAt`; a new
 revision creates a new row. Raw source records and GeoJSON are retained.
 
-There is no independent collector, automatic retention cleanup, or history UI.
+This alert history has no independent collector, automatic retention cleanup, or history UI.
 Closing the dashboard stops its polling and cancels pending history batches.
 History write failures log a warning without blocking live alerts. Records
 continue accumulating until manually deleted; track file size as history grows.
 Current geographic calculations and alert freshness rules remain unchanged.
+
+Daily ISPU snapshots use a separate collector and tables. Run `npm run ispu:collect`
+to archive all valid stations independently of the dashboard, or `npm run ispu:schedule`
+to register a daily Windows task at 08:30 WIB. See [Daily ISPU history](ispu-history.md)
+for collection, local logs, CSV export, historical station/city graphs and rankings.
 
 ## Cached initial alerts
 

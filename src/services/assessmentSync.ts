@@ -10,12 +10,13 @@ const assessments = [
 ];
 const running = new Map<string, Promise<void>>();
 
-export function refreshBackgroundAssessments(): Promise<void> {
+export function refreshBackgroundAssessments(throwOnError = false): Promise<void> {
   return Promise.all(assessments.map(({ source, category, endpoint, refresh }) => {
     const pending = running.get(category);
     if (pending) return pending;
     const request = Promise.resolve().then(refresh).catch(error => {
       logSyncFailure({ source, category, endpoint }, error);
+      if (throwOnError) throw error;
     }).finally(() => running.delete(category));
     running.set(category, request);
     return request;

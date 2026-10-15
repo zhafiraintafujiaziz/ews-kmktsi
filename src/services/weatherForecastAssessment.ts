@@ -1,6 +1,6 @@
-import type { AlertSeverity } from '../types';
-import { PROVINCES } from '../constants/provinces';
-import { mapTextToProvinceId } from '../utils/provinceMap';
+import type { AlertSeverity } from '../types/index.ts';
+import { PROVINCES } from '../constants/provinces.ts';
+import { mapTextToProvinceId } from '../utils/provinceMap.ts';
 
 export const FORECAST_SOURCE = 'https://www.bmkg.go.id/cuaca/potensi-cuaca-ekstrem';
 const DAY = 86400000;

@@ -1,4 +1,4 @@
-import type { AssessmentLevel } from '../types';
+import type { AssessmentLevel } from '../types/index.ts';
 
 /**
  * BNPB InaRISK IRBI (Indeks Risiko Bencana Indonesia) kelas risiko.

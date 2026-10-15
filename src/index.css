@@ -3382,6 +3382,112 @@ body.is-dragging-splitter .mobile-splitter {
   }
 }
 
+/* Local ISPU archive: history and national rankings. */
+.kerentanan-content[hidden], .ispu-history-panel[hidden] { display: none; }
+.kerentanan-with-history {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr) 400px;
+  grid-template-areas: "offices map history";
+  min-height: 0;
+}
+.kerentanan-with-history > .kerentanan-panel { grid-area: offices; }
+.kerentanan-with-history > .kerentanan-map-wrap { grid-area: map; min-width: 0; min-height: 0; }
+.kerentanan-with-history > .mobile-splitter { display: none; }
+.ispu-history-panel {
+  grid-area: history;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-default);
+  font-size: 12px;
+}
+.ispu-history-header { padding: 16px; border-bottom: 1px solid var(--border-default); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; }
+.ispu-history-header h2, .ispu-history-section-heading h2 { margin: 4px 0 0; font-size: 16px; font-weight: 700; }
+.ispu-history-eyebrow { font-size: 9px; letter-spacing: .07em; font-weight: 700; color: var(--text-secondary); }
+.ispu-history-body { overflow-y: auto; min-height: 0; flex: 1; padding: 16px; }
+.ispu-history-context { margin: 0 0 16px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--accent-light); color: var(--text-secondary); line-height: 1.6; }
+.ispu-history-context strong { color: var(--text-primary); }
+.ispu-history-panel button { cursor: pointer; }
+.ispu-history-header button, .ispu-history-presets button, .ispu-history-error button {
+  padding: 6px 9px; border: 1px solid var(--border-default); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text-secondary); font-size: 11px; font-weight: 600;
+}
+.ispu-history-panel button:focus-visible, .ispu-history-panel summary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+.ispu-history-selectors { display: grid; gap: 14px; }
+.ispu-history-selectors .MuiInputBase-root, .ispu-history-selectors .MuiInputLabel-root { font-size: 12px; }
+.ispu-history-presets { display: flex; gap: 6px; margin: 14px 0 10px; }
+.ispu-history-range-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 14px 0 10px; }
+.ispu-history-range-actions .ispu-history-presets { margin: 0; }
+.ispu-history-range-actions > .ispu-history-export { margin-left: auto; white-space: nowrap; }
+.ispu-history-presets button[aria-pressed="true"] { border-color: var(--accent-primary); background: var(--accent-light); color: var(--accent-primary); }
+.ispu-history-dates { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.ispu-history-dates label, .ispu-history-day { display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+.ispu-history-dates input, .ispu-history-day select { width: 100%; min-width: 0; box-sizing: border-box; padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-default); background: var(--bg-surface); color: var(--text-primary); font: inherit; }
+.ispu-history-day { margin: 12px 0; }
+.ispu-history-note { margin: 8px 0; color: var(--text-secondary); font-size: 11px; line-height: 1.55; }
+.ispu-history-message { padding: 16px 12px; color: var(--text-secondary); background: var(--bg-sidebar); border-radius: var(--radius-sm); line-height: 1.6; }
+.ispu-history-error { padding: 12px; margin: 10px 0; background: var(--alert-critical-bg); color: var(--alert-critical); line-height: 1.6; }
+.ispu-history-error button { display: block; margin-top: 8px; }
+.ispu-history-chart { margin-top: 16px; }
+.ispu-history-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ispu-history-chart svg text { fill: var(--text-secondary); font-size: 10px; }
+.ispu-history-chart svg .ispu-chart-axis-title { font-size: 11px; font-weight: 700; }
+.ispu-chart-grid { stroke: var(--border-default); stroke-dasharray: 3 3; }
+.ispu-chart-point { cursor: pointer; }
+.ispu-chart-point:focus { outline: none; stroke-width: 4px; }
+.ispu-history-series-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.ispu-history-series-legend button { display: inline-flex; align-items: center; gap: 5px; text-align: left; padding: 5px 7px; border: 1px solid var(--border-default); border-radius: 4px; background: var(--bg-surface); color: var(--text-secondary); font-size: 10px; }
+.ispu-history-series-legend button[aria-pressed="false"] { opacity: .5; text-decoration: line-through; }
+.ispu-history-series-legend i { display: inline-block; width: 16px; height: 3px; flex-shrink: 0; }
+.ispu-history-reading { padding: 12px; margin: 12px 0; background: var(--bg-primary); border: 1px solid var(--border-default); border-radius: var(--radius-sm); }
+.ispu-history-reading > div { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+.ispu-history-reading b { white-space: nowrap; font-size: 22px; line-height: 1.1; }
+.ispu-history-reading b small { font-size: 10px; color: var(--text-secondary); }
+.ispu-history-reading p { margin: 6px 0 0; color: var(--text-secondary); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.ispu-history-reading .ispu-history-flag { color: var(--alert-critical); }
+.ispu-history-category { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; line-height: 1.4; }
+.ispu-history-category i { height: 7px; width: 7px; border: 1px solid var(--text-secondary); border-radius: 50%; flex-shrink: 0; }
+.ispu-history-data summary { cursor: pointer; font-weight: 600; color: var(--accent-primary); padding: 8px 0; }
+.ispu-history-data-actions { display: flex; justify-content: flex-end; margin: 4px 0 8px; }
+.ispu-history-export { padding: 7px 10px; border: 1px solid var(--accent-primary); border-radius: var(--radius-sm); background: var(--accent-light); color: var(--accent-primary); font: inherit; font-size: 11px; font-weight: 600; }
+.ispu-history-export:hover:not(:disabled) { background: var(--bg-surface); }
+.ispu-history-export:disabled { opacity: .5; cursor: not-allowed; }
+.ispu-history-table-scroll { overflow-x: auto; max-height: 320px; }
+.ispu-history-data table { min-width: 520px; }
+.ispu-history-panel table { width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; }
+.ispu-history-panel caption { text-align: left; color: var(--text-secondary); padding: 8px 0; font-size: 10px; }
+.ispu-history-panel th { padding: 8px 5px; background: var(--bg-sidebar); color: var(--text-secondary); font-size: 10px; font-weight: 600; }
+.ispu-history-panel td { padding: 10px 5px; border-bottom: 1px solid var(--border-default); vertical-align: top; }
+.ispu-history-panel td small { display: block; margin-top: 3px; font-size: 10px; color: var(--text-secondary); line-height: 1.45; }
+.ispu-history-rankings { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border-default); }
+.ispu-history-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ispu-history-section-heading > span { font-size: 10px; color: var(--text-secondary); }
+.ispu-history-ranking { margin-top: 18px; }
+.ispu-history-ranking h3 { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 8px; font-size: 13px; }
+.ispu-history-ranking h3 span { font-size: 10px; font-weight: 400; color: var(--text-secondary); }
+.ispu-history-ranking td:first-child { color: var(--text-secondary); width: 20px; }
+.ispu-history-ranking td:last-child { width: 87px; }
+.ispu-history-ranking td:last-child b { display: block; font-size: 15px; margin-bottom: 3px; }
+.ispu-history-ranking td button { display: block; width: 100%; padding: 0; background: transparent; border: 0; text-align: left; color: var(--text-primary); font: inherit; }
+.ispu-history-ranking td button:hover strong { color: var(--accent-primary); text-decoration: underline; }
+@media (min-width: 769px) and (max-width: 1279px) {
+  .kerentanan-with-history { grid-template-columns: 360px minmax(0, 1fr); grid-template-areas: "offices map" "offices history"; grid-template-rows: minmax(340px, 55vh) max-content; overflow-y: auto; align-items: start; }
+  .kerentanan-with-history > .kerentanan-panel { height: calc(100dvh - 110px); max-height: calc(100dvh - 110px); position: sticky; top: 0; }
+  .kerentanan-with-history > .kerentanan-map-wrap { height: 100%; }
+  .kerentanan-with-history .ispu-history-panel { display: block; overflow: visible; border-top: 1px solid var(--border-default); }
+  .kerentanan-with-history .ispu-history-body { overflow: visible; }
+}
+@media (max-width: 768px) {
+  .kerentanan-with-history { grid-template-columns: minmax(0, 1fr); grid-template-areas: "map" "history" "offices"; grid-template-rows: minmax(300px, 50vh) max-content 420px; overflow-y: auto; }
+  .kerentanan-with-history > .kerentanan-map-wrap { height: 100%; }
+  .kerentanan-with-history > .kerentanan-panel { height: 100%; width: 100%; min-height: 0; }
+  .kerentanan-with-history .ispu-history-panel { display: block; overflow: visible; border-left: 0; border-top: 1px solid var(--border-default); }
+  .kerentanan-with-history .ispu-history-body { overflow: visible; }
+}
+
 /* components/perkiraan/PerkiraanScreen.css */
 /* Always-expanded pills for perkiraan tab switcher */
 .topbar-filter-group.perkiraan .topbar-filter-pill {
@@ -6305,3 +6411,9 @@ body.is-dragging-splitter .mobile-splitter {
 }
 
 .screen-loading { padding: 24px; color: var(--text-secondary); }
+.browser-data-controls { margin-block: 12px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.browser-data-controls p { margin-block: 6px; }
+.browser-data-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.browser-data-actions button { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #334155; cursor: pointer; font: inherit; }
+.browser-data-actions button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.browser-data-actions button:disabled { opacity: .6; cursor: wait; }

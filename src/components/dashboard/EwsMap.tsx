@@ -14,6 +14,7 @@ import MapController from './map/MapController';
 import MapEventsHandler from './map/MapEventsHandler';
 import AlertCircles from './map/AlertCircles';
 import KpwMarkers from './map/KpwMarkers';
+import IspuStationMarkers from './map/IspuStationMarkers';
 import NearestKpwPanel from './map/NearestKpwPanel';
 import MapLegend from './map/MapLegend';
 import VolcanoReferenceLayer from './map/VolcanoReferenceLayer';
@@ -442,6 +443,8 @@ const EwsMapComponent: React.FC<EwsMapProps> = ({
         ))}
 
         {!baseMapOnly && <AlertCircles alerts={visibleAlerts} onAlertSelect={onAlertSelect} provinceCentroids={provinceCentroids} />}
+
+        {!baseMapOnly && isKerentananView && activeTypeFilter === 'air_quality' && <IspuStationMarkers />}
 
         {!baseMapOnly && <KpwMarkers
           alerts={visibleAlerts}

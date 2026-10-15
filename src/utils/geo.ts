@@ -1,5 +1,5 @@
-import type { KpwbiOffice } from '../types';
-import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
+import type { KpwbiOffice } from '../types/index.ts';
+import { KPWBI_OFFICES } from '../constants/kpwbiOffices.ts';
 
 export function haversineDistance(
   lat1: number,

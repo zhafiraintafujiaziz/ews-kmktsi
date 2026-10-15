@@ -1,5 +1,7 @@
-import type { VolcanoReport, VolcanoLevel, VolcanoSeismicity, DisasterAlert, AlertSeverity } from '../types';
-import { fetchHtmlWithCorsProxy } from './proxy';
+import type { VolcanoReport, VolcanoLevel, VolcanoSeismicity, DisasterAlert, AlertSeverity } from '../types/index.ts';
+import { fetchHtmlWithCorsProxy } from './proxy.ts';
+import { usesBrowserStorage } from '../domain/dataMode.ts';
+import { requestFeed } from './feedClient.ts';
 
 
 
@@ -73,14 +75,14 @@ export function getJakartaDateString(d: Date = new Date()): string {
 }
 
 export const MagmaService = {
-  async fetchDailyReport(dateStr: string): Promise<VolcanoReport[]> {
+  async fetchDailyReport(dateStr: string, parseHtml = (text: string): Document => new DOMParser().parseFromString(text, 'text/html')): Promise<VolcanoReport[]> {
+    if (usesBrowserStorage()) return requestFeed('volcano-report', { date: dateStr });
     const url = `https://magma.esdm.go.id/v1/gunung-api/laporan-harian/${dateStr}`;
     try {
       const htmlText = await fetchHtmlWithCorsProxy(url);
       if (!htmlText) throw new Error('Empty response from proxy');
 
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlText, 'text/html');
+      const doc = parseHtml(htmlText);
 
       // Search cards by headers
       const reports: VolcanoReport[] = [];
@@ -136,7 +138,8 @@ export const MagmaService = {
     }
   },
 
-  async fetchLiveAlerts(): Promise<DisasterAlert[]> {
+  async fetchLiveAlerts(parseHtml?: (text: string) => Document): Promise<DisasterAlert[]> {
+    if (usesBrowserStorage()) return requestFeed('magma');
     const today = new Date();
     const yesterday = new Date(today.getTime() - 24 * 3600000);
 
@@ -145,8 +148,8 @@ export const MagmaService = {
 
     try {
       const results = await Promise.allSettled([
-        this.fetchDailyReport(todayStr),
-        this.fetchDailyReport(yesterdayStr)
+        this.fetchDailyReport(todayStr, parseHtml),
+        this.fetchDailyReport(yesterdayStr, parseHtml)
       ]);
 
       const todayReports = results[0].status === 'fulfilled' ? results[0].value : [];

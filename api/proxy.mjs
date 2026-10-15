@@ -38,6 +38,10 @@ function sendText(res, status, body, contentType) {
 }
 
 export default async function handler(req, res) {
+  if (process.env.VERCEL) {
+    res.setHeader('Cache-Control', 'no-store');
+    return sendJson(res, 410, { error: 'Use the named /api/feeds endpoints.' });
+  }
   if (req.method !== 'GET') {
     return sendJson(res, 405, { error: 'Method not allowed' });
   }

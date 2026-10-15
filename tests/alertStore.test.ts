@@ -332,3 +332,16 @@ test('a background assessment rejection stays out of feed health and later cycle
   assert.equal(warnings.length, 1);
   assert.equal(store.getSnapshot().alerts.length, 1);
 });
+test('five-minute feed policy avoids early refreshes and pauses requests while hidden', async t => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout', 'setInterval'], now: NOW });
+  let calls = 0, active = true;
+  const store = createAlertStore({ feeds: [{ id: 'earthquakes', name: 'Gempa', intervalMs: 300_000, fetch: async () => { calls++; return [alert()]; } }],
+    pollIntervalMs: 30_000, canRefresh: () => active, loadSnapshots: async () => [] });
+  const leave = store.subscribe(() => {});
+  await setImmediate(); assert.equal(calls, 1);
+  t.mock.timers.tick(299_999); await setImmediate(); assert.equal(calls, 1);
+  t.mock.timers.tick(1); await setImmediate(); assert.equal(calls, 2);
+  active = false; t.mock.timers.tick(300_000); await setImmediate(); assert.equal(calls, 2);
+  active = true; await store.refresh(); assert.equal(calls, 3);
+  leave();
+});

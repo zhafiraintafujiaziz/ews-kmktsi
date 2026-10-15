@@ -8,7 +8,7 @@ import EwsMap from '../dashboard/EwsMap';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import FullPageCaptureButton from '../ui/FullPageCaptureButton';
 import MobileSplitter from '../ui/MobileSplitter';
-import IqairPanel from './IqairPanel';
+import IspuHistoryPanel from './IspuHistoryPanel';
 import { INARISK_CATEGORIES, getHazardLevel, type InaRiskCategory } from '../../constants/kerentananCategories';
 import { useAlerts } from '../../hooks/useAlerts';
 import { useInariskRevision } from '../../hooks/useInariskRevision';
@@ -36,9 +36,9 @@ interface RankedOfficeItem {
 
 const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
   const [selectedHazard, setSelectedHazard] = useState<InaRiskCategory>('earthquake');
-  const [iqairActive, setIqairActive] = useState(false);
   const [selectedProvinceId, setSelectedProvinceId] = useState<string | null>(null);
   const [selectedOfficeId, setSelectedOfficeId] = useState<string | null>(null);
+  const [officeSelectionRevision, setOfficeSelectionRevision] = useState(0);
   const { alerts, loadingSources, feedHealth } = useAlerts();
   const assessmentRevision = useInariskRevision();
 
@@ -77,6 +77,7 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
   };
 
   const handleOfficeSelect = (officeId: string) => {
+    setOfficeSelectionRevision(value => value + 1);
     setSelectedOfficeId(officeId);
     const office = KPWBI_OFFICES.find((o) => o.id === officeId);
     if (office) setSelectedProvinceId(office.provinceId);
@@ -106,7 +107,7 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
   const headerSummary = initialLoading ? currentHazard.label
     : selectedHazard === 'earthquake' && assessmentStatus?.status === 'error' ? 'Gagal memuat Gempa'
     : summaryLabel;
-  const headerStatusClass = iqairActive || initialLoading || headerBand.status !== 'available'
+  const headerStatusClass = initialLoading || headerBand.status !== 'available'
     ? 'clear'
     : headerBand.level === 'Tinggi' ? 'critical'
     : headerBand.level === 'Sedang' ? 'warning'
@@ -128,7 +129,7 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
             <div className="topbar-brand-text">
               <h1 className="topbar-title">Analisis <span>Bahaya</span></h1>
               <span className="topbar-brand-sub">
-                {iqairActive ? 'DEWA - IQAir' : showVolcanoReference ? 'DEWA - MAGMA / PVMBG' : selectedHazard === 'air_quality' ? 'DEWA - KemenLH ISPU' : 'DEWA - BNPB IRBI'}
+                {showVolcanoReference ? 'DEWA - MAGMA / PVMBG' : selectedHazard === 'air_quality' ? 'DEWA - KemenLH ISPU' : 'DEWA - BNPB IRBI'}
               </span>
             </div>
           </div>
@@ -139,8 +140,8 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
             <div className={`topbar-status ${headerStatusClass}`}>
               <span className="topbar-status-dot" />
               <span className="kerentanan-status-content">
-                {!iqairActive && renderDisasterIcon(selectedHazard, undefined, { width: '14px', height: '14px' })}
-                <span>{iqairActive ? 'Kualitas Udara - IQAir' : headerSummary}</span>
+                {renderDisasterIcon(selectedHazard, undefined, { width: '14px', height: '14px' })}
+                <span>{headerSummary}</span>
               </span>
             </div>
           </div>
@@ -152,21 +153,19 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
             {HAZARD_TABS.map((tab) => (
               <button
                 key={tab.key}
-                className={`topbar-filter-pill${!iqairActive && selectedHazard === tab.key ? ' active' : ''}`}
-                onClick={() => { setIqairActive(false); setSelectedHazard(tab.key); }}
+                className={`topbar-filter-pill${selectedHazard === tab.key ? ' active' : ''}`}
+                onClick={() => setSelectedHazard(tab.key)}
               >
                 <span>{renderDisasterIcon(tab.key)}</span>
                 <span>{tab.label}</span>
               </button>
             ))}
-            <button className={`topbar-filter-pill${iqairActive ? ' active' : ''}`} onClick={() => setIqairActive(true)}><span>IQAir</span></button>
           </div>
         </div>
       </header>
 
       {/* Main content: left panel + map */}
-      <IqairPanel active={iqairActive} />
-      {!iqairActive && <div className="kerentanan-content">
+      <div className={`kerentanan-content${selectedHazard === 'air_quality' ? ' kerentanan-with-history' : ''}`}>
         <aside className="kerentanan-panel">
           {irbiCategory && currentHazard.inariskLabel && (
             <p className="kerentanan-source-info">BNPB IRBI · Kelas risiko {currentHazard.label} per kabupaten/kota kantor. Warna provinsi mengikuti kelas kantor tertinggi, bukan rata-rata seluruh provinsi.</p>
@@ -321,7 +320,8 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
             baseMapOnly={initialLoading}
           />
         </div>
-      </div>}
+        <IspuHistoryPanel active={selectedHazard === 'air_quality'} selectedOfficeId={selectedOfficeId} officeSelectionRevision={officeSelectionRevision} />
+      </div>
 
     </div>
   );

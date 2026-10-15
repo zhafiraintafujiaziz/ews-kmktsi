@@ -1,8 +1,10 @@
-import type { KpwbiOffice } from '../types';
-import { OFFICE_IRBI_REGION } from '../constants/officeIrbiRegion';
-import { normalizeIrbiScore, type IrbiHazard } from '../constants/irbiRiskClass';
-import { fetchHtmlWithCorsProxy } from './proxy';
-import { logSyncFailure } from './syncDiagnostics';
+import type { KpwbiOffice } from '../types/index.ts';
+import { OFFICE_IRBI_REGION } from '../constants/officeIrbiRegion.ts';
+import { normalizeIrbiScore, type IrbiHazard } from '../constants/irbiRiskClass.ts';
+import { fetchHtmlWithCorsProxy } from './proxy.ts';
+import { logSyncFailure } from './syncDiagnostics.ts';
+import { usesBrowserStorage } from '../domain/dataMode.ts';
+import { requestFeed } from './feedClient.ts';
 
 const IRBI_DATA_URL = 'https://inarisk.bnpb.go.id/apiv4/data-irbi-full';
 
@@ -77,8 +79,13 @@ export class BnpbIrbiService {
     this.notify();
     let rows: Map<string, IrbiRow>;
     try {
-      const text = await fetchHtmlWithCorsProxy(IRBI_DATA_URL);
-      rows = parseLatestIrbiRows(text);
+      if (usesBrowserStorage()) {
+        const compact = await requestFeed<IrbiRow[]>('irbi');
+        rows = new Map(compact.map(row => [String(row.pcode), row]));
+      } else {
+        const text = await fetchHtmlWithCorsProxy(IRBI_DATA_URL);
+        rows = parseLatestIrbiRows(text);
+      }
     } catch (error) {
       fields.forEach((field) => {
         offices.forEach((office) => this.failedOffices.get(field)?.add(office.id));

@@ -1,7 +1,13 @@
 # React + TypeScript + Vite
 
+For the Vercel bandwidth changes, browser-only persistence, backup controls,
+refresh intervals, and validation steps, see [Browser storage and public feeds](docs/browser-storage.md).
+
 For local SQLite setup, migrations, browser data import, and the later Turso Cloud
 transition, see [Local database development](docs/local-database.md).
+
+For the local daily ISPU archive, Windows scheduling, CSV export, historical
+station/city graphs and top-10 rankings, see [Daily ISPU history](docs/ispu-history.md).
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

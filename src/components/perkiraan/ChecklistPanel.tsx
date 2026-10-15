@@ -13,6 +13,7 @@ import { usePreparednessChecklist } from '../../hooks/usePreparednessChecklist';
 import { BnpbInariskService } from '../../services/bnpbInariskService';
 import { useAlerts } from '../../hooks/useAlerts';
 import { isOfficeAffectedByAlert } from '../../utils/disasterImpact';
+import BrowserDataControls from '../ui/BrowserDataControls';
 
 const ChecklistPanel: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
@@ -57,6 +58,7 @@ const ChecklistPanel: React.FC = () => {
 
   const storageStatus = (
     <div aria-live="polite">
+      <BrowserDataControls />
       {(isLoading || isSaving) && <p className="checklist-flood-note">{isLoading ? 'Memuat checklist...' : 'Menyimpan checklist...'}</p>}
       {error && <p className="checklist-flood-note" role="alert">{error} <button type="button" onClick={() => void reload()} disabled={isLoading || isSaving}>Muat ulang</button></p>}
       {saveMessage && !isSaving && !error && <p className="checklist-flood-note">{saveMessage}</p>}

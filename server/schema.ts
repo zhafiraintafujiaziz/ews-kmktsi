@@ -1,4 +1,5 @@
-import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import type { IspuQualityFlag } from '../src/domain/ispuHistory.ts';
 import type { ReportFields } from '../src/domain/persistence.ts';
 import type { DisasterRecord } from '../src/domain/disasterRecord.ts';
 
@@ -41,22 +42,39 @@ export const alertSnapshots = sqliteTable('alert_snapshots', {
   records: text('records', { mode: 'json' }).$type<DisasterRecord[]>().notNull(),
 });
 
-export const iqairLocations = sqliteTable('iqair_locations', {
-  id: text('id').primaryKey(),
+export const ispuDailyRuns = sqliteTable('ispu_daily_runs', {
+  collectionDate: text('collection_date').primaryKey(),
+  scheduledAt: text('scheduled_at').notNull(),
+  fetchedAt: text('fetched_at'),
+  completedAt: text('completed_at').notNull(),
+  status: text('status', { enum: ['success', 'failed'] }).notNull(),
+  attemptCount: integer('attempt_count').notNull(),
+  stationCount: integer('station_count').notNull(),
+  acceptedCount: integer('accepted_count').notNull(),
+  rejectedCount: integer('rejected_count').notNull(),
+  staleCount: integer('stale_count').notNull(),
+  undatedCount: integer('undated_count').notNull(),
+  errorSummary: text('error_summary'),
+  rawResponse: text('raw_response'),
+});
+
+export const ispuDailyReadings = sqliteTable('ispu_daily_readings', {
+  collectionDate: text('collection_date').notNull().references(() => ispuDailyRuns.collectionDate),
+  stationId: text('station_id').notNull(),
+  name: text('name').notNull(),
+  city: text('city').notNull(),
   province: text('province').notNull(),
-  data: text('data').notNull(),
-});
-export const iqairSnapshots = sqliteTable('iqair_snapshots', {
-  key: text('key').primaryKey(),
-  retrievedAt: integer('retrieved_at').notNull(),
-  data: text('data').notNull(),
-});
-export const iqairRequests = sqliteTable('iqair_requests', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  method: text('method').notNull(),
-  attemptedAt: integer('attempted_at').notNull(),
-}, table => [index('iqair_requests_time_idx').on(table.method, table.attemptedAt)]);
-export const iqairControls = sqliteTable('iqair_controls', {
-  key: text('key').primaryKey(),
-  until: integer('until').notNull(),
-});
+  latitude: real('latitude'),
+  longitude: real('longitude'),
+  value: real('value').notNull(),
+  category: text('category').notNull(),
+  dominantPollutant: text('dominant_pollutant').notNull(),
+  sourceTimeText: text('source_time_text').notNull(),
+  sourceTimeLabel: text('source_time_label').notNull(),
+  sourceTimezone: text('source_timezone').notNull(),
+  observedAt: text('observed_at'),
+  qualityFlags: text('quality_flags', { mode: 'json' }).$type<IspuQualityFlag[]>().notNull(),
+}, table => [
+  primaryKey({ columns: [table.collectionDate, table.stationId] }),
+  index('ispu_readings_station_date_idx').on(table.stationId, table.collectionDate),
+]);

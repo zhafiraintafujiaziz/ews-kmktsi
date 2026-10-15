@@ -34,7 +34,15 @@ function isUrlAllowed(url: string): boolean {
 
 export interface FetchProxyOptions { signal?: AbortSignal }
 
+let serverSourceRequests = false;
+export function enableServerSourceRequests() { serverSourceRequests = true; }
+
 async function fetchViaApiProxy(url: string, signal?: AbortSignal): Promise<Response | null> {
+  if (serverSourceRequests) {
+    const response = await fetch(url, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(12_000)]) : AbortSignal.timeout(12_000), headers: { 'User-Agent': 'EWS-MKTBI/1.0', Accept: '*/*' } });
+    if (!response.ok) throw new Error('Upstream HTTP ' + response.status);
+    return response;
+  }
   try {
     const res = await fetch('/api/proxy?url=' + encodeURIComponent(url), { signal });
     if (!res.ok) return null;

@@ -4,7 +4,7 @@ import { isCurrentlyUsable } from './freshness.ts';
 import { applyAlertSnapshots } from './alertCache.ts';
 import type { AlertSnapshot } from './persistence.ts';
 
-export type AlertFeed = { id: string; name: string; fetch: () => Promise<DisasterAlert[]> };
+export type AlertFeed = { id: string; name: string; fetch: () => Promise<DisasterAlert[]>; intervalMs?: number; freshness?: () => { fetchedAt: string; freshUntil: string } | undefined };
 export type FeedHealth = Record<string, { status: 'available' | 'unavailable'; checkedAt: string }>;
 export interface AlertStoreSnapshot {
   alerts: DisasterAlert[];
@@ -19,6 +19,9 @@ export interface AlertStoreSnapshot {
 
 type Clock = Pick<typeof globalThis, 'setTimeout' | 'clearTimeout' | 'setInterval' | 'clearInterval' | 'queueMicrotask'> & { now: () => number };
 interface AlertStoreOptions {
+  pollIntervalMs?: number;
+  canRefresh?: () => boolean;
+  assessmentIntervalMs?: number;
   feeds: readonly AlertFeed[];
   loadSnapshots: (signal: AbortSignal) => Promise<AlertSnapshot[]>;
   persist?: (snapshot: AlertSnapshot, history: DisasterRecord[], signal: AbortSignal) => Promise<void>;
@@ -68,6 +71,9 @@ export function createAlertStore(options: AlertStoreOptions) {
   const writes = new Set<AbortController>();
   const pendingWrites: { snapshot: AlertSnapshot; history: DisasterRecord[] }[] = [];
   const pendingFeeds = new Set<string>();
+  const nextChecks = new Map<string, number>();
+  const failureCounts = new Map<string, number>();
+  let nextAssessment = 0;
   let cacheLoaded = false;
   let cacheController: AbortController | null = null;
   let interval: ReturnType<typeof setInterval> | null = null;
@@ -98,6 +104,8 @@ export function createAlertStore(options: AlertStoreOptions) {
     const now = clock.now();
     // Fixed feed order also fixes duplicate-ID precedence regardless of timing.
     for (const feed of options.feeds) {
+      const freshness = feed.freshness?.();
+      if (freshness && Date.parse(freshness.freshUntil) <= now) cachedFeeds.set(feed.id, freshness.fetchedAt);
       let hasUsable = false;
       for (const record of recordsByFeed.get(feed.id) ?? []) {
         const alert = legacy(record);
@@ -166,18 +174,28 @@ export function createAlertStore(options: AlertStoreOptions) {
 
   function refresh(): Promise<void> {
     if (cycle) return cycle;
+    if (options.canRefresh && !options.canRefresh()) { schedulePublish(); return Promise.resolve(); }
+    const due = options.feeds.filter(feed => (nextChecks.get(feed.id) ?? 0) <= clock.now());
+    if (options.refreshAssessments && clock.now() >= nextAssessment) {
+      nextAssessment = clock.now() + 30_000;
+      void Promise.resolve().then(options.refreshAssessments).then(() => { nextAssessment = clock.now() + (options.assessmentIntervalMs ?? options.pollIntervalMs ?? 60_000); }).catch(error => warn('Assessment bahaya gagal:', error));
+    }
+    if (!due.length) { if (!options.feeds.length) initialComplete = true; schedulePublish(); return Promise.resolve(); }
     fetching = true;
-    options.feeds.forEach(feed => pendingFeeds.add(feed.id));
+    due.forEach(feed => pendingFeeds.add(feed.id));
     schedulePublish();
-    if (options.refreshAssessments) void Promise.resolve().then(options.refreshAssessments).catch(error => warn('Assessment bahaya gagal:', error));
     const checkedAt = new Date(clock.now()).toISOString();
-    const tasks = options.feeds.map(async feed => {
+    const tasks = due.map(async feed => {
       try {
         const result = await withDeadline(feed);
+        const freshness = feed.freshness?.();
+        const sourceCheckedAt = freshness?.fetchedAt ?? checkedAt;
+        if (feed.intervalMs) nextChecks.set(feed.id, freshness ? Date.parse(freshness.freshUntil) : clock.now() + feed.intervalMs);
+        failureCounts.delete(feed.id);
         const accepted: DisasterRecord[] = [], history: DisasterRecord[] = [];
         for (const alert of result) {
           try {
-            const record = normalizeAdapterAlert(alert, feed.id, checkedAt);
+            const record = normalizeAdapterAlert(alert, feed.id, sourceCheckedAt);
             history.push(record);
             if (isCurrentlyUsable(legacy(record), clock.now())) accepted.push(record);
           } catch (error) { warn(`Rejected invalid record from ${feed.name}:`, error); }
@@ -185,10 +203,16 @@ export function createAlertStore(options: AlertStoreOptions) {
         recordsByFeed.set(feed.id, accepted);
         successfulFeeds.add(feed.id);
         cachedFeeds.delete(feed.id);
-        feedHealth = { ...feedHealth, [feed.id]: { status: 'available', checkedAt } };
-        pendingWrites.push({ snapshot: { feed: feed.id, checkedAt, records: accepted }, history });
+        feedHealth = { ...feedHealth, [feed.id]: { status: 'available', checkedAt: sourceCheckedAt } };
+        pendingWrites.push({ snapshot: { feed: feed.id, checkedAt: sourceCheckedAt, records: accepted }, history });
       } catch (error) {
+        if (feed.intervalMs) {
+          const failures = (failureCounts.get(feed.id) ?? 0) + 1;
+          failureCounts.set(feed.id, failures);
+          nextChecks.set(feed.id, clock.now() + Math.min(300, 30 * 2 ** Math.min(failures - 1, 4)) * 1000);
+        }
         recordsByFeed.set(feed.id, (recordsByFeed.get(feed.id) ?? []).filter(record => isCurrentlyUsable(legacy(record), clock.now())));
+        cachedFeeds.set(feed.id, cachedFeeds.get(feed.id) ?? feedHealth[feed.id]?.checkedAt ?? checkedAt);
         feedHealth = { ...feedHealth, [feed.id]: { status: 'unavailable', checkedAt } };
         options.onFeedError?.(feed, error);
       } finally {
@@ -199,7 +223,8 @@ export function createAlertStore(options: AlertStoreOptions) {
     cycle = Promise.allSettled(tasks).then(() => {
       fetching = false;
       initialComplete = true;
-      lastChecked = clock.now();
+      lastChecked = due.some(feed => feed.freshness)
+        ? Math.max(...Object.values(feedHealth).map(value => Date.parse(value.checkedAt))) : clock.now();
       cycle = null;
       schedulePublish();
     });
@@ -217,6 +242,7 @@ export function createAlertStore(options: AlertStoreOptions) {
 
   return {
     getSnapshot: () => snapshot,
+    hasSubscribers: () => listeners.size > 0,
     refresh,
     subscribe(listener: () => void) {
       listeners.add(listener);
@@ -227,7 +253,7 @@ export function createAlertStore(options: AlertStoreOptions) {
           void hydrate(cacheController);
         }
         void refresh();
-        interval = clock.setInterval(() => void refresh(), 60_000);
+        interval = clock.setInterval(() => void refresh(), options.pollIntervalMs ?? 60_000);
       }
       return () => { listeners.delete(listener); if (!listeners.size) stop(); };
     },

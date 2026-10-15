@@ -4,6 +4,7 @@ import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import type { KpwbiOffice } from '../../constants/kpwbiOffices';
 import type { ReportFields, Report } from '../../domain/persistence';
 import { initializePersistence, saveReport } from '../../services/persistenceService';
+import BrowserDataControls from '../ui/BrowserDataControls';
 
 type LaporanForm = ReportFields;
 
@@ -302,6 +303,7 @@ const LaporanSidebar: React.FC = () => {
         {isLoading && <p role="status">Memuat penyimpanan laporan...</p>}
         {storageError && <p role="alert">{storageError}</p>}
         {savedMsg && <div className="laporan-saved-toast" role="status">{savedMsg}</div>}
+        <BrowserDataControls />
       </div>
     </div>
   );

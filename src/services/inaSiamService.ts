@@ -1,7 +1,9 @@
-import type { DisasterAlert, AlertSeverity, ClosedAirportInfo } from '../types';
-import { fetchWithCorsProxy } from './proxy';
-import { findNearestKpwOffice } from '../utils/geo';
-import { getProvinceIdForVolcano } from './magmaService';
+import type { DisasterAlert, AlertSeverity, ClosedAirportInfo } from '../types/index.ts';
+import { fetchWithCorsProxy } from './proxy.ts';
+import { usesBrowserStorage } from '../domain/dataMode.ts';
+import { requestFeed } from './feedClient.ts';
+import { findNearestKpwOffice } from '../utils/geo.ts';
+import { getProvinceIdForVolcano } from './magmaService.ts';
 
 export interface LiveSigmetPolygon {
   id: string;
@@ -99,6 +101,10 @@ export function computeTrajectoryArrow(
 
 export const InaSiamService = {
   async fetchLiveSigmets(): Promise<Record<string, LiveSigmetPolygon>> {
+    if (usesBrowserStorage()) {
+      currentSigmets = await requestFeed<Record<string, LiveSigmetPolygon>>('inasiam');
+      return currentSigmets;
+    }
     const urls = [
       'https://web-aviation.bmkg.go.id/va-map.php?sigmet=1',
       'https://inasiam.rack.my.id/api/v1/opmet/sigmet/geojson',
@@ -159,6 +165,7 @@ export const InaSiamService = {
   },
 
   async fetchClosedAirports(): Promise<ClosedAirportInfo[]> {
+    if (usesBrowserStorage()) return requestFeed('closed-airports');
     const data = await fetchWithCorsProxy('https://web-aviation.bmkg.go.id/va-map.php?data=1') as {
       closed_airports?: Record<string, { reason?: string; detail?: string; valid_from?: string; valid_to?: string }>;
       stations?: Array<{ icao: string; name: string; lat?: number; lon?: number }>;
