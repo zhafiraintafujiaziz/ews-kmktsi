@@ -4,18 +4,25 @@ import { haversineDistance } from '../utils/geo';
 import { mapTextToProvinceId } from '../utils/provinceMap';
 import { fetchWithCorsProxy } from './proxy';
 import { getIspuAlertSeverity, getIspuCategory, getIspuStyle } from '../constants/ispuCategories';
+import { parseSourceTime } from '../utils/ispuTime';
+import { usesBrowserStorage } from '../domain/dataMode.ts';
+import { requestFeedEnvelope } from './feedClient.ts';
+import { recordBrowserIspu } from './browserHistory.ts';
+import type { IspuDailyReading } from '../domain/ispuHistory.ts';
 
 const ISPU_API_URL = 'https://ispu.kemenlh.go.id/apimobile/v1/getStations';
 
-function parseObservationTime(value: string): Date | null {
-  const months: Record<string, string> = {
-    januari: 'January', februari: 'February', maret: 'March', april: 'April', mei: 'May',
-    juni: 'June', juli: 'July', agustus: 'August', september: 'September', oktober: 'October',
-    november: 'November', desember: 'December',
-  };
-  const normalized = value.replace(/\b([A-Za-z]+)\b/g, (part) => months[part.toLowerCase()] ?? part);
-  const parsed = new Date(normalized);
-  return Number.isFinite(parsed.getTime()) ? parsed : null;
+function parseObservationTime(values: string[], timezone: string): string | null {
+  const zone = timezone.trim().toUpperCase();
+  for (const value of values) {
+    const parsed = parseSourceTime(value);
+    if (parsed.observedAt) return parsed.observedAt;
+    if (value.trim() && parsed.issue === 'ambiguous_timestamp' && /^(WIB|WITA|WIT|UTC|GMT)$/.test(zone)) {
+      const zoned = parseSourceTime(`${value} ${zone}`);
+      if (zoned.observedAt) return zoned.observedAt;
+    }
+  }
+  return null;
 }
 
 export interface OfficeIspuAssessment {
@@ -40,6 +47,19 @@ export class IspuService {
    * Fetch current stations from KemenLH. Stale or undated readings are ignored.
    */
   static async fetchIspuStations(): Promise<IspuStationInfo[]> {
+    if (usesBrowserStorage()) {
+      const response = await requestFeedEnvelope<{ readings: IspuDailyReading[] }>('ispu');
+      this.cachedStations = response.data.readings.filter(row => row.latitude !== null && row.longitude !== null
+        && row.latitude !== 0 && row.longitude !== 0 && row.qualityFlags.length === 0).map(row => ({
+        idStasiun: row.stationId, nama: row.name, kota: row.city, provinsi: row.province,
+        latitude: row.latitude!, longitude: row.longitude!, ispuValue: row.value,
+        category: row.category as IspuCategory, dominantParam: row.dominantPollutant,
+        waktuText: row.sourceTimeLabel || row.sourceTimeText, observedAt: row.observedAt ?? undefined,
+      }));
+      try { await recordBrowserIspu(response.data.readings, response.fetchedAt); }
+      catch (error) { console.warn('Riwayat ISPU belum tersimpan di browser.', error); }
+      return this.getStations();
+    }
     const now = Date.now();
     if (this.cachedStations.length > 0 && now - this.lastFetchTime < this.CACHE_TTL_MS) {
       return this.cachedStations;
@@ -56,7 +76,7 @@ export class IspuService {
           const categoryInfo = r.kategori && typeof r.kategori === 'object' ? r.kategori as Record<string, unknown> : {};
           const val = Number(r.val);
           const waktuText = text(r.waktu_text || r.waktu) || 'Terkini';
-          const observedAt = parseObservationTime(waktuText);
+          const observedAt = parseObservationTime([text(r.waktu), text(r.waktu_text)], text(r.time_z));
 
           const rawParam = text(r.param);
           const cleanParam = rawParam.replace(/<sub>|<\/sub>/gi, '');
@@ -74,7 +94,7 @@ export class IspuService {
             category: cat,
             dominantParam: cleanParam,
             waktuText,
-            observedAt: observedAt?.toISOString(),
+            observedAt: observedAt ?? undefined,
             keterangan: text(categoryInfo.keterangan),
             color: this.getCategoryColor(cat),
           };

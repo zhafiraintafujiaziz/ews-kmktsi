@@ -1,10 +1,9 @@
 import { useSyncExternalStore } from 'react';
-import { BnpbInariskService } from '../services/bnpbInariskService';
-import { KarhutlaRegionalService } from '../services/karhutlaRegionalService';
+import { BnpbIrbiService } from '../services/bnpbIrbiService';
 import { subscribeForecast, getForecastRevision } from '../services/weatherForecastAssessment';
 function subscribe(listener: () => void) {
-  const a = BnpbInariskService.subscribe(listener), b = subscribeForecast(listener), c = KarhutlaRegionalService.subscribe(listener);
-  return () => { a(); b(); c(); };
+  const a = BnpbIrbiService.subscribe(listener), b = subscribeForecast(listener);
+  return () => { a(); b(); };
 }
-const getRevision = () => BnpbInariskService.getRevision() + getForecastRevision() + KarhutlaRegionalService.getRevision();
+const getRevision = () => BnpbIrbiService.getRevision() + getForecastRevision();
 export function useInariskRevision() { return useSyncExternalStore(subscribe, getRevision); }

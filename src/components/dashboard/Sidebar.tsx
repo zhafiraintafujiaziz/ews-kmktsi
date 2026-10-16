@@ -31,7 +31,6 @@ interface SidebarProps {
   typeFilter: DisasterType | 'all';
   setTypeFilter: (val: DisasterType | 'all') => void;
   isLoading?: boolean;
-  loadingSources?: string[];
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
@@ -59,7 +58,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   typeFilter,
   setTypeFilter,
   isLoading,
-  loadingSources = [],
   isCollapsed,
   onToggleCollapse,
 }) => {
@@ -318,16 +316,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <p style={{ fontWeight: 500, marginTop: '8px' }}>
               Memuat data...
             </p>
-            {loadingSources.length > 0 && (
-              <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                {loadingSources.map((source) => (
-                  <div key={source} style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', marginBottom: '4px' }}>
-                    <div className="sidebar-spinner" style={{ width: '10px', height: '10px', borderWidth: '1.5px' }} />
-                    {source}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         ) : (
           <>

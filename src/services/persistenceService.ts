@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { AlertSnapshotSchema, BrowserImportSchema, ChecklistItemSchema, ReportFieldsSchema, ReportSchema, type Report, type ChecklistItem, type AlertSnapshot } from '../domain/persistence.ts';
 import type { DisasterRecord } from '../domain/disasterRecord.ts';
+import { usesBrowserStorage } from '../domain/dataMode.ts';
+import { migrateBrowserData, saveBrowserReport, loadBrowserReports, saveBrowserChecklist, loadBrowserChecklist, saveBrowserSnapshot, loadBrowserSnapshots } from './browserPersistence.ts';
 
 const REPORTS_KEY = 'ews-mktbi:laporan-kpw';
 const CHECKLIST_KEY = 'ews-mktbi:kpw-checklist';
@@ -38,6 +40,7 @@ export function readBrowserImport(storage: Pick<Storage, 'getItem' | 'setItem'>)
 }
 
 export function initializePersistence(): Promise<void> {
+  if (usesBrowserStorage()) return Promise.resolve().then(migrateBrowserData);
   initialization ??= Promise.resolve().then(async () => {
     const input = readBrowserImport(localStorage);
     await request('/api/import', 'POST', input);
@@ -50,29 +53,34 @@ export function initializePersistence(): Promise<void> {
 
 export async function saveReport(report: Report): Promise<Report> {
   await initializePersistence();
+  if (usesBrowserStorage()) return saveBrowserReport(report);
   const response = await request<{ report: Report }>('/api/reports', 'POST', ReportSchema.parse(report));
   return ReportSchema.parse(response.report);
 }
 
 export async function loadReports(): Promise<Report[]> {
   await initializePersistence();
+  if (usesBrowserStorage()) return loadBrowserReports();
   const response = await request<{ reports: Report[] }>('/api/reports');
   return z.array(ReportSchema).parse(response.reports);
 }
 
 export async function loadChecklist(): Promise<ChecklistItem[]> {
   await initializePersistence();
+  if (usesBrowserStorage()) return loadBrowserChecklist();
   const response = await request<{ items: ChecklistItem[] }>('/api/checklist');
   return z.array(ChecklistItemSchema.strip()).parse(response.items);
 }
 
 export async function saveChecklist(item: ChecklistItem): Promise<ChecklistItem> {
   await initializePersistence();
+  if (usesBrowserStorage()) return saveBrowserChecklist(item);
   const response = await request<{ item: ChecklistItem }>('/api/checklist', 'PUT', ChecklistItemSchema.parse(item));
   return ChecklistItemSchema.strip().parse(response.item);
 }
 
 export async function persistAlertHistory(records: DisasterRecord[], signal?: AbortSignal): Promise<void> {
+  if (usesBrowserStorage()) return;
   // Small bounded requests; no background timer and no dependency on legacy imports.
   for (let offset = 0; offset < records.length; offset += 20) {
     signal?.throwIfAborted();
@@ -81,10 +89,12 @@ export async function persistAlertHistory(records: DisasterRecord[], signal?: Ab
 }
 
 export async function loadAlertSnapshots(signal?: AbortSignal): Promise<AlertSnapshot[]> {
+  if (usesBrowserStorage()) return loadBrowserSnapshots();
   const response = await request<{ snapshots: AlertSnapshot[] }>('/api/alert-cache', 'GET', undefined, signal);
   return z.array(AlertSnapshotSchema).parse(response.snapshots);
 }
 
 export async function persistAlertSnapshot(snapshot: AlertSnapshot, signal?: AbortSignal): Promise<void> {
+  if (usesBrowserStorage()) { saveBrowserSnapshot(snapshot); return; }
   await request('/api/alert-cache', 'POST', AlertSnapshotSchema.parse(snapshot), signal);
 }

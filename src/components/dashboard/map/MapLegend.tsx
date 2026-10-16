@@ -68,7 +68,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
             <img src="/manggala-logo.png" alt="Manggala Agni Logo" title="Manggala Agni" className="legend-agency-logo" style={{ zIndex: 1 }} />
           </div>
           <span className="legend-title" style={{ marginLeft: '6px' }}>
-            {isAirQualityFilter ? 'Kategori ISPU' : showVolcanoReference ? 'Kerentanan geografis' : assessmentCategory === 'extreme_weather' ? 'Bahaya Banjir (InaRISK)' : isInariskFilter ? 'Indeks Bahaya (InaRISK)' : 'Map Legend'}
+            {isAirQualityFilter ? 'Kategori ISPU' : showVolcanoReference ? 'Kerentanan geografis' : assessmentCategory === 'extreme_weather' ? 'Bahaya Cuaca Ekstrim (InaRISK)' : isInariskFilter ? 'Indeks Bahaya (InaRISK)' : 'Map Legend'}
           </span>
         </div>
         <svg
@@ -88,6 +88,15 @@ const MapLegend: React.FC<MapLegendProps> = ({
 
       {isExpanded && (
         <div className="legend-content">
+          {isAirQualityFilter && isInariskFilter && <>
+            <div className="legend-item">
+              <span className="ispu-office-legend-symbols" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12,2L1,7v2h22V7L12,2z M4,9v11h3V9H4z M10,9v11h4V9h-4z M17,9v11h3V9h-3z M2,20v2h20v-2H2z" /></svg>
+                <span>★ ●</span>
+              </span>
+              <span>Kantor BI / KPW</span>
+            </div>
+          </>}
           {isAirQualityFilter && ISPU_CATEGORIES.map(({ category, label, range, color }) => (
             <div className="legend-item" key={category}>
               <span className="legend-shape-icon">

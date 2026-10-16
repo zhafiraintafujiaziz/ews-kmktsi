@@ -8,9 +8,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "node --expose-gc --experimental-strip-types --test tests/freshness.test.ts tests/disasterRecord.test.ts tests/ispuRisk.test.ts tests/kerentanan.test.ts tests/hazardAssessment.test.ts tests/karhutlaRegional.test.ts tests/persistence.test.ts tests/alertNotifications.test.ts",
+    "test": "node --expose-gc --experimental-strip-types --test tests/freshness.test.ts tests/disasterRecord.test.ts tests/ispuRisk.test.ts tests/kerentanan.test.ts tests/hazardAssessment.test.ts tests/earthquakeHazard.test.ts tests/karhutlaRegional.test.ts tests/persistence.test.ts tests/alertNotifications.test.ts tests/alertStore.test.ts tests/ispuHistory.test.ts tests/browserStorage.test.ts tests/feeds.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --experimental-strip-types scripts/migrate.ts",
+    "ispu:collect": "node --experimental-strip-types scripts/collect-ispu.ts",
+    "ispu:schedule": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/schedule-ispu.ps1",
+    "ispu:export": "node --experimental-strip-types scripts/export-ispu.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -20,6 +23,7 @@
     "@microsoft/power-apps": "^1.0.3",
     "@mui/icons-material": "^9.1.1",
     "@mui/material": "^9.1.2",
+    "cheerio": "^1.2.0",
     "dotenv": "^18.0.5",
     "drizzle-orm": "^0.45.3",
     "html2canvas-pro": "^2.5.0",

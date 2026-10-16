@@ -129,9 +129,9 @@ export interface VolcanoReport {
 
 // === Perkiraan / Preparedness Types ===
 
-export type { MegathrustZone } from '../constants/megathrustZones';
-export type { RingOfFireArc, VolcanoPoint } from '../constants/ringOfFire';
-export type { ChecklistItemDef, ChecklistStatus } from '../constants/preparednessChecklist';
+export type { MegathrustZone } from '../constants/megathrustZones.ts';
+export type { RingOfFireArc, VolcanoPoint } from '../constants/ringOfFire.ts';
+export type { ChecklistItemDef, ChecklistStatus } from '../constants/preparednessChecklist.ts';
 
 // === Disaster Risk Calculator Types ===
 

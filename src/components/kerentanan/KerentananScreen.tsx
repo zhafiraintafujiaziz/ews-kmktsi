@@ -1,19 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { PROVINCES } from '../../constants/provinces';
-import { BnpbInariskService } from '../../services/bnpbInariskService';
+import { BnpbIrbiService, type IrbiCategory } from '../../services/bnpbIrbiService';
 import { IspuService, type OfficeIspuAssessment } from '../../services/ispuService';
 import { ISPU_CATEGORIES } from '../../constants/ispuCategories';
 import EwsMap from '../dashboard/EwsMap';
 import { renderDisasterIcon } from '../../utils/alertUtils';
 import FullPageCaptureButton from '../ui/FullPageCaptureButton';
 import MobileSplitter from '../ui/MobileSplitter';
+import IspuHistoryPanel from './IspuHistoryPanel';
 import { INARISK_CATEGORIES, getHazardLevel, type InaRiskCategory } from '../../constants/kerentananCategories';
 import { useAlerts } from '../../hooks/useAlerts';
 import { useInariskRevision } from '../../hooks/useInariskRevision';
 import type { OfficeHazardAssessment } from '../../utils/officeHazardAssessment';
-import { resolveKerentananOfficeAssessment } from '../../utils/kerentananAssessment';
-import { KarhutlaRegionalService } from '../../services/karhutlaRegionalService';
+import { getKerentananHeaderBand, resolveKerentananOfficeAssessment } from '../../utils/kerentananAssessment';
 import { VOLCANO_REFERENCE_POINTS, VOLCANO_REFERENCE_SOURCE, VOLCANO_REFERENCE_RETRIEVED_AT } from '../../constants/volcanoReferencePoints';
 
 interface KerentananScreenProps {
@@ -38,7 +38,8 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
   const [selectedHazard, setSelectedHazard] = useState<InaRiskCategory>('earthquake');
   const [selectedProvinceId, setSelectedProvinceId] = useState<string | null>(null);
   const [selectedOfficeId, setSelectedOfficeId] = useState<string | null>(null);
-  const { alerts, isLoading } = useAlerts();
+  const [officeSelectionRevision, setOfficeSelectionRevision] = useState(0);
+  const { alerts, loadingSources, feedHealth } = useAlerts();
   const assessmentRevision = useInariskRevision();
 
   const provincesMap = useMemo(() => new Map(PROVINCES.map((p) => [p.id, p])), []);
@@ -51,7 +52,7 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
           : null;
       const assessment = resolveKerentananOfficeAssessment(office, selectedHazard);
       const score = assessment.index;
-      if (score === null && selectedHazard !== 'karhutla' && selectedHazard !== 'extreme_weather') return [];
+      if (score === null && selectedHazard !== 'earthquake' && selectedHazard !== 'karhutla' && selectedHazard !== 'extreme_weather') return [];
 
       return [{
         office,
@@ -68,7 +69,7 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
       });
     // InaRISK revisions and feed publications refresh the external assessment caches.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedHazard, assessmentRevision, alerts]);
+  }, [selectedHazard, assessmentRevision, alerts, feedHealth]);
 
   const handleProvinceSelect = (provinceId: string) => {
     setSelectedProvinceId((prev) => (prev === provinceId ? null : provinceId));
@@ -76,6 +77,7 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
   };
 
   const handleOfficeSelect = (officeId: string) => {
+    setOfficeSelectionRevision(value => value + 1);
     setSelectedOfficeId(officeId);
     const office = KPWBI_OFFICES.find((o) => o.id === officeId);
     if (office) setSelectedProvinceId(office.provinceId);
@@ -83,10 +85,33 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
 
   const currentHazard = HAZARD_TABS.find(t => t.key === selectedHazard)!;
   const showVolcanoReference = selectedHazard === 'volcanic' || selectedHazard === 'volcanic_ash';
-  const useInaRisk = selectedHazard === 'earthquake' || selectedHazard === 'karhutla' || selectedHazard === 'extreme_weather';
-  const assessmentStatus = selectedHazard === 'karhutla' ? KarhutlaRegionalService.getAssessmentStatus() : useInaRisk ? BnpbInariskService.getAssessmentStatus(selectedHazard) : null;
+  const irbiCategory: IrbiCategory | null = selectedHazard === 'earthquake' || selectedHazard === 'extreme_weather' || selectedHazard === 'karhutla' ? selectedHazard : null;
+  const assessmentStatus = irbiCategory ? BnpbIrbiService.getAssessmentStatus(irbiCategory) : null;
   const displayedCount = rankedOffices.length;
-  const availableCount = rankedOffices.filter(item => item.score !== null).length;
+  const actualAvailableCount = selectedHazard === 'air_quality'
+    ? rankedOffices.filter(item => item.ispuAssessment !== null).length
+    : rankedOffices.filter(item => item.score !== null && item.assessment.status !== 'assumed').length;
+  const selectedSourceLoading = selectedHazard === 'air_quality'
+    ? !feedHealth.ispu || loadingSources.includes('Kualitas Udara ISPU')
+    : selectedHazard === 'earthquake' || selectedHazard === 'extreme_weather' || selectedHazard === 'karhutla'
+      ? assessmentStatus?.status === 'idle' || assessmentStatus?.status === 'loading'
+      : false;
+  const initialLoading = selectedSourceLoading && actualAvailableCount === 0;
+  const refreshing = selectedSourceLoading && actualAvailableCount > 0;
+  const summaryLoading = initialLoading || refreshing;
+  const headerBand = getKerentananHeaderBand(rankedOffices, selectedHazard, summaryLoading);
+  const summaryLabel = headerBand.status === 'loading' ? 'Memuat data'
+    : headerBand.status === 'no_data' ? 'Data tidak tersedia'
+    : selectedHazard === 'air_quality' ? `${headerBand.count} Kantor · ISPU ${headerBand.level}`
+    : `${headerBand.count} Kantor · Indeks ${headerBand.level} · ${currentHazard.label}`;
+  const headerSummary = initialLoading ? currentHazard.label
+    : selectedHazard === 'earthquake' && assessmentStatus?.status === 'error' ? 'Gagal memuat Gempa'
+    : summaryLabel;
+  const headerStatusClass = initialLoading || headerBand.status !== 'available'
+    ? 'clear'
+    : headerBand.level === 'Tinggi' ? 'critical'
+    : headerBand.level === 'Sedang' ? 'warning'
+    : 'monitoring';
 
   return (
     <div className="kerentanan-container">
@@ -104,19 +129,19 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
             <div className="topbar-brand-text">
               <h1 className="topbar-title">Analisis <span>Bahaya</span></h1>
               <span className="topbar-brand-sub">
-                {showVolcanoReference ? 'DEWA - MAGMA / PVMBG' : selectedHazard === 'air_quality' ? 'DEWA - KemenLH ISPU' : 'DEWA - BNPB InaRISK'}
+                {showVolcanoReference ? 'DEWA - MAGMA / PVMBG' : selectedHazard === 'air_quality' ? 'DEWA - KemenLH ISPU' : 'DEWA - BNPB IRBI'}
               </span>
             </div>
           </div>
 
           {/* Right: count status chip + screenshot */}
           <div className="topbar-right">
-            <FullPageCaptureButton filename="Bahaya_EWS" />
-            <div className="topbar-status kerentanan">
+            <FullPageCaptureButton filename="Bahaya_EWS" iconOnly />
+            <div className={`topbar-status ${headerStatusClass}`}>
               <span className="topbar-status-dot" />
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <span className="kerentanan-status-content">
                 {renderDisasterIcon(selectedHazard, undefined, { width: '14px', height: '14px' })}
-                <span>{displayedCount} {showVolcanoReference ? 'Kantor' : 'Wilayah'} — {currentHazard.label}</span>
+                <span>{headerSummary}</span>
               </span>
             </div>
           </div>
@@ -133,20 +158,6 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
               >
                 <span>{renderDisasterIcon(tab.key)}</span>
                 <span>{tab.label}</span>
-                {tab.key === 'air_quality' && (
-                  <span
-                    style={{
-                      width: '7px',
-                      height: '7px',
-                      borderRadius: '50%',
-                      backgroundColor: '#ef4444',
-                      display: 'inline-block',
-                      marginLeft: '3px',
-                      boxShadow: '0 0 3px rgba(0,0,0,0.3)',
-                    }}
-                    title="Indikator Kualitas Udara ISPU"
-                  />
-                )}
               </button>
             ))}
           </div>
@@ -154,24 +165,18 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
       </header>
 
       {/* Main content: left panel + map */}
-      <div className="kerentanan-content">
+      <div className={`kerentanan-content${selectedHazard === 'air_quality' ? ' kerentanan-with-history' : ''}`}>
         <aside className="kerentanan-panel">
-          {useInaRisk && currentHazard.inariskLabel && (
-            <p className="kerentanan-source-info">InaRISK · Bahaya {currentHazard.inariskLabel}. {selectedHazard === 'karhutla' ? 'Indeks kantor adalah rata-rata sel raster valid dalam radius 25 km. Warna provinsi mengikuti indeks kantor tertinggi, bukan rata-rata seluruh provinsi.' : 'Warna provinsi menunjukkan indeks tertinggi dari kantor yang memiliki data, bukan seluruh wilayah provinsi.'}</p>
+          {irbiCategory && currentHazard.inariskLabel && (
+            <p className="kerentanan-source-info">BNPB IRBI · Kelas risiko {currentHazard.label} per kabupaten/kota kantor. Warna provinsi mengikuti kelas kantor tertinggi, bukan rata-rata seluruh provinsi.</p>
           )}
-          {selectedHazard === 'extreme_weather' && <p className="kerentanan-source-info">Kerentanan Cuaca menggunakan indeks Bahaya Banjir InaRISK pada titik kantor. Indeks ini menggambarkan bahaya banjir, bukan seluruh jenis cuaca ekstrem. Provinsi dan kantor tanpa data menggunakan asumsi indeks 0.10, kategori Rendah. Halaman Perkiraan tetap menggunakan BMKG.</p>}
-          {selectedHazard === 'karhutla' && <div className="kerentanan-source-info" role="status" data-karhutla-status={assessmentStatus?.status}>
-            <p>Nilai raster 25 km: {availableCount}/{KPWBI_OFFICES.length} kantor tersedia.</p>
-            <p>{assessmentStatus?.status === 'loading' ? 'Menghitung statistik raster...' : assessmentStatus?.status === 'error' ? 'Statistik InaRISK gagal dimuat.' : assessmentStatus?.status === 'no_data' ? 'Tidak ada sel raster valid pada wilayah kantor.' : 'NoData dikecualikan; angka 0 tetap dihitung. Cakupan adalah perkiraan proporsi area dengan data valid.'}</p>
-            {!!assessmentStatus?.failedOfficeCount && <p>{assessmentStatus.failedOfficeCount} kantor gagal dihitung. Gunakan hitung ulang untuk mencoba kembali.</p>}
-            {assessmentStatus?.checkedAt && <p>Diperiksa: {new Date(assessmentStatus.checkedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB.</p>}
-            <button className="topbar-back-btn" type="button" disabled={assessmentStatus?.status === 'loading'} onClick={() => { void KarhutlaRegionalService.refresh(KPWBI_OFFICES, true); }}>Hitung ulang</button>
-          </div>}
-          {(selectedHazard === 'earthquake' || selectedHazard === 'extreme_weather') && assessmentStatus && (
-            <p className="kerentanan-source-info" role="status" data-status={assessmentStatus.status}>
-              {BnpbInariskService.getAssessmentMessage(selectedHazard)}
-              {assessmentStatus.checkedAt && <> Terakhir diperiksa: {new Date(assessmentStatus.checkedAt).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB.</>}
-            </p>
+          {irbiCategory && assessmentStatus && (
+            <div className="kerentanan-source-info" role="status" data-status={assessmentStatus.status}>
+              <p>{actualAvailableCount}/{KPWBI_OFFICES.length} kantor memiliki nilai IRBI.</p>
+              <p>{BnpbIrbiService.getAssessmentMessage(irbiCategory)}</p>
+              {assessmentStatus.checkedAt && <p>Diperiksa: {new Date(assessmentStatus.checkedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB.</p>}
+              <button className="topbar-back-btn" type="button" disabled={assessmentStatus.status === 'loading'} onClick={() => { void BnpbIrbiService.refreshAssessment(KPWBI_OFFICES); }}>Muat ulang</button>
+            </div>
           )}
           {showVolcanoReference && <div className="kerentanan-source-info" data-volcano-reference>
             <p>Peta alternatif menampilkan {VOLCANO_REFERENCE_POINTS.length} titik gunung api dari <a href={VOLCANO_REFERENCE_SOURCE} target="_blank" rel="noopener noreferrer">MAGMA Indonesia / PVMBG</a> dan sketsa busur Ring of Fire. Koordinat diambil {VOLCANO_REFERENCE_RETRIEVED_AT}.</p>
@@ -180,9 +185,9 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
           </div>}
           <div className="kerentanan-panel-header">
             <span className="kerentanan-panel-title">
-              {showVolcanoReference ? 'Estimasi Kerentanan Geografis' : selectedHazard === 'extreme_weather' ? 'Indeks Banjir InaRISK' : selectedHazard === 'air_quality' ? 'Peringkat Kualitas Udara (ISPU)' : selectedHazard === 'karhutla' ? 'Indeks Karhutla · 25 km' : 'Indeks Bahaya'}
+              {showVolcanoReference ? 'Estimasi Kerentanan Geografis' : selectedHazard === 'air_quality' ? 'Peringkat Kualitas Udara (ISPU)' : irbiCategory ? 'Kelas Risiko IRBI' : 'Indeks Bahaya'}
             </span>
-            <span className="kerentanan-panel-count">{displayedCount} {showVolcanoReference ? 'kantor' : 'wilayah'}</span>
+            {!initialLoading && <span className="kerentanan-panel-count">{displayedCount} {showVolcanoReference || selectedHazard === 'earthquake' ? 'kantor' : 'wilayah'}</span>}
           </div>
 
           {selectedHazard === 'air_quality' && (
@@ -204,14 +209,23 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
             </>
           )}
 
-          <div className="kerentanan-panel-scroll">
-            {rankedOffices.length === 0 ? (
+          <div className="kerentanan-panel-scroll" aria-busy={initialLoading || refreshing}>
+            {initialLoading ? (
+              <div className="kerentanan-empty kerentanan-loading-status" role="status">
+                <p>Memuat data {currentHazard.label}...</p>
+              </div>
+            ) : refreshing && (
+              <div className="kerentanan-empty kerentanan-loading-status" role="status">
+                <p>Memperbarui data {currentHazard.label}...</p>
+              </div>
+            )}
+            {!initialLoading && rankedOffices.length === 0 ? (
               <div className="kerentanan-empty">
                 <p>{selectedHazard === 'air_quality'
-                  ? isLoading ? 'Memuat data...' : 'Data ISPU tidak tersedia.'
-                  : BnpbInariskService.getAssessmentMessage(selectedHazard)}</p>
+                  ? 'Data ISPU tidak tersedia.'
+                  : irbiCategory ? BnpbIrbiService.getAssessmentMessage(irbiCategory) : 'Data tidak tersedia.'}</p>
               </div>
-            ) : (
+            ) : !initialLoading && (
               rankedOffices.map(({ office, score, assessment, ispuAssessment }, idx) => {
                 const province = provincesMap.get(office.provinceId);
                 const isSelected = selectedOfficeId === office.id;
@@ -303,8 +317,10 @@ const KerentananScreen: React.FC<KerentananScreenProps> = ({ onBack }) => {
             activeTypeFilter={selectedHazard}
             isKerentananView={true}
             showVolcanoReference={showVolcanoReference}
+            baseMapOnly={initialLoading}
           />
         </div>
+        <IspuHistoryPanel active={selectedHazard === 'air_quality'} selectedOfficeId={selectedOfficeId} officeSelectionRevision={officeSelectionRevision} />
       </div>
 
     </div>

@@ -1,11 +1,13 @@
-import type { DisasterAlert, AlertSeverity } from '../types';
-import { parseForecastTable, publishForecastSnapshot, failForecastSnapshot, FORECAST_SOURCE } from './weatherForecastAssessment';
-import type { WeatherData } from '../types/weather';
-import { KPWBI_OFFICES } from '../constants/kpwbiOffices';
-import { findNearestKpwOffice } from '../utils/geo';
-import { mapTextToProvinceId } from '../utils/provinceMap';
-import { PROVINCIAL_CAPITALS_ADM4 } from '../constants/provincialCapitalsAdm4';
-import { fetchHtmlWithCorsProxy, fetchWithCorsProxy } from './proxy';
+import type { DisasterAlert, AlertSeverity } from '../types/index.ts';
+import { parseForecastTable, publishForecastSnapshot, failForecastSnapshot, FORECAST_SOURCE } from './weatherForecastAssessment.ts';
+import type { WeatherData } from '../types/weather.ts';
+import { KPWBI_OFFICES } from '../constants/kpwbiOffices.ts';
+import { findNearestKpwOffice } from '../utils/geo.ts';
+import { mapTextToProvinceId } from '../utils/provinceMap.ts';
+import { PROVINCIAL_CAPITALS_ADM4 } from '../constants/provincialCapitalsAdm4.ts';
+import { fetchHtmlWithCorsProxy, fetchWithCorsProxy } from './proxy.ts';
+import { usesBrowserStorage } from '../domain/dataMode.ts';
+import { requestFeed } from './feedClient.ts';
 
 interface BmkgEarthquake {
   Tanggal: string;
@@ -78,6 +80,7 @@ function getEarthquakeSeverity(dirasakan: string, magnitude: number): AlertSever
 }
 
 export async function fetchLatestEarthquakes(): Promise<DisasterAlert[]> {
+  if (usesBrowserStorage()) return requestFeed('earthquakes');
   try {
     const [dirasakanData, autoData] = await Promise.all([
       fetchWithCorsProxy('https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json').catch(e => {
@@ -89,6 +92,8 @@ export async function fetchLatestEarthquakes(): Promise<DisasterAlert[]> {
         return null;
       })
     ]);
+
+    if (!dirasakanData && !autoData) throw new Error('Both BMKG earthquake sources are unavailable');
 
     const rawGempaList: BmkgEarthquake[] = [];
 
@@ -159,14 +164,16 @@ export async function fetchLatestEarthquakes(): Promise<DisasterAlert[]> {
   }
 }
 
-export async function fetchExtremeWeather(): Promise<DisasterAlert[]> {
+export async function fetchExtremeWeather(parseXml = (text: string): Document => new DOMParser().parseFromString(text, 'text/xml')): Promise<DisasterAlert[]> {
+  if (usesBrowserStorage()) return requestFeed('extreme-weather');
   try {
-    const response = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.bmkg.go.id/alerts/nowcast/id/rss.xml');
+    const response = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.bmkg.go.id/alerts/nowcast/id/rss.xml', { signal: AbortSignal.timeout(12_000) });
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
     if (data.status !== 'ok') throw new Error('RSS-to-JSON API status not ok');
     const rawItems = data.items || [];
     const items = rawItems.slice(0, 15);
+    let failedDocuments = 0;
 
     const alertsPromises = items.map(async (item: { guid: string; link: string; title: string; description: string; pubDate: string }, index: number) => {
       let latitude: number | undefined;
@@ -179,8 +186,7 @@ export async function fetchExtremeWeather(): Promise<DisasterAlert[]> {
       try {
         const xmlText = await fetchHtmlWithCorsProxy(item.link);
         if (xmlText) {
-          const parser = new DOMParser();
-          const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+          const xmlDoc = parseXml(xmlText);
 
           const capSeverity = xmlDoc.querySelector('severity')?.textContent?.toLowerCase();
           if (capSeverity === 'extreme' || capSeverity === 'severe') severity = 3;
@@ -202,6 +208,7 @@ export async function fetchExtremeWeather(): Promise<DisasterAlert[]> {
           }
         }
       } catch (e) {
+        failedDocuments++;
         console.warn(`Failed to fetch CAP XML for ${item.link}.`, e);
       }
 
@@ -229,6 +236,7 @@ export async function fetchExtremeWeather(): Promise<DisasterAlert[]> {
     });
 
     const results = await Promise.allSettled(alertsPromises);
+    if (items.length > 0 && failedDocuments === items.length) throw new Error('All weather warning documents are unavailable');
     const parsedAlerts = results
       .filter((r): r is PromiseFulfilledResult<DisasterAlert | null> => r.status === 'fulfilled')
       .map((r) => r.value)
@@ -241,6 +249,11 @@ export async function fetchExtremeWeather(): Promise<DisasterAlert[]> {
 }
 
 export async function fetchThreeDayForecast(): Promise<DisasterAlert[]> {
+  if (usesBrowserStorage()) {
+    const value = await requestFeed<{ alerts: DisasterAlert[]; snapshot: import('./weatherForecastAssessment').ForecastSnapshot }>('forecast');
+    publishForecastSnapshot(value.snapshot);
+    return value.alerts;
+  }
   try {
     const html = await fetchHtmlWithCorsProxy(FORECAST_SOURCE);
     const snapshot = parseForecastTable(html);
@@ -286,6 +299,7 @@ function parseWaktuMulai(waktu: string): string | null {
 }
 
 export async function fetchEarlyWarning(): Promise<DisasterAlert[]> {
+  if (usesBrowserStorage()) return requestFeed('early-warning');
   try {
     const html = await fetchHtmlWithCorsProxy('https://www.bmkg.go.id/cuaca/peringatan-dini-cuaca');
     if (!html) throw new Error('No HTML content returned');
@@ -352,6 +366,7 @@ interface BmkgWeatherResponse {
 }
 
 export async function fetchProvinceWeatherForecast(provinceId: string): Promise<WeatherData> {
+  if (usesBrowserStorage()) return requestFeed('province-weather', { provinceId });
   const mapping = PROVINCIAL_CAPITALS_ADM4[provinceId];
   if (!mapping) {
     throw new Error(`No ADM4 mapping found for province ID: ${provinceId}`);

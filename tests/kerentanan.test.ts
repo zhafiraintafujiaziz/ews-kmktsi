@@ -18,10 +18,16 @@ registerHooks({
 });
 
 const { BnpbInariskService, parseHazardIndex } = await import('../src/services/bnpbInariskService.ts');
-const { INARISK_HAZARD_SERVICES, INARISK_CATEGORIES, getHazardLevel, getHazardSeverity } = await import('../src/constants/kerentananCategories.ts');
+const { BnpbIrbiService } = await import('../src/services/bnpbIrbiService.ts');
+const { INARISK_HAZARD_SERVICES, INARISK_CATEGORIES, getHazardLevel, getHazardSeverity, getInaRiskAssessmentEndpoint } = await import('../src/constants/kerentananCategories.ts');
+const { EARTHQUAKE_WMS_SERVICE, earthquakeHazardUrl, parseEarthquakeHazardValue } = await import('../src/services/earthquakeHazard.ts');
 const { scoreAlertForOffice, mapInariskToHazard, isInaRiskSupportedType } = await import('../src/utils/riskCalculator.ts');
 const { fetchWithCorsProxy } = await import('../src/services/proxy.ts');
 const { KPWBI_OFFICES } = await import('../src/constants/kpwbiOffices.ts');
+const { getKerentananHighSummary, getKerentananHeaderBand } = await import('../src/utils/kerentananAssessment.ts');
+const { refreshBackgroundAssessments } = await import('../src/services/assessmentSync.ts');
+const { createAlertStore } = await import('../src/domain/alertStore.ts');
+const { logSyncFailure } = await import('../src/services/syncDiagnostics.ts');
 const office = KPWBI_OFFICES[0];
 const secondOffice = { ...office, id: 'second', longitude: office.longitude + 1 };
 const missingOffice = { ...office, id: 'missing', longitude: office.longitude + 2 };
@@ -41,23 +47,47 @@ function alert(type: DisasterAlert['type'], severity: 1 | 2 | 3): DisasterAlert 
 }
 
 function fixture(target: URL, offices = [office], value: unknown = 0.8): Response {
-  if (target.pathname.endsWith('/identify')) {
-    return Response.json({ results: [{ layerId: 0, attributes: { 'Stretch.Pixel Value': value } }] });
+  if (isEarthquakeRequest(target) || isWeatherRequest(target)) {
+    requestedOffice(target, offices);
+    return earthquakeFixture(value);
   }
+  assert.ok(target.pathname.endsWith('/getSamples'));
   return Response.json({ samples: offices.map((o, locationId) => ({
     locationId, value, location: { x: o.longitude, y: o.latitude, spatialReference: { wkid: 4326 } },
   })) });
 }
 
+function isEarthquakeRequest(target: URL): boolean {
+  return target.hostname === 'inarisk1.bnpb.go.id' && target.searchParams.get('request') === 'GetFeatureInfo'
+    && target.searchParams.get('query_layers') === INARISK_HAZARD_SERVICES.earthquake;
+}
+
+function isWeatherRequest(target: URL): boolean {
+  return target.hostname === 'inarisk1.bnpb.go.id' && target.searchParams.get('request') === 'GetFeatureInfo'
+    && target.searchParams.get('query_layers') === INARISK_HAZARD_SERVICES.extreme_weather;
+}
+
+function requestedOffice(target: URL, offices = [office]) {
+  const [west, south, east, north] = target.searchParams.get('bbox')!.split(',').map(Number);
+  const longitude = (west + east) / 2, latitude = (south + north) / 2;
+  const found = offices.find(o => Math.abs(o.longitude - longitude) < 1e-7 && Math.abs(o.latitude - latitude) < 1e-7);
+  assert.ok(found, 'WMS pixel must be centered on a requested office');
+  return found;
+}
+
+function earthquakeFixture(value: unknown = 0.8): Response {
+  return Response.json({ type: 'FeatureCollection', features: [{ type: 'Feature', geometry: null, properties: { GRAY_INDEX: value } }] });
+}
+
 test('six tabs use four portal Bahaya services; ash shares eruption data', () => {
   assert.deepEqual(INARISK_CATEGORIES.map(c => c.key), [...sources, 'volcanic_ash', 'air_quality']);
   assert.deepEqual(INARISK_HAZARD_SERVICES, {
-    earthquake: 'layer_bahaya_gempabumi/MapServer',
-    extreme_weather: 'layer_bahaya_banjir/ImageServer',
+    earthquake: 'raster:INDEKS_BAHAYA_GEMPABUMI1',
+    extreme_weather: 'raster:INDEKS_BAHAYA_CUACAEKSTRIM1',
     karhutla: 'layer_bahaya_kebakaran_hutan_dan_lahan/ImageServer',
     volcanic: 'layer_bahaya_letusan_gunungapi/ImageServer',
   });
-  assert.equal(INARISK_CATEGORIES.find(c => c.key === 'extreme_weather')?.inariskLabel, 'Banjir');
+  assert.equal(INARISK_CATEGORIES.find(c => c.key === 'extreme_weather')?.inariskLabel, 'Cuaca Ekstrim');
   assert.equal(INARISK_CATEGORIES.find(c => c.key === 'volcanic_ash')?.inariskLabel, 'Letusan Gunung Api');
 });
 
@@ -85,8 +115,8 @@ test('official 0.3 and 0.6 boundaries classify raw indices before rounding', () 
   }
 });
 
-test('earthquake uses the Kerentanan page InaRISK factor with severity-only elevation', t => {
-  const lookup = t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => 0);
+test('earthquake uses the Kerentanan page IRBI factor with severity-only elevation', t => {
+  const lookup = t.mock.method(BnpbIrbiService, 'getIndex', () => 0);
   for (const type of ['earthquake'] as const) {
     assert.equal(isInaRiskSupportedType(type), true);
     for (const [index, assessment] of [[0, 1], [0.4, 2], [0.7, 3]] as const) {
@@ -123,31 +153,19 @@ test('unsupported disasters and ISPU never query InaRISK', t => {
   assert.equal(lookup.mock.callCount(), 0);
 });
 
-test('MapServer identify and reordered multipoint samples map each value to its office', async t => {
+test('point queries and reordered multipoint samples map values to offices and preserve zero', async t => {
   const urls: URL[] = [];
   const offices = [office, secondOffice, missingOffice];
   t.mock.method(globalThis, 'fetch', async input => {
     const target = targetOf(input);
     urls.push(target);
+    if (isEarthquakeRequest(target) || isWeatherRequest(target)) {
+      const requested = requestedOffice(target, offices);
+      return earthquakeFixture(requested.id === office.id ? '0' : requested.id === secondOffice.id ? '0.61' : 'NoData');
+    }
     const geometry = JSON.parse(target.searchParams.get('geometry')!);
     assert.equal(geometry.spatialReference.wkid, 4326);
-    if (target.pathname.endsWith('/identify')) {
-      assert.equal(target.searchParams.get('geometryType'), 'esriGeometryPoint');
-      assert.equal(target.searchParams.get('sr'), '4326');
-      assert.equal(target.searchParams.get('layers'), 'all:0');
-      assert.equal(target.searchParams.get('tolerance'), '0');
-      assert.equal(target.searchParams.get('imageDisplay'), '256,256,96');
-      assert.deepEqual(target.searchParams.get('mapExtent')!.split(',').map(Number), [geometry.x - 0.01, geometry.y - 0.01, geometry.x + 0.01, geometry.y + 0.01]);
-      const value = geometry.x === office.longitude ? '0' : geometry.x === secondOffice.longitude ? '0.61' : 'NoData';
-      return Response.json({ results: [
-        { layerId: 9, attributes: { 'Stretch.Pixel Value': '1' } },
-        { layerId: 0, attributes: { 'Stretch.Pixel Value': value } },
-      ] });
-    }
-    if (target.pathname.includes(INARISK_HAZARD_SERVICES.extreme_weather)) {
-      assert.deepEqual(JSON.parse(target.searchParams.get('renderingRule')!), { rasterFunction: 'None' });
-      assert.equal(target.searchParams.get('interpolation'), 'RSP_NearestNeighbor');
-    }
+    assert.ok(target.pathname.endsWith('/getSamples'));
     assert.equal(target.searchParams.get('geometryType'), 'esriGeometryMultipoint');
     assert.deepEqual(geometry.points, offices.map(o => [o.longitude, o.latitude]));
     return Response.json({ samples: [
@@ -157,7 +175,7 @@ test('MapServer identify and reordered multipoint samples map each value to its 
     ] });
   });
   await BnpbInariskService.refreshAssessment(offices);
-  assert.equal(urls.length, offices.length + 3);
+  assert.equal(urls.length, sources.length - 2 + offices.length * 2);
   for (const type of hazards) {
     assert.equal(BnpbInariskService.getLocalHazardIndex(office.id, type), 0);
     assert.equal(BnpbInariskService.getLocalHazardIndex(secondOffice.id, type), 0.61);
@@ -177,7 +195,7 @@ test('categories publish independently, notify subscribers, and recover after an
   t.mock.method(globalThis, 'fetch', async input => {
     const target = targetOf(input);
     if (target.pathname.includes(INARISK_HAZARD_SERVICES.volcanic)) await gate;
-    if (failWeather && target.pathname.includes(INARISK_HAZARD_SERVICES.extreme_weather)) return Response.json({ error: { code: 503, message: 'Synthetic category failure' } });
+    if (failWeather && isWeatherRequest(target)) return Response.json({ error: { code: 503, message: 'Synthetic category failure' } });
     return fixture(target);
   });
   const publications: number[] = [];
@@ -215,10 +233,7 @@ test('categories publish independently, notify subscribers, and recover after an
 
 test('NoData clears old values and is distinct from malformed responses', async t => {
   let malformed = false;
-  t.mock.method(globalThis, 'fetch', async input => {
-    const target = targetOf(input);
-    return Response.json(malformed ? {} : target.pathname.endsWith('/identify') ? { results: [] } : { samples: [] });
-  });
+  t.mock.method(globalThis, 'fetch', async input => Response.json(malformed ? {} : (isEarthquakeRequest(targetOf(input)) || isWeatherRequest(targetOf(input))) ? { type: 'FeatureCollection', features: [] } : { samples: [] }));
   await BnpbInariskService.refreshAssessment([office]);
   for (const type of hazards) {
     assert.equal(BnpbInariskService.getLocalHazardIndex(office.id, type), null);
@@ -230,13 +245,14 @@ test('NoData clears old values and is distinct from malformed responses', async 
   for (const type of hazards) assert.equal(BnpbInariskService.getAssessmentStatus(type).status, 'error');
 });
 
-test('one failed earthquake point preserves successful points and distinguishes NoData', async t => {
+test('partial earthquake point results distinguish NoData from request failures', async t => {
+  const diagnostics = t.mock.method(console, 'error', () => {});
+  const noData = t.mock.method(console, 'info', () => {});
   t.mock.method(globalThis, 'fetch', async input => {
     const target = targetOf(input);
-    if (target.pathname.endsWith('/identify')) {
-      const point = JSON.parse(target.searchParams.get('geometry')!);
-      if (point.x === secondOffice.longitude) return Response.json({ error: { message: 'Point unavailable' } });
-      return fixture(target, [office], point.x === missingOffice.longitude ? '' : 0.4);
+    if (isEarthquakeRequest(target)) {
+      const requested = requestedOffice(target, [office, secondOffice, missingOffice]);
+      return requested.id === missingOffice.id ? Response.json({ type: 'FeatureCollection', features: [] }) : earthquakeFixture(requested.id === office.id ? '0.4' : 'NoData');
     }
     return fixture(target, [office, secondOffice, missingOffice]);
   });
@@ -245,57 +261,291 @@ test('one failed earthquake point preserves successful points and distinguishes 
   const status = BnpbInariskService.getAssessmentStatus('earthquake');
   assert.equal(status.status, 'partial');
   assert.equal(status.valueCount, 1);
-  assert.equal(status.failedOfficeCount, 1);
-  assert.match(BnpbInariskService.getAssessmentMessage('earthquake', secondOffice.id), /gagal merespons/);
+  assert.equal(status.failedOfficeCount, 0);
+  assert.match(BnpbInariskService.getAssessmentMessage('earthquake', secondOffice.id), /tidak menyediakan nilai/);
   assert.match(BnpbInariskService.getAssessmentMessage('earthquake', missingOffice.id), /tidak menyediakan nilai/);
   assert.equal(BnpbInariskService.getLocalHazardIndex(office.id, 'extreme_weather'), 0.8);
+  assert.equal(diagnostics.mock.callCount(), 0);
+  const detail = noData.mock.calls[0].arguments[1];
+  assert.equal(detail.category, 'earthquake');
+  assert.equal(detail.endpoint, EARTHQUAKE_WMS_SERVICE);
+  assert.equal(detail.valueCount, 1);
+  assert.equal(detail.failedOfficeCount, 0);
+  assert.equal(detail.noDataOfficeCount, 2);
+  assert.ok(noData.mock.calls.some(call => call.arguments[1].kind === 'no_data'));
 });
 
-test('earthquake requests never exceed four concurrent identifies', async t => {
-  const offices = Array.from({ length: 9 }, (_, i) => ({ ...office, id: 'concurrency-' + i, longitude: office.longitude + i * 0.01 }));
-  let active = 0;
-  let maxActive = 0;
-  let identifies = 0;
+test('background IRBI assessment runs once, skips overlap, and recovers after a failure', async t => {
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  let fail = true;
+  let calls = 0;
+  t.mock.method(BnpbIrbiService, 'refreshAssessment', async () => {
+    calls++;
+    if (fail) { await gate; throw new AggregateError([new Error('Synthetic IRBI failure')]); }
+  });
+  const diagnostics = t.mock.method(console, 'error', () => {});
+  const first = refreshBackgroundAssessments();
+  await nextTurn();
+  assert.equal(calls, 1);
+  const second = refreshBackgroundAssessments();
+  await nextTurn();
+  assert.equal(calls, 1);
+  release();
+  await Promise.all([first, second]);
+  assert.equal(diagnostics.mock.callCount(), 1);
+  fail = false;
+  await refreshBackgroundAssessments();
+  assert.equal(calls, 2);
+  assert.equal(diagnostics.mock.callCount(), 1);
+});
+
+test('minute scheduling refreshes the IRBI assessment each minute', async t => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout', 'setInterval'], now: Date.UTC(2026, 9, 14) });
+  let calls = 0;
+  t.mock.method(BnpbIrbiService, 'refreshAssessment', async () => { calls++; });
+  const store = createAlertStore({ feeds: [], loadSnapshots: async () => [], refreshAssessments: refreshBackgroundAssessments });
+  const unsubscribe = store.subscribe(() => {});
+  t.after(unsubscribe);
+  await nextTurn();
+  assert.equal(calls, 1);
+  t.mock.timers.tick(60_000);
+  await nextTurn();
+  assert.equal(calls, 2);
+  unsubscribe();
+  t.mock.timers.tick(60_000);
+  await nextTurn();
+  assert.equal(calls, 2);
+});
+
+test('minute scheduling retries a failed IRBI refresh and logs the sync failure', async t => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout', 'setInterval'], now: Date.UTC(2026, 9, 14) });
+  let calls = 0;
+  let fail = true;
+  const diagnostics = t.mock.method(console, 'error', () => {});
+  t.mock.method(BnpbIrbiService, 'refreshAssessment', async () => {
+    calls++;
+    if (fail) throw new AggregateError([Object.assign(new Error('Synthetic IRBI failure'), { kind: 'service_error', status: 500 })]);
+  });
+  const store = createAlertStore({ feeds: [], loadSnapshots: async () => [], refreshAssessments: refreshBackgroundAssessments });
+  const unsubscribe = store.subscribe(() => {});
+  t.after(unsubscribe);
+  await nextTurn();
+  assert.equal(calls, 1);
+  assert.equal(diagnostics.mock.callCount(), 1);
+  fail = false;
+  t.mock.timers.tick(60_000);
+  await nextTurn();
+  assert.equal(calls, 2);
+  assert.equal(diagnostics.mock.callCount(), 1);
+  unsubscribe();
+  t.mock.timers.tick(60_000);
+  await nextTurn();
+  assert.equal(calls, 2);
+});
+
+for (const source of ['earthquake', 'extreme_weather'] as const) test(source + ' point results keep office identity when requests complete out of order', async t => {
+  const offices = [office, secondOffice, missingOffice];
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  t.mock.method(globalThis, 'fetch', async input => {
+    const requested = requestedOffice(targetOf(input), offices);
+    if (requested.id === office.id) { await gate; return earthquakeFixture('0'); }
+    if (requested.id === secondOffice.id) return earthquakeFixture('0.61');
+    return earthquakeFixture('NoData');
+  });
+  const refresh = BnpbInariskService.refreshAssessment(offices, [source]);
+  await nextTurn();
+  release();
+  await refresh;
+  assert.equal(BnpbInariskService.getLocalHazardIndex(office.id, source), 0);
+  assert.equal(BnpbInariskService.getLocalHazardIndex(secondOffice.id, source), 0.61);
+  assert.equal(BnpbInariskService.getLocalHazardIndex(missingOffice.id, source), null);
+  assert.equal(BnpbInariskService.getAssessmentStatus(source).valueCount, 2);
+});
+
+test('console diagnostics distinguish invalid JSON, service errors, and timeouts', t => {
+  const diagnostics = t.mock.method(console, 'error', () => {});
+  logSyncFailure({ source: 'InaRISK', category: 'earthquake', endpoint: 'https://gis.bnpb.go.id/identify' }, new AggregateError([
+    new SyntaxError('Unexpected token <'), Object.assign(new Error('Raster service failed'), { kind: 'service_error', status: 500 }),
+    new Error('InaRISK category request timed out after 14000 ms'),
+  ]));
+  const detail = diagnostics.mock.calls[0].arguments[1];
+  assert.deepEqual(detail.errors.map((error: { kind: string }) => error.kind), ['invalid_response', 'service_error', 'timeout']);
+});
+
+for (const source of ['earthquake', 'extreme_weather'] as const) test('all 48 ' + source + ' offices query only their Bahaya raster at their exact coordinates', async t => {
+  const offices = KPWBI_OFFICES;
+  const requestedIds: string[] = [];
+  let active = 0, peak = 0;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  t.mock.method(globalThis, 'fetch', async input => {
+    assert.ok(String(input).startsWith('/api/proxy?url='));
+    const target = targetOf(input);
+    assert.equal(target.origin + target.pathname, EARTHQUAKE_WMS_SERVICE);
+    assert.equal(target.searchParams.get('service'), 'WMS');
+    assert.equal(target.searchParams.get('version'), '1.1.1');
+    assert.equal(target.searchParams.get('request'), 'GetFeatureInfo');
+    assert.equal(target.searchParams.get('layers'), INARISK_HAZARD_SERVICES[source]);
+    assert.equal(target.searchParams.get('query_layers'), INARISK_HAZARD_SERVICES[source]);
+    assert.equal(target.searchParams.get('srs'), 'EPSG:4326');
+    assert.equal(target.searchParams.get('info_format'), 'application/json');
+    assert.equal(target.searchParams.get('format'), 'image/png');
+    for (const key of ['width', 'height']) assert.equal(target.searchParams.get(key), '1');
+    for (const key of ['x', 'y', 'buffer']) assert.equal(target.searchParams.get(key), '0');
+    const requested = requestedOffice(target, offices);
+    requestedIds.push(requested.id);
+    const [west, south, east, north] = target.searchParams.get('bbox')!.split(',').map(Number);
+    assert.ok(Math.abs(east - west - 0.0001) < 1e-9);
+    assert.ok(Math.abs(north - south - 0.0001) < 1e-9);
+    assert.ok(!target.href.includes('RISIKO') && !target.href.includes('KERENTANAN'));
+    active++; peak = Math.max(peak, active);
+    await gate;
+    active--;
+    return earthquakeFixture(requestedIds.indexOf(requested.id) / (offices.length - 1));
+  });
+  const refresh = BnpbInariskService.refreshAssessment(offices, [source]);
+  await nextTurn();
+  assert.equal(requestedIds.length, 6);
+  release();
+  await refresh;
+  assert.equal(peak, 6);
+  assert.equal(new Set(requestedIds).size, offices.length);
+  assert.equal(requestedIds.length, offices.length);
+  assert.equal(BnpbInariskService.getAssessmentStatus(source).status, 'available');
+  for (const requested of offices) {
+    assert.equal(BnpbInariskService.getLocalHazardIndex(requested.id, source), requestedIds.indexOf(requested.id) / (offices.length - 1));
+  }
+});
+
+test('earthquake and extreme weather use separate Bahaya layers and retain independent values', async t => {
+  let failWeather = false;
+  const layers: string[] = [];
   t.mock.method(globalThis, 'fetch', async input => {
     const target = targetOf(input);
-    if (target.pathname.endsWith('/identify')) {
-      identifies++;
-      maxActive = Math.max(maxActive, ++active);
-      await nextTurn();
-      active--;
-    }
-    return fixture(target, offices);
+    requestedOffice(target);
+    layers.push(target.searchParams.get('query_layers')!);
+    if (isEarthquakeRequest(target)) return earthquakeFixture(0.8);
+    assert.ok(isWeatherRequest(target));
+    if (failWeather) return Response.json({ error: { code: 503, message: 'Synthetic weather failure' } });
+    return earthquakeFixture(0);
   });
-  await BnpbInariskService.refreshAssessment(offices);
-  assert.equal(maxActive, 4);
-  assert.equal(identifies, offices.length);
-  assert.equal(BnpbInariskService.getAssessmentStatus('earthquake').valueCount, offices.length);
+  await BnpbInariskService.refreshAssessment([office], ['earthquake', 'extreme_weather']);
+  assert.deepEqual(layers.sort(), [INARISK_HAZARD_SERVICES.earthquake, INARISK_HAZARD_SERVICES.extreme_weather].sort());
+  assert.equal(BnpbInariskService.getLocalHazardIndex(office.id, 'earthquake'), 0.8);
+  assert.equal(BnpbInariskService.getLocalHazardIndex(office.id, 'extreme_weather'), 0);
+  failWeather = true;
+  await assert.rejects(BnpbInariskService.refreshAssessment([office], ['extreme_weather']), AggregateError);
+  assert.equal(BnpbInariskService.getLocalHazardIndex(office.id, 'extreme_weather'), null);
+  assert.equal(BnpbInariskService.getAssessmentStatus('extreme_weather').status, 'error');
+  assert.equal(BnpbInariskService.getLocalHazardIndex(office.id, 'earthquake'), 0.8);
+  assert.equal(BnpbInariskService.getAssessmentStatus('earthquake').status, 'available');
+  failWeather = false;
+  await BnpbInariskService.refreshAssessment([office], ['extreme_weather']);
+  assert.equal(BnpbInariskService.getLocalHazardIndex(office.id, 'extreme_weather'), 0);
+  assert.equal(BnpbInariskService.getAssessmentStatus('extreme_weather').status, 'available');
 });
 
-test('the 14-second category deadline aborts pending identifies and retains completed values', async t => {
+test('earthquake parser preserves raw zero and decimal values without inventing class indices', () => {
+  for (const value of [0, 0.5538657903671265, 1, '0.61', null, 'NoData']) {
+    assert.equal(parseEarthquakeHazardValue({ type: 'FeatureCollection', features: [{ properties: { GRAY_INDEX: value } }] }), value);
+  }
+  assert.equal(parseEarthquakeHazardValue({ type: 'FeatureCollection', features: [] }), null);
+  for (const data of [{}, { samples: [] }, { type: 'FeatureCollection', features: null }, { type: 'FeatureCollection', features: [null] }, { type: 'FeatureCollection', features: [{}] }, { type: 'FeatureCollection', features: [{ properties: { level: 'Tinggi' } }] }]) {
+    assert.throws(() => parseEarthquakeHazardValue(data));
+  }
+  const target = new URL(earthquakeHazardUrl(office));
+  assert.equal(requestedOffice(target).id, office.id);
+  assert.equal(getInaRiskAssessmentEndpoint('earthquake'), EARTHQUAKE_WMS_SERVICE);
+  assert.equal(getInaRiskAssessmentEndpoint('extreme_weather'), EARTHQUAKE_WMS_SERVICE);
+});
+
+test('failed earthquake point requests preserve completed values and allow recovery', async t => {
+  const offices = [office, secondOffice, missingOffice];
+  let fail = true;
+  const diagnostics = t.mock.method(console, 'error', () => {});
+  t.mock.method(globalThis, 'fetch', async input => {
+    const target = targetOf(input);
+    if (!isEarthquakeRequest(target)) return fixture(target, offices);
+    const requested = requestedOffice(target, offices);
+    if (fail && requested.id === secondOffice.id) return Response.json({ error: { code: 500, message: 'Synthetic point failure' } });
+    return earthquakeFixture(requested.id === missingOffice.id ? 'NoData' : 0.5538657903671265);
+  });
+  await BnpbInariskService.refreshAssessment(offices);
+  const status = BnpbInariskService.getAssessmentStatus('earthquake');
+  assert.equal(status.status, 'partial');
+  assert.equal(status.valueCount, 1);
+  assert.equal(status.failedOfficeCount, 1);
+  assert.equal(BnpbInariskService.getLocalHazardIndex(office.id, 'earthquake'), 0.5538657903671265);
+  assert.match(BnpbInariskService.getAssessmentMessage('earthquake', secondOffice.id), /gagal merespons/);
+  assert.match(BnpbInariskService.getAssessmentMessage('earthquake', missingOffice.id), /tidak menyediakan nilai/);
+  assert.equal(BnpbInariskService.getAssessmentStatus('extreme_weather').status, 'available');
+  assert.equal(diagnostics.mock.callCount(), 1);
+  fail = false;
+  await BnpbInariskService.refreshAssessment(offices, ['earthquake']);
+  assert.equal(BnpbInariskService.getAssessmentStatus('earthquake').failedOfficeCount, 0);
+  assert.equal(BnpbInariskService.getLocalHazardIndex(secondOffice.id, 'earthquake'), 0.5538657903671265);
+});
+
+for (const source of ['earthquake', 'extreme_weather'] as const) test(source + ' request deadlines abort stalled calls, advance the queue, and permit recovery', async t => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const offices = Array.from({ length: 8 }, (_, i) => ({ ...office, id: 'deadline-' + i, longitude: office.longitude + i * 0.01 }));
   const pendingSignals: AbortSignal[] = [];
+  let hang = false;
   t.mock.method(globalThis, 'fetch', async (input, options) => {
     const target = targetOf(input);
-    if (target.pathname.endsWith('/identify') && JSON.parse(target.searchParams.get('geometry')!).x !== offices[0].longitude) {
+    if (hang && (source === 'earthquake' ? isEarthquakeRequest(target) : isWeatherRequest(target))) {
       pendingSignals.push(options!.signal!);
       return new Promise<Response>(() => {});
     }
     return fixture(target, offices);
   });
+  await BnpbInariskService.refreshAssessment(offices);
+  hang = true;
   const refresh = BnpbInariskService.refreshAssessment(offices);
+  const rejected = assert.rejects(refresh, AggregateError);
   await nextTurn();
-  assert(pendingSignals.length > 0);
-  t.mock.timers.tick(14_000);
-  await refresh;
-  assert(pendingSignals.every(s => s.aborted));
-  const status = BnpbInariskService.getAssessmentStatus('earthquake');
-  assert.equal(status.status, 'partial');
-  assert.equal(status.valueCount, 1);
-  assert.equal(status.failedOfficeCount, offices.length - 1);
-  assert.equal(BnpbInariskService.getLocalHazardIndex(offices[0].id, 'earthquake'), 0.8);
-  assert.equal(BnpbInariskService.getAssessmentStatus('extreme_weather').status, 'available');
+  assert.equal(pendingSignals.length, 6);
+  assert.equal(BnpbInariskService.getAssessmentStatus(source === 'earthquake' ? 'extreme_weather' : 'earthquake').status, 'available');
+  t.mock.timers.tick(8_000);
+  await nextTurn();
+  assert.equal(pendingSignals.length, offices.length);
+  assert(pendingSignals.slice(0, 6).every(signal => signal.aborted));
+  t.mock.timers.tick(8_000);
+  await rejected;
+  assert(pendingSignals.every(signal => signal.aborted));
+  const status = BnpbInariskService.getAssessmentStatus(source);
+  assert.equal(status.status, 'error');
+  assert.equal(status.valueCount, 0);
+  assert.equal(status.failedOfficeCount, offices.length);
+  assert.match(status.error!, /timed out/);
+  for (const requested of offices) assert.equal(BnpbInariskService.getLocalHazardIndex(requested.id, source), null);
+  hang = false;
+  await BnpbInariskService.refreshAssessment(offices, [source]);
+  assert.equal(BnpbInariskService.getAssessmentStatus(source).status, 'available');
+  assert.equal(BnpbInariskService.getAssessmentStatus(source).failedOfficeCount, 0);
+});
+
+test('the earthquake category deadline aborts active requests and leaves queued offices unrequested', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const offices = Array.from({ length: 60 }, (_, i) => ({ ...office, id: 'category-' + i, longitude: office.longitude + i * 0.01 }));
+  const signals: AbortSignal[] = [];
+  t.mock.method(globalThis, 'fetch', async (_input, options) => {
+    signals.push(options!.signal!);
+    return new Promise<Response>(() => {});
+  });
+  const refresh = BnpbInariskService.refreshAssessment(offices, ['earthquake']);
+  const rejected = assert.rejects(refresh, AggregateError);
+  await nextTurn();
+  for (let wave = 0; wave < 3; wave++) { t.mock.timers.tick(8_000); await nextTurn(); }
+  assert.equal(signals.length, 24);
+  t.mock.timers.tick(6_000);
+  await rejected;
+  assert(signals.every(signal => signal.aborted));
+  assert.equal(signals.length, 24);
+  assert.equal(BnpbInariskService.getAssessmentStatus('earthquake').failedOfficeCount, offices.length);
+  assert.equal(BnpbInariskService.getAssessmentStatus('earthquake').status, 'error');
 });
 
 test('an entirely timed-out source reports error while other sources remain available', async t => {
@@ -372,4 +622,59 @@ test('MAGMA reference coordinates provide nearest distances without invented ind
   const nearest = getNearestReferenceVolcano(jogja.latitude, jogja.longitude);
   assert.equal(nearest.volcano.name, 'Merapi');
   assert.ok(nearest.distanceKm > 20 && nearest.distanceKm < 40);
+});
+
+
+test('header summary counts high raw indices before rounding across hazard tabs', () => {
+  const items = [0, 0.3, 0.6, 0.600001, 0.8, null].map(score => ({ score, ispuAssessment: null }));
+  for (const hazard of ['earthquake', 'extreme_weather', 'karhutla', 'volcanic', 'volcanic_ash'] as const) {
+    assert.deepEqual(getKerentananHighSummary(items, hazard), { highCount: 2, availableCount: 5, status: 'available' });
+  }
+});
+
+test('header summary includes every BI location category, including headquarters and data center', () => {
+  const items = KPWBI_OFFICES.map(office => ({ office, score: 0.8, ispuAssessment: null }));
+  assert.ok(items.some(item => item.office.category === 'kantor_pusat'));
+  assert.ok(items.some(item => item.office.category === 'dc'));
+  assert.equal(getKerentananHighSummary(items, 'volcanic').highCount, KPWBI_OFFICES.length);
+});
+
+test('ISPU header counts Berbahaya using station values, independently of distance-adjusted indices', () => {
+  const items = [0, 100, 200, 299, 300, 301].map(ispuValue => ({ score: 0.2, ispuAssessment: { ispuValue } }));
+  items.push({ score: 0.9, ispuAssessment: { ispuValue: 299 } });
+  assert.deepEqual(getKerentananHighSummary(items, 'air_quality'), { highCount: 2, availableCount: 7, status: 'available' });
+  assert.equal(getKerentananHighSummary([{ score: 0.9, ispuAssessment: null }], 'air_quality').availableCount, 0);
+});
+
+test('header distinguishes missing/loading data from valid zero high counts and retains data during refresh', () => {
+  const missing = [null, NaN, Infinity].map(score => ({ score, ispuAssessment: null }));
+  assert.deepEqual(getKerentananHighSummary(missing, 'earthquake', true), { highCount: 0, availableCount: 0, status: 'loading' });
+  assert.deepEqual(getKerentananHighSummary(missing, 'earthquake'), { highCount: 0, availableCount: 0, status: 'no_data' });
+  assert.equal(getKerentananHighSummary([], 'air_quality', true).status, 'loading');
+  assert.deepEqual(getKerentananHighSummary([{ score: 0, ispuAssessment: null }], 'earthquake', true), { highCount: 0, availableCount: 1, status: 'available' });
+});
+
+test('header chip uses the worst Tinggi, Sedang, or Rendah band', () => {
+  const items = [0.2, 0.4, 0.4, 0.8].map(score => ({ score, ispuAssessment: null }));
+  assert.deepEqual(getKerentananHeaderBand(items, 'earthquake'), { level: 'Tinggi', count: 1, status: 'available' });
+  items[3].score = 0.5;
+  assert.deepEqual(getKerentananHeaderBand(items, 'karhutla'), { level: 'Sedang', count: 3, status: 'available' });
+  assert.deepEqual(getKerentananHeaderBand(items.map(() => ({ score: 0.1, ispuAssessment: null })), 'volcanic'), { level: 'Rendah', count: 4, status: 'available' });
+  assert.deepEqual(getKerentananHeaderBand([{ score: null, ispuAssessment: null }], 'earthquake', true), { level: null, count: 0, status: 'loading' });
+  assert.deepEqual(getKerentananHeaderBand([], 'earthquake'), { level: null, count: 0, status: 'no_data' });
+
+  const ispu = [0, 50, 51, 101, 200, 201, 300].map(ispuValue => ({ score: 0.1, ispuAssessment: { ispuValue } }));
+  assert.deepEqual(getKerentananHeaderBand(ispu, 'air_quality'), { level: 'Tinggi', count: 2, status: 'available' });
+  assert.deepEqual(getKerentananHeaderBand(ispu.slice(0, 5), 'air_quality'), { level: 'Sedang', count: 3, status: 'available' });
+  assert.deepEqual(getKerentananHeaderBand(ispu.slice(0, 2), 'air_quality'), { level: 'Rendah', count: 2, status: 'available' });
+});
+
+test('header summary recomputes for updated assessments and a changed active tab', () => {
+  const items = [{ score: 0.8, ispuAssessment: { ispuValue: 100 } }];
+  assert.equal(getKerentananHighSummary(items, 'earthquake').highCount, 1);
+  assert.equal(getKerentananHighSummary(items, 'air_quality').highCount, 0);
+  items[0].score = 0.6;
+  items[0].ispuAssessment.ispuValue = 300;
+  assert.equal(getKerentananHighSummary(items, 'earthquake').highCount, 0);
+  assert.equal(getKerentananHighSummary(items, 'air_quality').highCount, 1);
 });

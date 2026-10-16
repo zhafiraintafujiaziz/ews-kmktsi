@@ -38,7 +38,10 @@ export function usePreparednessChecklist() {
     mounted.current = true;
     // Apply database results asynchronously after mounting.
     void Promise.resolve().then(fetchData);
-    return () => { mounted.current = false; };
+    const onChange = (event: Event) => { if (!(event instanceof StorageEvent) || event.key?.startsWith('ews-browser:v1:checklist:')) void fetchData(); };
+    window.addEventListener('storage', onChange);
+    window.addEventListener('ews-data-change', onChange);
+    return () => { mounted.current = false; window.removeEventListener('storage', onChange); window.removeEventListener('ews-data-change', onChange); };
   }, [fetchData]);
 
   const getStatus = useCallback(

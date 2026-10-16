@@ -5,11 +5,13 @@ import Alert from '@mui/material/Alert';
 interface FullPageCaptureButtonProps {
   targetRef?: RefObject<HTMLElement | null>;
   filename?: string;
+  iconOnly?: boolean;
 }
 
 export default function FullPageCaptureButton({
   targetRef,
   filename = 'Dashboard_EWS',
+  iconOnly = false,
 }: FullPageCaptureButtonProps) {
   const [capturing, setCapturing] = useState(false);
   const [captured, setCaptured] = useState(false);
@@ -88,15 +90,20 @@ export default function FullPageCaptureButton({
     }
   };
 
+  const statusText = capturing ? 'Mengambil...' : captured ? 'Tersimpan!' : null;
+  const captureLabel = statusText ?? 'Screenshot';
+  const showStatusText = !iconOnly && statusText !== null;
+
   return (
     <span className="full-page-capture-control" data-capture-control>
       <button
-        className={`topbar-report-btn${captured ? ' screenshot-captured' : ''}`}
+        className={`topbar-report-btn${iconOnly || !showStatusText ? ' topbar-report-btn--icon' : ''}${captured ? ' screenshot-captured' : ''}`}
         type="button"
         onClick={handleCapture}
         disabled={capturing || captured}
         aria-busy={capturing}
-        title="Screenshot Dashboard"
+        aria-label={showStatusText ? undefined : captureLabel}
+        title={iconOnly ? captureLabel : 'Screenshot Dashboard'}
       >
         {capturing ? (
           <svg className="screenshot-capture-spinner" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -113,7 +120,7 @@ export default function FullPageCaptureButton({
             <circle cx="12" cy="13" r="4" />
           </svg>
         )}
-        <span aria-live="polite">{capturing ? 'Mengambil...' : captured ? 'Tersimpan!' : 'Screenshot'}</span>
+        {showStatusText && <span aria-live="polite">{statusText}</span>}
       </button>
       {error && (
         <Alert severity="error" onClose={() => setError(null)} sx={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 300, zIndex: 10000 }}>

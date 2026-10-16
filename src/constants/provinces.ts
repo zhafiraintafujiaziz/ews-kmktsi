@@ -1,4 +1,4 @@
-import type { Province } from '../types';
+import type { Province } from '../types/index.ts';
 
 export const PROVINCES: Province[] = [
   // Sumatera Island Group

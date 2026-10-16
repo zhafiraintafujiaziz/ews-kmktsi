@@ -1,0 +1,1650 @@
+{
+  "success": true,
+  "startedAt": "2026-10-14T04:45:34.210Z",
+  "finishedAt": "2026-10-14T04:46:04.910Z",
+  "durationMs": 30690.49,
+  "source": {
+    "provider": "BNPB InaRISK",
+    "assessment": "IRBI kelas risiko",
+    "endpoint": "https://inarisk.bnpb.go.id/apiv4/irbi/{pcode}",
+    "thresholds": {
+      "tinggi": 144,
+      "sedang": 13,
+      "scaleMax": 224.4
+    },
+    "hazardMax": {
+      "gempabumi": 32.4,
+      "cuaca_ekstrem": 20.4,
+      "karlahut": 36
+    }
+  },
+  "nationalMax": {
+    "gempabumi": 32.4,
+    "cuaca_ekstrem": 20.4,
+    "karlahut": 36
+  },
+  "maxMatchesAssumption": true,
+  "officeCount": 48,
+  "resolvedCount": 48,
+  "unresolved": [],
+  "requestCount": 83,
+  "requests": [
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/provinsi",
+      "status": 200,
+      "durationMs": 453.91
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/11",
+      "status": 200,
+      "durationMs": 464.95
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/12",
+      "status": 200,
+      "durationMs": 145.46
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/13",
+      "status": 200,
+      "durationMs": 156.75
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/14",
+      "status": 200,
+      "durationMs": 310.24
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/21",
+      "status": 200,
+      "durationMs": 9331.08
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/15",
+      "status": 200,
+      "durationMs": 558.89
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/17",
+      "status": 200,
+      "durationMs": 117.65
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/16",
+      "status": 200,
+      "durationMs": 123.09
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/19",
+      "status": 200,
+      "durationMs": 97.35
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/18",
+      "status": 200,
+      "durationMs": 70.75
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/31",
+      "status": 200,
+      "durationMs": 135.06
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/32",
+      "status": 200,
+      "durationMs": 88.04
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/36",
+      "status": 200,
+      "durationMs": 86.32
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/33",
+      "status": 200,
+      "durationMs": 100.76
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/34",
+      "status": 200,
+      "durationMs": 71.49
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/35",
+      "status": 200,
+      "durationMs": 100.56
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/61",
+      "status": 200,
+      "durationMs": 140.7
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/62",
+      "status": 200,
+      "durationMs": 117.25
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/63",
+      "status": 200,
+      "durationMs": 98.15
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/64",
+      "status": 200,
+      "durationMs": 108.12
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/65",
+      "status": 200,
+      "durationMs": 93.91
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/51",
+      "status": 200,
+      "durationMs": 82.36
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/52",
+      "status": 200,
+      "durationMs": 451.96
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/53",
+      "status": 200,
+      "durationMs": 89.78
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/71",
+      "status": 200,
+      "durationMs": 80.81
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/75",
+      "status": 200,
+      "durationMs": 185.64
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/72",
+      "status": 200,
+      "durationMs": 213.43
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/76",
+      "status": 200,
+      "durationMs": 120.32
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/74",
+      "status": 200,
+      "durationMs": 83.17
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/73",
+      "status": 200,
+      "durationMs": 70.95
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/82",
+      "status": 200,
+      "durationMs": 97.78
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/81",
+      "status": 200,
+      "durationMs": 124.74
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/92",
+      "status": 200,
+      "durationMs": 108.22
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/kabupaten/91",
+      "status": 200,
+      "durationMs": 89.06
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1171",
+      "status": 200,
+      "durationMs": 126.6
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1173",
+      "status": 200,
+      "durationMs": 298.27
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1271",
+      "status": 200,
+      "durationMs": 89.21
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1272",
+      "status": 200,
+      "durationMs": 81.67
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1273",
+      "status": 200,
+      "durationMs": 122.63
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1371",
+      "status": 200,
+      "durationMs": 125.13
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1471",
+      "status": 200,
+      "durationMs": 98.89
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/2171",
+      "status": 200,
+      "durationMs": 73.27
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1571",
+      "status": 200,
+      "durationMs": 85.62
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1771",
+      "status": 200,
+      "durationMs": 90.78
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1671",
+      "status": 200,
+      "durationMs": 112.12
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1971",
+      "status": 200,
+      "durationMs": 151.87
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/1871",
+      "status": 200,
+      "durationMs": 156.76
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3171",
+      "status": 200,
+      "durationMs": 89.12
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3204",
+      "status": 200,
+      "durationMs": 89.06
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3209",
+      "status": 200,
+      "durationMs": 77.69
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3206",
+      "status": 200,
+      "durationMs": 72.32
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3604",
+      "status": 200,
+      "durationMs": 72.57
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3322",
+      "status": 200,
+      "durationMs": 121.29
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3372",
+      "status": 200,
+      "durationMs": 92.22
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3302",
+      "status": 200,
+      "durationMs": 98.39
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3328",
+      "status": 200,
+      "durationMs": 90
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3471",
+      "status": 200,
+      "durationMs": 85.95
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3578",
+      "status": 200,
+      "durationMs": 73.76
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3507",
+      "status": 200,
+      "durationMs": 91.27
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3506",
+      "status": 200,
+      "durationMs": 89.52
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3509",
+      "status": 200,
+      "durationMs": 68.96
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/6171",
+      "status": 200,
+      "durationMs": 80.3
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/6271",
+      "status": 200,
+      "durationMs": 112.96
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/6371",
+      "status": 200,
+      "durationMs": 88.16
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/6472",
+      "status": 200,
+      "durationMs": 98.45
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/6471",
+      "status": 200,
+      "durationMs": 203.48
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/6571",
+      "status": 200,
+      "durationMs": 104.77
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/5171",
+      "status": 200,
+      "durationMs": 93.77
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/5271",
+      "status": 200,
+      "durationMs": 97.75
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/5301",
+      "status": 200,
+      "durationMs": 120.85
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/7171",
+      "status": 200,
+      "durationMs": 79.9
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/7501",
+      "status": 200,
+      "durationMs": 102.41
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/7271",
+      "status": 200,
+      "durationMs": 125.58
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/7602",
+      "status": 200,
+      "durationMs": 94.02
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/7471",
+      "status": 200,
+      "durationMs": 179.72
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/7371",
+      "status": 200,
+      "durationMs": 99.41
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/8271",
+      "status": 200,
+      "durationMs": 99.69
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/8171",
+      "status": 200,
+      "durationMs": 100.83
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/9202",
+      "status": 200,
+      "durationMs": 99.71
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/9103",
+      "status": 200,
+      "durationMs": 100.74
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/irbi/3215",
+      "status": 200,
+      "durationMs": 101.36
+    },
+    {
+      "url": "https://inarisk.bnpb.go.id/apiv4/data-irbi-full",
+      "status": 200,
+      "durationMs": 10892.24
+    }
+  ],
+  "offices": [
+    {
+      "id": "kpwbi-banda-aceh",
+      "name": "KPwBI Provinsi Aceh",
+      "city": "Banda Aceh",
+      "provinceId": "ID-AC",
+      "pcode": "1171",
+      "kabupaten": "Kota Banda Aceh",
+      "hazards": {
+        "gempabumi": {
+          "score": 11.79,
+          "index": 0.3638888888888889,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 7.42,
+          "index": 0.36372549019607847,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 13.1,
+          "index": 0.3638888888888889,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-lhokseumawe",
+      "name": "KPwBI Lhokseumawe",
+      "city": "Lhokseumawe",
+      "provinceId": "ID-AC",
+      "pcode": "1173",
+      "kabupaten": "Kota Lhokseumawe",
+      "hazards": {
+        "gempabumi": {
+          "score": 16.76,
+          "index": 0.517283950617284,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 10.55,
+          "index": 0.5171568627450981,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 18.62,
+          "index": 0.5172222222222222,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-medan",
+      "name": "KPwBI Provinsi Sumatera Utara",
+      "city": "Medan",
+      "provinceId": "ID-SU",
+      "pcode": "1271",
+      "kabupaten": "Kota Medan",
+      "hazards": {
+        "gempabumi": {
+          "score": 21.6,
+          "index": 0.6666666666666667,
+          "level": "Tinggi"
+        },
+        "cuaca_ekstrem": {
+          "score": 13.6,
+          "index": 0.6666666666666667,
+          "level": "Tinggi"
+        },
+        "karlahut": {
+          "score": 36,
+          "index": 1,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-pematangsiantar",
+      "name": "KPwBI Pematangsiantar",
+      "city": "Pematangsiantar",
+      "provinceId": "ID-SU",
+      "pcode": "1272",
+      "kabupaten": "Kota Pematangsiantar",
+      "hazards": {
+        "gempabumi": {
+          "score": 10.8,
+          "index": 0.33333333333333337,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 13.6,
+          "index": 0.6666666666666667,
+          "level": "Tinggi"
+        },
+        "karlahut": {
+          "score": 33.6,
+          "index": 0.9333333333333333,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-sibolga",
+      "name": "KPwBI Sibolga",
+      "city": "Sibolga",
+      "provinceId": "ID-SU",
+      "pcode": "1273",
+      "kabupaten": "Kota Sibolga",
+      "hazards": {
+        "gempabumi": {
+          "score": 21.6,
+          "index": 0.6666666666666667,
+          "level": "Tinggi"
+        },
+        "cuaca_ekstrem": {
+          "score": 13.6,
+          "index": 0.6666666666666667,
+          "level": "Tinggi"
+        },
+        "karlahut": {
+          "score": 33.6,
+          "index": 0.9333333333333333,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-padang",
+      "name": "KPwBI Provinsi Sumatera Barat",
+      "city": "Padang",
+      "provinceId": "ID-SB",
+      "pcode": "1371",
+      "kabupaten": "Kota Padang",
+      "hazards": {
+        "gempabumi": {
+          "score": 19.68,
+          "index": 0.6074074074074074,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 18.59,
+          "index": 0.9112745098039217,
+          "level": "Tinggi"
+        },
+        "karlahut": {
+          "score": 32.8,
+          "index": 0.911111111111111,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-pekanbaru",
+      "name": "KPwBI Provinsi Riau",
+      "city": "Pekanbaru",
+      "provinceId": "ID-RI",
+      "pcode": "1471",
+      "kabupaten": "Kota Pekanbaru",
+      "hazards": {
+        "gempabumi": {
+          "score": 10.8,
+          "index": 0.33333333333333337,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 13.6,
+          "index": 0.6666666666666667,
+          "level": "Tinggi"
+        },
+        "karlahut": {
+          "score": 36,
+          "index": 1,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-batam",
+      "name": "KPwBI Provinsi Kepulauan Riau",
+      "city": "Batam",
+      "provinceId": "ID-KR",
+      "pcode": "2171",
+      "kabupaten": "Kota Batam",
+      "hazards": {
+        "gempabumi": {
+          "score": 6.48,
+          "index": 0.2,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 8.16,
+          "index": 0.4,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 14.39,
+          "index": 0.39972222222222226,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-jambi",
+      "name": "KPwBI Provinsi Jambi",
+      "city": "Jambi",
+      "provinceId": "ID-JA",
+      "pcode": "1571",
+      "kabupaten": "Kota Jambi",
+      "hazards": {
+        "gempabumi": {
+          "score": 8.56,
+          "index": 0.26419753086419756,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 10.78,
+          "index": 0.5284313725490196,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 27.58,
+          "index": 0.7661111111111111,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-bengkulu",
+      "name": "KPwBI Provinsi Bengkulu",
+      "city": "Bengkulu",
+      "provinceId": "ID-BE",
+      "pcode": "1771",
+      "kabupaten": "Kota Bengkulu",
+      "hazards": {
+        "gempabumi": {
+          "score": 20.23,
+          "index": 0.6243827160493828,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 12.73,
+          "index": 0.6240196078431374,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 20.23,
+          "index": 0.5619444444444445,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-palembang",
+      "name": "KPwBI Provinsi Sumatera Selatan",
+      "city": "Palembang",
+      "provinceId": "ID-SS",
+      "pcode": "1671",
+      "kabupaten": "Kota Palembang",
+      "hazards": {
+        "gempabumi": {
+          "score": 10.8,
+          "index": 0.33333333333333337,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 13.6,
+          "index": 0.6666666666666667,
+          "level": "Tinggi"
+        },
+        "karlahut": {
+          "score": 36,
+          "index": 1,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-pangkalpinang",
+      "name": "KPwBI Provinsi Kepulauan Bangka Belitung",
+      "city": "Pangkalpinang",
+      "provinceId": "ID-BB",
+      "pcode": "1971",
+      "kabupaten": "Kota Pangkal Pinang",
+      "hazards": {
+        "gempabumi": {
+          "score": 10.8,
+          "index": 0.33333333333333337,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 13.6,
+          "index": 0.6666666666666667,
+          "level": "Tinggi"
+        },
+        "karlahut": {
+          "score": 36,
+          "index": 1,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-bandar-lampung",
+      "name": "KPwBI Provinsi Lampung",
+      "city": "Bandar Lampung",
+      "provinceId": "ID-LA",
+      "pcode": "1871",
+      "kabupaten": "Kota Bandar Lampung",
+      "hazards": {
+        "gempabumi": {
+          "score": 9.15,
+          "index": 0.28240740740740744,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 5.76,
+          "index": 0.2823529411764706,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 14.74,
+          "index": 0.40944444444444444,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-jakarta",
+      "name": "Bank Indonesia Kantor Pusat",
+      "city": "Jakarta Pusat (Thamrin)",
+      "provinceId": "ID-JK",
+      "pcode": "3171",
+      "kabupaten": "Kota Administrasi Jakarta Pusat",
+      "hazards": {
+        "gempabumi": {
+          "score": 5.443548387,
+          "index": 0.1680107526851852,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 0,
+          "index": 0,
+          "level": "Rendah"
+        },
+        "karlahut": {
+          "score": 10.88709677,
+          "index": 0.3024193547222222,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-jakarta-kpw",
+      "name": "KPwBI Provinsi DKI Jakarta",
+      "city": "Jakarta Pusat (Senen)",
+      "provinceId": "ID-JK",
+      "pcode": "3171",
+      "kabupaten": "Kota Administrasi Jakarta Pusat",
+      "hazards": {
+        "gempabumi": {
+          "score": 5.443548387,
+          "index": 0.1680107526851852,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 0,
+          "index": 0,
+          "level": "Rendah"
+        },
+        "karlahut": {
+          "score": 10.88709677,
+          "index": 0.3024193547222222,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-bandung",
+      "name": "KPwBI Provinsi Jawa Barat",
+      "city": "Bandung",
+      "provinceId": "ID-JB",
+      "pcode": "3204",
+      "kabupaten": "Bandung",
+      "hazards": {
+        "gempabumi": {
+          "score": 13.49,
+          "index": 0.4163580246913581,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 12.74,
+          "index": 0.6245098039215686,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 22.49,
+          "index": 0.6247222222222222,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-cirebon",
+      "name": "KPwBI Cirebon",
+      "city": "Cirebon",
+      "provinceId": "ID-JB",
+      "pcode": "3209",
+      "kabupaten": "Cirebon",
+      "hazards": {
+        "gempabumi": {
+          "score": 6.99,
+          "index": 0.21574074074074076,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 13.2,
+          "index": 0.6470588235294118,
+          "level": "Tinggi"
+        },
+        "karlahut": {
+          "score": 23.3,
+          "index": 0.6472222222222223,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-tasikmalaya",
+      "name": "KPwBI Tasikmalaya",
+      "city": "Tasikmalaya",
+      "provinceId": "ID-JB",
+      "pcode": "3206",
+      "kabupaten": "Tasikmalaya",
+      "hazards": {
+        "gempabumi": {
+          "score": 13.95,
+          "index": 0.4305555555555556,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 8.78,
+          "index": 0.4303921568627451,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 23.25,
+          "index": 0.6458333333333334,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-serang",
+      "name": "KPwBI Provinsi Banten",
+      "city": "Serang",
+      "provinceId": "ID-BT",
+      "pcode": "3604",
+      "kabupaten": "Serang",
+      "hazards": {
+        "gempabumi": {
+          "score": 10.94,
+          "index": 0.3376543209876543,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 6.89,
+          "index": 0.3377450980392157,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 18.23,
+          "index": 0.5063888888888889,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-semarang",
+      "name": "KPwBI Provinsi Jawa Tengah",
+      "city": "Semarang",
+      "provinceId": "ID-JT",
+      "pcode": "3322",
+      "kabupaten": "Semarang",
+      "hazards": {
+        "gempabumi": {
+          "score": 9.33,
+          "index": 0.287962962962963,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 5.88,
+          "index": 0.2882352941176471,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 15.55,
+          "index": 0.43194444444444446,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-solo",
+      "name": "KPwBI Solo / Surakarta",
+      "city": "Solo",
+      "provinceId": "ID-JT",
+      "pcode": "3372",
+      "kabupaten": "Kota Surakarta",
+      "hazards": {
+        "gempabumi": {
+          "score": 8.64,
+          "index": 0.2666666666666667,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 5.44,
+          "index": 0.2666666666666667,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 0,
+          "index": 0,
+          "level": "Rendah"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-purwokerto",
+      "name": "KPwBI Purwokerto",
+      "city": "Purwokerto",
+      "provinceId": "ID-JT",
+      "pcode": "3302",
+      "kabupaten": "Banyumas",
+      "hazards": {
+        "gempabumi": {
+          "score": 8.76,
+          "index": 0.27037037037037037,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 5.52,
+          "index": 0.27058823529411763,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 14.6,
+          "index": 0.40555555555555556,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-tegal",
+      "name": "KPwBI Tegal",
+      "city": "Tegal",
+      "provinceId": "ID-JT",
+      "pcode": "3328",
+      "kabupaten": "Tegal",
+      "hazards": {
+        "gempabumi": {
+          "score": 10.17,
+          "index": 0.3138888888888889,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 6.41,
+          "index": 0.31421568627450985,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 16.96,
+          "index": 0.47111111111111115,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-yogyakarta",
+      "name": "KPwBI DI Yogyakarta",
+      "city": "Yogyakarta",
+      "provinceId": "ID-YO",
+      "pcode": "3471",
+      "kabupaten": "Kota Yogyakarta",
+      "hazards": {
+        "gempabumi": {
+          "score": 10.76,
+          "index": 0.33209876543209876,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 6.78,
+          "index": 0.33235294117647063,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 16.74,
+          "index": 0.46499999999999997,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-surabaya",
+      "name": "KPwBI Provinsi Jawa Timur",
+      "city": "Surabaya",
+      "provinceId": "ID-JI",
+      "pcode": "3578",
+      "kabupaten": "Kota Surabaya",
+      "hazards": {
+        "gempabumi": {
+          "score": 8.08,
+          "index": 0.24938271604938272,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 15.27,
+          "index": 0.7485294117647059,
+          "level": "Tinggi"
+        },
+        "karlahut": {
+          "score": 25.14,
+          "index": 0.6983333333333334,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-malang",
+      "name": "KPwBI Malang",
+      "city": "Malang",
+      "provinceId": "ID-JI",
+      "pcode": "3507",
+      "kabupaten": "Malang",
+      "hazards": {
+        "gempabumi": {
+          "score": 12,
+          "index": 0.3703703703703704,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 7.56,
+          "index": 0.37058823529411766,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 20.01,
+          "index": 0.5558333333333334,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-kediri",
+      "name": "KPwBI Kediri",
+      "city": "Kediri",
+      "provinceId": "ID-JI",
+      "pcode": "3506",
+      "kabupaten": "Kediri",
+      "hazards": {
+        "gempabumi": {
+          "score": 11.81,
+          "index": 0.3645061728395062,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 11.15,
+          "index": 0.5465686274509804,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 19.68,
+          "index": 0.5466666666666666,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-jember",
+      "name": "KPwBI Jember",
+      "city": "Jember",
+      "provinceId": "ID-JI",
+      "pcode": "3509",
+      "kabupaten": "Jember",
+      "hazards": {
+        "gempabumi": {
+          "score": 12.18,
+          "index": 0.37592592592592594,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 7.67,
+          "index": 0.37598039215686274,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 20.31,
+          "index": 0.5641666666666666,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-pontianak",
+      "name": "KPwBI Provinsi Kalimantan Barat",
+      "city": "Pontianak",
+      "provinceId": "ID-KB",
+      "pcode": "6171",
+      "kabupaten": "Kota Pontianak",
+      "hazards": {
+        "gempabumi": {
+          "score": 7.713082841,
+          "index": 0.23805811237654323,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 9.712770985,
+          "index": 0.476116224754902,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 15.42616568,
+          "index": 0.42850460222222225,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-palangka-raya",
+      "name": "KPwBI Provinsi Kalimantan Tengah",
+      "city": "Palangka Raya",
+      "provinceId": "ID-KT",
+      "pcode": "6271",
+      "kabupaten": "Kota Palangkaraya",
+      "hazards": {
+        "gempabumi": {
+          "score": 6.36,
+          "index": 0.1962962962962963,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 8,
+          "index": 0.3921568627450981,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 21.19,
+          "index": 0.5886111111111112,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-banjarmasin",
+      "name": "KPwBI Provinsi Kalimantan Selatan",
+      "city": "Banjarmasin",
+      "provinceId": "ID-KS",
+      "pcode": "6371",
+      "kabupaten": "Kota Banjarmasin",
+      "hazards": {
+        "gempabumi": {
+          "score": 6.2,
+          "index": 0.19135802469135804,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 7.81,
+          "index": 0.382843137254902,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 12.41,
+          "index": 0.3447222222222222,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-samarinda",
+      "name": "KPwBI Provinsi Kalimantan Timur",
+      "city": "Samarinda",
+      "provinceId": "ID-KI",
+      "pcode": "6472",
+      "kabupaten": "Kota Samarinda",
+      "hazards": {
+        "gempabumi": {
+          "score": 5.89,
+          "index": 0.18179012345679013,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 7.41,
+          "index": 0.3632352941176471,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 19.62,
+          "index": 0.545,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-balikpapan",
+      "name": "KPwBI Balikpapan",
+      "city": "Balikpapan",
+      "provinceId": "ID-KI",
+      "pcode": "6471",
+      "kabupaten": "Kota Balikpapan",
+      "hazards": {
+        "gempabumi": {
+          "score": 5.51,
+          "index": 0.17006172839506173,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 6.94,
+          "index": 0.3401960784313726,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 18.37,
+          "index": 0.5102777777777778,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-tarakan",
+      "name": "KPwBI Provinsi Kalimantan Utara",
+      "city": "Tarakan",
+      "provinceId": "ID-KU",
+      "pcode": "6571",
+      "kabupaten": "Kota Tarakan",
+      "hazards": {
+        "gempabumi": {
+          "score": 8.79,
+          "index": 0.27129629629629626,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 11.06,
+          "index": 0.5421568627450981,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 29.28,
+          "index": 0.8133333333333334,
+          "level": "Tinggi"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-denpasar",
+      "name": "KPwBI Provinsi Bali",
+      "city": "Denpasar",
+      "provinceId": "ID-BA",
+      "pcode": "5171",
+      "kabupaten": "Kota Denpasar",
+      "hazards": {
+        "gempabumi": {
+          "score": 12.79,
+          "index": 0.3947530864197531,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 8.05,
+          "index": 0.39460784313725494,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 21.31,
+          "index": 0.5919444444444444,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-mataram",
+      "name": "KPwBI Provinsi Nusa Tenggara Barat",
+      "city": "Mataram",
+      "provinceId": "ID-NB",
+      "pcode": "5271",
+      "kabupaten": "Kota Mataram",
+      "hazards": {
+        "gempabumi": {
+          "score": 6.699751861,
+          "index": 0.20678246484567903,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 0,
+          "index": 0,
+          "level": "Rendah"
+        },
+        "karlahut": {
+          "score": 20.84367246,
+          "index": 0.5789909016666667,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-kupang",
+      "name": "KPwBI Provinsi Nusa Tenggara Timur",
+      "city": "Kupang",
+      "provinceId": "ID-NT",
+      "pcode": "5301",
+      "kabupaten": "Kupang",
+      "hazards": {
+        "gempabumi": {
+          "score": 20.02,
+          "index": 0.6179012345679012,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 18.91,
+          "index": 0.9269607843137255,
+          "level": "Tinggi"
+        },
+        "karlahut": {
+          "score": 22.25,
+          "index": 0.6180555555555556,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-manado",
+      "name": "KPwBI Provinsi Sulawesi Utara",
+      "city": "Manado",
+      "provinceId": "ID-SA",
+      "pcode": "7171",
+      "kabupaten": "Kota Manado",
+      "hazards": {
+        "gempabumi": {
+          "score": 11.47,
+          "index": 0.3540123456790124,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 7.22,
+          "index": 0.353921568627451,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 12.74,
+          "index": 0.3538888888888889,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-gorontalo",
+      "name": "KPwBI Provinsi Gorontalo",
+      "city": "Gorontalo",
+      "provinceId": "ID-GO",
+      "pcode": "7501",
+      "kabupaten": "Gorontalo",
+      "hazards": {
+        "gempabumi": {
+          "score": 18.29,
+          "index": 0.5645061728395062,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 11.51,
+          "index": 0.5642156862745098,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 20.32,
+          "index": 0.5644444444444444,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-palu",
+      "name": "KPwBI Provinsi Sulawesi Tengah",
+      "city": "Palu",
+      "provinceId": "ID-ST",
+      "pcode": "7271",
+      "kabupaten": "Kota Palu",
+      "hazards": {
+        "gempabumi": {
+          "score": 20.06,
+          "index": 0.6191358024691358,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 8.42,
+          "index": 0.4127450980392157,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 22.28,
+          "index": 0.6188888888888889,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-mamuju",
+      "name": "KPwBI Provinsi Sulawesi Barat",
+      "city": "Mamuju",
+      "provinceId": "ID-SR",
+      "pcode": "7602",
+      "kabupaten": "Mamuju",
+      "hazards": {
+        "gempabumi": {
+          "score": 19.91,
+          "index": 0.6145061728395063,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 8.36,
+          "index": 0.40980392156862744,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 22.12,
+          "index": 0.6144444444444445,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-kendari",
+      "name": "KPwBI Provinsi Sulawesi Tenggara",
+      "city": "Kendari",
+      "provinceId": "ID-SG",
+      "pcode": "7471",
+      "kabupaten": "Kota Kendari",
+      "hazards": {
+        "gempabumi": {
+          "score": 5.9,
+          "index": 0.1820987654320988,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 7.43,
+          "index": 0.36421568627450984,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 19.66,
+          "index": 0.5461111111111111,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-makassar",
+      "name": "KPwBI Provinsi Sulawesi Selatan",
+      "city": "Makassar",
+      "provinceId": "ID-SN",
+      "pcode": "7371",
+      "kabupaten": "Kota Makassar",
+      "hazards": {
+        "gempabumi": {
+          "score": 7.59,
+          "index": 0.23425925925925928,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 9.56,
+          "index": 0.4686274509803922,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 16.88,
+          "index": 0.46888888888888886,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-ternate",
+      "name": "KPwBI Provinsi Maluku Utara",
+      "city": "Ternate",
+      "provinceId": "ID-MU",
+      "pcode": "8271",
+      "kabupaten": "Kota Ternate",
+      "hazards": {
+        "gempabumi": {
+          "score": 13.12,
+          "index": 0.4049382716049383,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 4.13,
+          "index": 0.20245098039215687,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 21.87,
+          "index": 0.6075,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-ambon",
+      "name": "KPwBI Provinsi Maluku",
+      "city": "Ambon",
+      "provinceId": "ID-MA",
+      "pcode": "8171",
+      "kabupaten": "Kota Ambon",
+      "hazards": {
+        "gempabumi": {
+          "score": 23.88,
+          "index": 0.737037037037037,
+          "level": "Tinggi"
+        },
+        "cuaca_ekstrem": {
+          "score": 10.02,
+          "index": 0.4911764705882353,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 17.69,
+          "index": 0.49138888888888893,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "kpwbi-manokwari",
+      "name": "KPwBI Provinsi Papua Barat",
+      "city": "Manokwari",
+      "provinceId": "ID-PB",
+      "pcode": "9202",
+      "kabupaten": "Manokwari",
+      "hazards": {
+        "gempabumi": {
+          "score": null,
+          "index": null,
+          "level": null
+        },
+        "cuaca_ekstrem": {
+          "score": null,
+          "index": null,
+          "level": null
+        },
+        "karlahut": {
+          "score": null,
+          "index": null,
+          "level": null
+        }
+      }
+    },
+    {
+      "id": "kpwbi-jayapura",
+      "name": "KPwBI Provinsi Papua",
+      "city": "Jayapura",
+      "provinceId": "ID-PA",
+      "pcode": "9103",
+      "kabupaten": "Jayapura",
+      "hazards": {
+        "gempabumi": {
+          "score": 19.9078341,
+          "index": 0.6144393240740741,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 3.31797235,
+          "index": 0.16264570343137255,
+          "level": "Sedang"
+        },
+        "karlahut": {
+          "score": 15.48387097,
+          "index": 0.43010752694444443,
+          "level": "Sedang"
+        }
+      }
+    },
+    {
+      "id": "drc-sinergi-karawang",
+      "name": "Gedung Sinergi — Data Center Bank Indonesia",
+      "city": "Karawang",
+      "provinceId": "ID-JB",
+      "pcode": "3215",
+      "kabupaten": "Karawang",
+      "hazards": {
+        "gempabumi": {
+          "score": 8.61,
+          "index": 0.2657407407407407,
+          "level": "Sedang"
+        },
+        "cuaca_ekstrem": {
+          "score": 16.26,
+          "index": 0.7970588235294119,
+          "level": "Tinggi"
+        },
+        "karlahut": {
+          "score": 28.7,
+          "index": 0.7972222222222222,
+          "level": "Tinggi"
+        }
+      }
+    }
+  ]
+}

@@ -1,10 +1,11 @@
 import type { AssessmentLevel, KpwbiOffice } from '../types';
 import { getHazardLevel, type InaRiskCategory } from '../constants/kerentananCategories';
-import { BnpbInariskService } from '../services/bnpbInariskService';
 import { IspuService } from '../services/ispuService';
 import { getNearestReferenceVolcano } from './volcanoReference';
-import { KarhutlaRegionalService, type KarhutlaRegionalAssessment } from '../services/karhutlaRegionalService';
 import { VOLCANO_REFERENCE_SOURCE } from '../constants/volcanoReferencePoints';
+import { BnpbIrbiService, type IrbiCategory } from '../services/bnpbIrbiService';
+import { OFFICE_IRBI_REGION } from '../constants/officeIrbiRegion';
+import { getIrbiLevel } from '../constants/irbiRiskClass';
 
 export interface OfficeHazardAssessment {
   source: 'InaRISK' | 'BMKG' | 'MAGMA / PVMBG' | 'ISPU' | 'Asumsi';
@@ -14,12 +15,32 @@ export interface OfficeHazardAssessment {
   level: AssessmentLevel | null;
   factor: 0 | 1 | 2 | 3 | null;
   explanation: string;
-  regional?: KarhutlaRegionalAssessment;
 }
 export function distanceFactor(distanceKm: number): 1 | 2 | 3 {
   return distanceKm <= 30 ? 3 : distanceKm <= 100 ? 2 : 1;
 }
 const indexForFactor = (factor: number) => factor === 3 ? 0.8 : factor === 2 ? 0.5 : factor === 1 ? 0.2 : 0;
+const factorForLevel = (level: AssessmentLevel | null): 0 | 1 | 2 | 3 | null =>
+  level === null ? null : level === 'Tinggi' ? 3 : level === 'Sedang' ? 2 : 1;
+
+/** Gempa, Cuaca, and Karhutla use the BNPB IRBI kelas risiko per kabupaten/kota. */
+const IRBI_CATEGORIES: Record<'earthquake' | 'extreme_weather' | 'karhutla', string> = {
+  earthquake: 'Gempa',
+  extreme_weather: 'Cuaca',
+  karhutla: 'Karhutla',
+};
+
+function resolveIrbiAssessment(office: KpwbiOffice, category: IrbiCategory) {
+  const index = BnpbIrbiService.getIndex(office.id, category);
+  const level = index === null ? null : getIrbiLevel(index);
+  const region = OFFICE_IRBI_REGION[office.id];
+  const status = BnpbIrbiService.getAssessmentStatus(category).status;
+  return { source: 'InaRISK' as const, sourceUrl: 'https://inarisk.bnpb.go.id/irbi', status: index === null ? status : 'available', index, level,
+    factor: factorForLevel(level),
+    explanation: index === null ? BnpbIrbiService.getAssessmentMessage(category, office.id)
+      : 'Kelas risiko IRBI ' + IRBI_CATEGORIES[category] + (region ? ' ' + region.kabupaten : '') + ': indeks ternormalisasi ' + index.toFixed(2) + ', kategori ' + level + '. Sumber: BNPB IRBI.' };
+}
+
 export function resolveOfficeAssessment(office: KpwbiOffice, hazard: InaRiskCategory): OfficeHazardAssessment {
   if (hazard === 'volcanic' || hazard === 'volcanic_ash') {
     const nearest = getNearestReferenceVolcano(office.latitude, office.longitude);
@@ -33,18 +54,5 @@ export function resolveOfficeAssessment(office: KpwbiOffice, hazard: InaRiskCate
     return { source: 'ISPU', sourceUrl: 'https://ispu.kemenlh.go.id/webv5/#/', status: assessment ? 'available' : 'no_data', index,
       factor: null, level: null, explanation: assessment ? 'SPKU: ' + assessment.stationName + ', ' + assessment.distanceKm + ' km. ISPU ' + assessment.ispuValue + ', ' + assessment.category : 'Data ISPU tidak tersedia.' };
   }
-  if (hazard === 'karhutla') {
-    const regional = KarhutlaRegionalService.getOfficeAssessment(office.id);
-    const statistics = regional?.statistics;
-    const index = statistics?.mean ?? null, level = index === null ? null : getHazardLevel(index);
-    return { source: 'InaRISK', sourceUrl: 'https://inarisk.bnpb.go.id/', status: regional?.status ?? 'loading', index, level,
-      factor: level === null ? null : level === 'Tinggi' ? 3 : level === 'Sedang' ? 2 : 1, regional: regional ?? undefined,
-      explanation: statistics ? 'Rata-rata raster InaRISK dalam radius 25 km: ' + statistics.mean.toFixed(2) + '. ' + statistics.validCellCount.toLocaleString('id-ID') + ' sel valid; cakupan ≈' + statistics.coveragePercent.toFixed(1) + '% wilayah. Rentang ' + statistics.min.toFixed(2) + '–' + statistics.max.toFixed(2) + '. NoData dikecualikan.'
-        : regional?.status === 'error' ? 'Statistik raster InaRISK gagal dimuat. Coba hitung ulang.' : regional?.status === 'no_data' ? 'InaRISK tidak menyediakan sel raster valid dalam radius 25 km kantor ini.' : 'Menghitung rata-rata raster InaRISK dalam radius 25 km...' };
-  }
-  const index = BnpbInariskService.getLocalHazardIndex(office.id, hazard), level = index === null ? null : getHazardLevel(index);
-  const status = BnpbInariskService.getAssessmentStatus(hazard).status;
-  return { source: 'InaRISK', sourceUrl: 'https://inarisk.bnpb.go.id/', status: index === null ? status : 'available', index, level,
-    factor: level === null ? null : level === 'Tinggi' ? 3 : level === 'Sedang' ? 2 : 1,
-    explanation: index === null ? BnpbInariskService.getAssessmentMessage(hazard, office.id) : 'Indeks bahaya ' + (hazard === 'extreme_weather' ? 'Banjir ' : '') + 'InaRISK pada titik kantor: ' + index.toFixed(2) + '.' };
+  return resolveIrbiAssessment(office, hazard);
 }

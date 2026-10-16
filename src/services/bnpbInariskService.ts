@@ -1,10 +1,14 @@
 import type { KpwbiOffice } from '../types';
-import { INARISK_HAZARD_SERVICES, resolveInaRiskSource, type InaRiskHazardType, type InaRiskSourceType } from '../constants/kerentananCategories';
+import { INARISK_HAZARD_SERVICES, getInaRiskAssessmentEndpoint, resolveInaRiskSource, type InaRiskHazardType, type InaRiskSourceType } from '../constants/kerentananCategories';
 import { fetchWithCorsProxy } from './proxy';
 import { haversineDistance } from '../utils/geo';
+import { logSyncFailure } from './syncDiagnostics';
+import { inaRiskPointHazardUrl, parseInaRiskPointHazardValue } from './earthquakeHazard';
 
 const BASE = 'https://gis.bnpb.go.id/server/rest/services/inarisk';
 const CATEGORY_DEADLINE_MS = 14_000;
+const POINT_CATEGORY_DEADLINE_MS = 30_000;
+const POINT_REQUEST_DEADLINE_MS = 8_000;
 
 export interface InaRiskAssessmentStatus {
   status: 'idle' | 'loading' | 'available' | 'partial' | 'no_data' | 'error';
@@ -38,8 +42,10 @@ async function fetchAssessment(url: string, signal: AbortSignal): Promise<Record
     if (!data || typeof data !== 'object') throw new Error('Invalid InaRISK response');
     const response = data as Record<string, unknown>;
     if (response.error) {
-      const error = response.error as { message?: string };
-      throw new Error(error.message || 'InaRISK service request failed');
+      const error = response.error as { message?: string; code?: number; details?: string[] };
+      throw Object.assign(new Error([error.message || 'InaRISK service request failed', ...(error.details ?? [])].join('; ')), {
+        kind: 'service_error', status: error.code, endpoint: url,
+      });
     }
     return response;
   } finally {
@@ -70,36 +76,32 @@ export class BnpbInariskService {
     const results = await Promise.allSettled(Object.entries(INARISK_HAZARD_SERVICES).filter(([source]) => !sources || sources.includes(source as InaRiskSourceType)).map(async ([sourceName, service]) => {
       const source = sourceName as InaRiskSourceType;
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(new Error('InaRISK category request timed out')), CATEGORY_DEADLINE_MS);
+      const pointSource = source === 'earthquake' || source === 'extreme_weather';
+      const deadline = pointSource ? POINT_CATEGORY_DEADLINE_MS : CATEGORY_DEADLINE_MS;
+      const timeout = setTimeout(() => controller.abort(new Error('InaRISK category request timed out after ' + deadline + ' ms')), deadline);
       const values = new Map<string, number>();
       const failures = new Set<string>();
-      const errors: string[] = [];
+      const errors: unknown[] = [];
       this.statuses.set(source, { ...this.getAssessmentStatus(source), status: 'loading', officeCount: offices.length });
       this.notify();
       try {
-        if (offices.length && source === 'earthquake') {
+        if (offices.length && (source === 'earthquake' || source === 'extreme_weather')) {
           let nextOffice = 0;
-          await Promise.all(Array.from({ length: Math.min(4, offices.length) }, async () => {
+          await Promise.all(Array.from({ length: Math.min(6, offices.length) }, async () => {
             while (nextOffice < offices.length && !controller.signal.aborted) {
               const office = offices[nextOffice++];
+              const request = new AbortController();
+              const pointTimeout = setTimeout(() => request.abort(new Error('InaRISK ' + source + ' point request timed out after 8000 ms')), POINT_REQUEST_DEADLINE_MS);
+              const signal = AbortSignal.any([controller.signal, request.signal]);
               try {
-                const geometry = { x: office.longitude, y: office.latitude, spatialReference: { wkid: 4326 } };
-                const query = new URLSearchParams({
-                  geometry: JSON.stringify(geometry), geometryType: 'esriGeometryPoint', sr: '4326',
-                  layers: 'all:0', tolerance: '0',
-                  mapExtent: [office.longitude - 0.01, office.latitude - 0.01, office.longitude + 0.01, office.latitude + 0.01].join(','),
-                  imageDisplay: '256,256,96', returnGeometry: 'false', returnUnformattedValues: 'true', returnFieldName: 'true', f: 'json',
-                });
-                const data = await fetchAssessment(
-                  BASE + '/' + service + '/identify?' + query, controller.signal,
-                );
-                if (!Array.isArray(data.results)) throw new Error('Missing earthquake identify results');
-                const result = data.results.find((item: { layerId?: number }) => item?.layerId === 0) as { attributes?: Record<string, unknown> } | undefined;
-                const index = parseHazardIndex(result?.attributes?.['Stretch.Pixel Value']);
+                const data = await fetchAssessment(inaRiskPointHazardUrl(office, source), signal);
+                const index = parseHazardIndex(parseInaRiskPointHazardValue(data));
                 if (index !== null) values.set(office.id, index);
               } catch (error) {
                 failures.add(office.id);
-                errors.push(error instanceof Error ? error.message : String(error));
+                errors.push(error);
+              } finally {
+                clearTimeout(pointTimeout);
               }
             }
           }));
@@ -107,10 +109,6 @@ export class BnpbInariskService {
         } else if (offices.length) {
           const geometry = { points: offices.map((office) => [office.longitude, office.latitude]), spatialReference: { wkid: 4326 } };
           const query = new URLSearchParams({ geometryType: 'esriGeometryMultipoint', geometry: JSON.stringify(geometry), returnFirstValueOnly: 'true', f: 'json' });
-          if (source === 'extreme_weather') {
-            query.set('renderingRule', JSON.stringify({ rasterFunction: 'None' }));
-            query.set('interpolation', 'RSP_NearestNeighbor');
-          }
           const data = await fetchAssessment(BASE + '/' + service + '/getSamples?' + query, controller.signal);
           if (!Array.isArray(data.samples)) throw new Error('Missing samples from ' + service);
           for (const sampleValue of data.samples) {
@@ -133,7 +131,7 @@ export class BnpbInariskService {
         }
       } catch (error) {
         offices.forEach((office) => failures.add(office.id));
-        errors.push(error instanceof Error ? error.message : String(error));
+        errors.push(error);
       } finally {
         clearTimeout(timeout);
       }
@@ -142,12 +140,22 @@ export class BnpbInariskService {
         : failures.size > 0 ? 'error' : 'no_data';
       this.publishedValues.set(source, values);
       this.failedOffices.set(source, failures);
+      const checkedAt = new Date().toISOString();
+      const errorMessage = errors.length ? errors[0] instanceof Error ? errors[0].message : String(errors[0]) : null;
       this.statuses.set(source, {
-        status, checkedAt: new Date().toISOString(), error: errors[0] ?? null,
+        status, checkedAt, error: errorMessage,
         officeCount: offices.length, valueCount: values.size, failedOfficeCount: failures.size,
       });
       this.notify();
-      if (status === 'error') throw new Error(errors[0] || 'InaRISK service unavailable');
+      const context = { source: 'InaRISK', category: source,
+        endpoint: getInaRiskAssessmentEndpoint(source),
+        officeCount: offices.length, valueCount: values.size, failedOfficeCount: failures.size };
+      if (status === 'partial' && errors.length) logSyncFailure(context, new AggregateError(errors, 'Partial InaRISK assessment failure'));
+      if (values.size + failures.size < offices.length) console.info('[sync] InaRISK no_data', {
+        ...context, checkedAt, kind: 'no_data', reason: 'No numeric raster value at some office coordinates.',
+        noDataOfficeCount: offices.length - values.size - failures.size,
+      });
+      if (status === 'error') throw new AggregateError(errors, errorMessage || 'InaRISK service unavailable');
     }));
     const errors = results.filter((result) => result.status === 'rejected').map((result) => result.reason);
     if (errors.length) throw new AggregateError(errors, 'Some InaRISK hazard categories are unavailable');

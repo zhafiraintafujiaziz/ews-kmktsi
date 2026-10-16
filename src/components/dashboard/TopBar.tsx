@@ -7,7 +7,7 @@ import type { DisasterAlert, DisasterType, RiskCalcResult } from '../../types';
 import { severityToCssClass } from '../../types';
 import { KPWBI_OFFICES } from '../../constants/kpwbiOffices';
 import { renderDisasterIcon } from '../../utils/alertUtils';
-import { useAlerts } from '../../hooks/useAlerts';
+import { useAlertField } from '../../hooks/useAlerts';
 import { useInariskRevision } from '../../hooks/useInariskRevision';
 import { INARISK_CATEGORIES } from '../../constants/kerentananCategories';
 import { buildOfficeRiskMap } from '../../utils/riskCalculator';
@@ -132,7 +132,10 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     onAlertSelect,
   } = props;
   
-  const { isFetching, lastCheckedTime, cachedSnapshotTime, cachedAlertIds } = useAlerts();
+  const isFetching = useAlertField('isFetching');
+  const lastCheckedTime = useAlertField('lastCheckedTime');
+  const cachedSnapshotTime = useAlertField('cachedSnapshotTime');
+  const cachedAlertIds = useAlertField('cachedAlertIds');
   const assessmentRevision = useInariskRevision();
   const [timeStr, setTimeStr] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -149,7 +152,8 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
   const sortedNotiAlerts = useMemo(() => sortNotificationAlerts(allAlerts ?? []), [allAlerts]);
 
   // Automatic notifications use the same assessed risk as the dashboard.
-  const notificationAlerts = sortedNotiAlerts.filter(alert => !alert.isForecast && !cachedAlertIds.has(alert.id) && props.riskResults.some(result => result.event.id === alert.id && result.shouldAlert));
+  const riskById = useMemo(() => new Map(props.riskResults.map(result => [result.event.id, result])), [props.riskResults]);
+  const notificationAlerts = useMemo(() => sortedNotiAlerts.filter(alert => !alert.isForecast && !cachedAlertIds.has(alert.id) && riskById.get(alert.id)?.shouldAlert), [sortedNotiAlerts, cachedAlertIds, riskById]);
   const latestAlert = notificationAlerts[0] ?? null;
   const automaticToastAlert = latestUnknownAlert(notificationAlerts, alertNotifications);
   const automaticToastFingerprint = automaticToastAlert ? alertFingerprint(automaticToastAlert) : null;
@@ -162,7 +166,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     const timer = setTimeout(acknowledgeAutomaticToast, 7000);
     return () => clearTimeout(timer);
   }, [automaticToastFingerprint, demoAlert]);
-  const latestRisk = props.riskResults.find(result => result.event.id === latestAlert?.id);
+  const latestRisk = latestAlert ? riskById.get(latestAlert.id) : undefined;
   const notificationStatusClass = latestRisk?.riskLevel === 'Tinggi'
     ? 'critical'
     : latestRisk?.riskLevel === 'Sedang' ? 'warning' : 'monitoring';
@@ -268,7 +272,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
     ? `${riskStats[3]} KPwBI Berisiko Tinggi`
     : totalAffectedOffices > 0
     ? `${totalAffectedOffices} KPwBI Dipantau`
-    : 'Status Normal';
+    : 'Belum ada peringatan ditampilkan';
 
   const toastAlert = demoAlert ?? automaticToastAlert;
   const toastClass = toastAlert ? 'critical' : 'watch';
@@ -375,9 +379,9 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
         </div>
 
         <div className="topbar-right">
-          <div className="topbar-sync-status" title={cachedSnapshotTime ? `Data tersimpan: ${cachedSnapshotTime.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB. Menunggu konfirmasi sumber langsung.` : lastCheckedTime ? `Terakhir sinkronisasi: ${lastCheckedTime.toLocaleTimeString('id-ID')} WIB` : 'Sinkronisasi berjalan...'}>
+          <div className="topbar-sync-status" title={cachedSnapshotTime ? `Data tersimpan: ${cachedSnapshotTime.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB. Menunggu konfirmasi sumber langsung.` : lastCheckedTime ? `Terakhir sinkronisasi: ${lastCheckedTime.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB` : 'Sinkronisasi berjalan...'}>
             <span className={`sync-dot ${isFetching ? 'syncing' : 'active'}`} />
-            <span className="sync-text">{cachedSnapshotTime ? `Cache ${cachedSnapshotTime.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })} WIB${isFetching ? ' · Memperbarui...' : ''}` : isFetching ? 'Sinkronisasi...' : 'Live'}</span>
+            <span className="sync-text">{isFetching ? 'Sinkronisasi...' : 'Live'}</span>
           </div>
 
           <span className="topbar-clock">{timeStr || '—'}</span>
@@ -582,7 +586,7 @@ export const TopBar: React.FC<TopBarProps> = (props) => {
                   {allAlerts.length === 0 ? (
                     <div className="noti-empty">
                       <span>🔔</span>
-                      <p>Tidak ada peringatan bencana aktif saat ini.</p>
+                      <p>Belum ada peringatan ditampilkan.</p>
                     </div>
                   ) : (
                     ([3, 2, 1] as const).map((severity) => {

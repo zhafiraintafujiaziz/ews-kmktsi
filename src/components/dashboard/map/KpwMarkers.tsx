@@ -291,7 +291,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                                 </div>
                                 {assessment && (
                                   <div className="kpw-tooltip-detail">
-                                    {assessment.regional ? 'InaRISK, rata-rata radius 25 km' : assessment.source}
+                                    {assessment.source}
                                     {assessment.index !== null ? ` · Indeks ${assessment.index.toFixed(2)}` : ''}
                                   </div>
                                 )}
@@ -330,7 +330,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                   const indexVal = assessment.index;
                   if (indexVal === null) return <div style={{ marginTop: '4px', fontSize: '11px' }}>{assessment.explanation}</div>;
                   const hazardTitle = getInaRiskCategory(hazard)?.label ?? hazard;
-                  const level = getHazardLevel(indexVal);
+                  const level = assessment.level ?? getHazardLevel(indexVal);
                   const color = level === 'Tinggi' ? 'var(--alert-critical)' : level === 'Sedang' ? 'var(--alert-warning)' : 'var(--alert-watch)';
                   return (
                     <div className="kpw-tooltip-section">
@@ -338,7 +338,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                         {hazardTitle} · Indeks {indexVal.toFixed(2)} · {level}
                       </div>
                       <div className="kpw-tooltip-detail">
-                        Kerentanan: {assessment.factor}/3 · {assessment.regional ? 'InaRISK, rata-rata radius 25 km' : assessment.source}
+                        Kerentanan: {assessment.factor}/3 · {assessment.source}
                       </div>
                     </div>
                   );
@@ -390,7 +390,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                     <div className="ews-popup-content">
                       <div className={`ews-popup-header ${severityToCssClass(severity)}`}>
                         <span>{renderDisasterIcon(hazard, undefined, { color: 'inherit' })}</span>
-                        <span>{hazard === 'karhutla' ? 'Rata-rata Raster 25 km' : hazard === 'extreme_weather' ? 'Indeks Bahaya Banjir untuk' : hazard === 'volcanic' || hazard === 'volcanic_ash' ? 'Kerentanan Geografis' : 'Indeks Bahaya'} {hazardTitle} ({assessment.source})</span>
+                        <span>{hazard === 'karhutla' ? 'Rata-rata Raster 25 km' : hazard === 'extreme_weather' ? 'Indeks Bahaya Cuaca Ekstrim' : hazard === 'volcanic' || hazard === 'volcanic_ash' ? 'Kerentanan Geografis' : 'Indeks Bahaya'} {hazardTitle} ({assessment.source})</span>
                       </div>
                       <div className="ews-popup-title" style={{ marginTop: 0 }}>{office.name} ({office.city})</div>
                       <p className="ews-popup-desc">
@@ -478,7 +478,7 @@ const KpwMarkers: React.FC<KpwMarkersProps> = ({
                                   </span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)' }}>
-                                  <span>{alert.type === 'air_quality' ? `ISPU: Keparahan ${disasterScore}/3 × ${disasterScore}/3` : `Keparahan: ${disasterScore}/3 • Kerentanan (${assessment?.regional ? 'InaRISK 25 km' : assessment?.source ?? 'Bahaya'}): ${indexValStr}`}</span>
+                                  <span>{alert.type === 'air_quality' ? `ISPU: Keparahan ${disasterScore}/3 × ${disasterScore}/3` : `Keparahan: ${disasterScore}/3 • Kerentanan (${assessment?.source ?? 'Bahaya'}): ${indexValStr}`}</span>
                                   <span style={{ 
                                     fontWeight: 600, 
                                     color: riskLevelColor(riskLevel)

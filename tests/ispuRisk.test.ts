@@ -18,11 +18,36 @@ registerHooks({
 });
 
 const { IspuService } = await import('../src/services/ispuService.ts');
-const { BnpbInariskService } = await import('../src/services/bnpbInariskService.ts');
+const { BnpbIrbiService } = await import('../src/services/bnpbIrbiService.ts');
 const { KPWBI_OFFICES } = await import('../src/constants/kpwbiOffices.ts');
 const { getIspuCategory } = await import('../src/constants/ispuCategories.ts');
 const { scoreAlertForOffice, buildOfficeRiskMap, buildAlertRiskResult, calculateRisk, mapAlertToDisasterEvent } = await import('../src/utils/riskCalculator.ts');
 const office = KPWBI_OFFICES[0];
+
+test('live stations honor WIB, WITA and WIT without treating eastern readings as future data', async t => {
+  const now = Date.parse('2026-10-15T04:15:00Z');
+  t.mock.method(Date, 'now', () => now);
+  const row = (id: string, waktu: string, time_z: string, extra: Record<string, unknown> = {}) => ({
+    id_stasiun: id, nama: id, kota: id, provinsi: '', lat: '-2.59821', lon: '140.682',
+    val: '70', waktu, waktu_text: waktu, time_z, ...extra,
+  });
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ rows: [
+    row('WIB', '2026-10-15 11:00:00', 'WIB'),
+    row('WITA', '2026-10-15 12:00:00', 'WITA'),
+    row('PAPUA', '2026-10-15 13:00:00', 'WIT'),
+    row('LABEL_FALLBACK', 'invalid', 'WIT', { waktu_text: '15-Oktober-2026 13:00:00' }),
+    row('EXPLICIT_OFFSET', '2026-10-15T04:00:00Z', 'WIT'),
+    row('STALE', '2026-10-14 12:00:00', 'WIT'),
+    row('FUTURE', '2026-10-15 14:00:00', 'WIT'),
+    row('UNKNOWN_ZONE', '2026-10-15 11:00:00', 'unknown'),
+    row('UNDATED', '', 'WIT'),
+  ] }));
+
+  const stations = await IspuService.fetchIspuStations();
+  assert.deepEqual(stations.map(station => station.idStasiun), ['WIB', 'WITA', 'PAPUA', 'LABEL_FALLBACK', 'EXPLICIT_OFFSET']);
+  assert.ok(stations.every(station => station.observedAt === '2026-10-15T04:00:00.000Z'));
+  assert.equal(IspuService.getStations().find(station => station.idStasiun === 'PAPUA')?.ispuValue, 70);
+});
 
 function airAlert(category: IspuCategory, severity: 1 | 2 | 3): DisasterAlert {
   return {
@@ -49,7 +74,7 @@ test('ISPU stations generate severity 1, 2 and 3; Baik and Sedang generate no al
 });
 
 test('ISPU contributes low, medium and high KPw risk without querying InaRISK', (t) => {
-  const inarisk = t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => {
+  const inarisk = t.mock.method(BnpbIrbiService, 'getIndex', () => {
     throw new Error('ISPU must not query InaRISK');
   });
   const cases = [
@@ -90,7 +115,7 @@ test('KPw uses the highest ISPU risk and excludes offices outside the impact are
 });
 
 test('severity 3 gives high risk with an available or missing InaRISK assessment', (t) => {
-  const inarisk = t.mock.method(BnpbInariskService, 'getLocalHazardIndex', () => 0.6);
+  const inarisk = t.mock.method(BnpbIrbiService, 'getIndex', () => 0.6);
   const earthquake: DisasterAlert = { ...airAlert('BERBAHAYA', 3), type: 'earthquake' };
   const scored = scoreAlertForOffice(office.id, earthquake);
   assert.equal(scored.assessmentScore, 2);
